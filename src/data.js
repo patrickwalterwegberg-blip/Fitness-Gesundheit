@@ -1,13 +1,13 @@
-export const studios = ['Alle Studios', 'Dörpen', 'Studio 02', 'Studio 03', 'Studio 04', 'Studio 05', 'Studio 06', 'Studio 07'];
+export { studios } from './studios';
 export const today = '2026-11-03';
 export const initialTasks = [
   { id: 't1', title: 'Wartung der Trainingsgeräte koordinieren', category: 'Technik', studio: 'Dörpen', person: 'Patrick Walter', due: today, priority: 'Hoch', done: false, repeat: 'Monatlich' },
-  { id: 't2', title: 'Material für die Winteraktion vorbereiten', category: 'Marketing', studio: 'Studio 02', person: 'Marketing-Team', due: today, priority: 'Normal', done: false, repeat: 'Einmalig' },
+  { id: 't2', title: 'Material für die Winteraktion vorbereiten', category: 'Marketing', studio: 'Sögel', person: 'Marketing-Team', due: today, priority: 'Normal', done: false, repeat: 'Einmalig' },
   { id: 't3', title: 'Bestand an Proteinshakes prüfen', category: 'Lager', studio: 'Dörpen', person: 'Studioleitung', due: today, priority: 'Normal', done: false, repeat: 'Wöchentlich' },
-  { id: 't4', title: 'Neue Mitarbeiterin im Empfang einarbeiten', category: 'Team', studio: 'Studio 03', person: 'Studioleitung', due: '2026-11-04', priority: 'Normal', done: false, repeat: 'Einmalig' },
+  { id: 't4', title: 'Neue Mitarbeiterin im Empfang einarbeiten', category: 'Team', studio: 'Bersenbrück', person: 'Studioleitung', due: '2026-11-04', priority: 'Normal', done: false, repeat: 'Einmalig' },
   { id: 't5', title: 'Erste-Hilfe-Material kontrollieren', category: 'Sicherheit', studio: 'Dörpen', person: 'Studioleitung', due: '2026-11-02', priority: 'Hoch', done: false, repeat: 'Monatlich' },
-  { id: 't6', title: 'Telefonleitfaden im Team besprechen', category: 'Team', studio: 'Studio 04', person: 'Studioleitung', due: today, priority: 'Normal', done: true, repeat: 'Einmalig' },
-  { id: 't7', title: 'Monatliche Inventur durchführen', category: 'Lager', studio: 'Studio 05', person: 'Studioleitung', due: '2026-11-06', priority: 'Normal', done: false, repeat: 'Monatlich' },
+  { id: 't6', title: 'Telefonleitfaden im Team besprechen', category: 'Team', studio: 'Lathen', person: 'Studioleitung', due: today, priority: 'Normal', done: true, repeat: 'Einmalig' },
+  { id: 't7', title: 'Monatliche Inventur durchführen', category: 'Lager', studio: 'Haselünne', person: 'Studioleitung', due: '2026-11-06', priority: 'Normal', done: false, repeat: 'Monatlich' },
 ];
 export const initialDocs = [
   { id: 'd1', title: 'Unser Telefonleitfaden', category: 'Empfang & Service', type: 'Leitfaden', studio: 'Alle Studios', date: today, size: 'Beispielinhalt', tags: ['Telefon', 'Empfang', 'Anruf', 'Probetraining'], content: 'Beispielleitfaden: Begrüße Anrufer freundlich mit Studionamen und deinem Namen. Frage nach ihrem Trainingsziel. Biete ein persönliches Beratungsgespräch an. Bestätige Termin, Standort und Ansprechpartner. Dokumentiere das Gespräch und die vereinbarten nächsten Schritte im CRM. Dieser Musterinhalt muss vor dem Einsatz durch eure freigegebene Anleitung ersetzt werden.' },
@@ -22,22 +22,22 @@ export const initialCourses = [
 ];
 export const initialLeads = [
   { id: 'l1', name: 'Interessent A', source: 'Website', studio: 'Dörpen', stage: 'Neue Leads', channel: 'E-Mail', consent: false },
-  { id: 'l2', name: 'Interessent B', source: 'Rückenfit-Aktion', studio: 'Studio 02', stage: 'Nicht erreicht', channel: 'WhatsApp', consent: true },
+  { id: 'l2', name: 'Interessent B', source: 'Rückenfit-Aktion', studio: 'Sögel', stage: 'Nicht erreicht', channel: 'WhatsApp', consent: true },
   { id: 'l3', name: 'Interessent C', source: 'Probetraining', studio: 'Dörpen', stage: 'Wiedervorlage', channel: 'E-Mail', consent: true },
-  { id: 'l4', name: 'Interessent D', source: 'Website', studio: 'Studio 03', stage: 'Terminiert', channel: 'WhatsApp', consent: true },
-  { id: 'l5', name: 'Interessent E', source: 'Testmitgliedschaft', studio: 'Studio 04', stage: 'Testaktion', channel: 'E-Mail', consent: true },
+  { id: 'l4', name: 'Interessent D', source: 'Website', studio: 'Bersenbrück', stage: 'Terminiert', channel: 'WhatsApp', consent: true },
+  { id: 'l5', name: 'Interessent E', source: 'Testmitgliedschaft', studio: 'Lathen', stage: 'Testaktion', channel: 'E-Mail', consent: true },
 ];
 export const stages = ['Neue Leads', 'Nicht erreicht', 'Wiedervorlage', 'Terminiert', 'Nicht erschienen', 'Follow-up nach Beratung', 'Testaktion', 'Gewonnen', 'Verloren', 'Abgebrochen'];
 export const initialInventory = [
   { id: 'i1', name: 'Whey Protein · Vanille', unit: 'Dose · 1 kg', category: 'Protein', studio: 'Dörpen', stock: 2, min: 5, target: 10, supplier: 'Noch festzulegen' },
   { id: 'i2', name: 'Whey Protein · Schokolade', unit: 'Dose · 1 kg', category: 'Protein', studio: 'Dörpen', stock: 8, min: 5, target: 10, supplier: 'Noch festzulegen' },
-  { id: 'i3', name: 'Mineralwasser', unit: 'Flasche · 0,5 l', category: 'Getränke', studio: 'Studio 02', stock: 12, min: 24, target: 48, supplier: 'Noch festzulegen' },
+  { id: 'i3', name: 'Mineralwasser', unit: 'Flasche · 0,5 l', category: 'Getränke', studio: 'Sögel', stock: 12, min: 24, target: 48, supplier: 'Noch festzulegen' },
   { id: 'i4', name: 'Desinfektionsmittel', unit: 'Kanister · 5 l', category: 'Verbrauch', studio: 'Dörpen', stock: 6, min: 3, target: 6, supplier: 'Noch festzulegen' },
 ];
 export const initialEquipment = [
   { id: 'e1', name: 'Laufband 01', model: 'Cardio · Beispielgerät', serial: 'DEMO-LB-001', studio: 'Dörpen', status: 'Wartung fällig', due: today, service: 'Noch nicht hinterlegt' },
   { id: 'e2', name: 'Beinpresse', model: 'Kraft · Beispielgerät', serial: 'DEMO-BP-002', studio: 'Dörpen', status: 'Betriebsbereit', due: '2026-12-10', service: 'Noch nicht hinterlegt' },
-  { id: 'e3', name: 'Crosstrainer 02', model: 'Cardio · Beispielgerät', serial: 'DEMO-CT-003', studio: 'Studio 02', status: 'Außer Betrieb', due: '2026-11-05', service: 'Noch nicht hinterlegt' },
+  { id: 'e3', name: 'Crosstrainer 02', model: 'Cardio · Beispielgerät', serial: 'DEMO-CT-003', studio: 'Sögel', status: 'Außer Betrieb', due: '2026-11-05', service: 'Noch nicht hinterlegt' },
 ];
 export const initialCampaigns = [
   { id: 'm1', name: 'Gemeinsam fit durch den Winter', desc: 'Die Winteraktion für alle sieben Studios.', channel: 'E-Mail & WhatsApp', studio: 'Alle Studios', status: 'In Planung', start: '2026-11-16', budget: 1500, color: 'orange' },
@@ -56,5 +56,5 @@ export const initialContacts = [
 export const initialNotices = [
   { id: 'notice-1', title: 'Gerätestörungen direkt melden', body: 'Beispielhinweis: Bei einer Störung Gerät kennzeichnen und die Studioleitung informieren. Den Musterablauf findest du im Wissenshub.', studio: 'Alle Studios', priority: 'Wichtig', target: 'knowledge', expires: '2026-12-31' },
   { id: 'notice-2', title: 'Dein nächster Lernschritt wartet', body: 'Beispielhinweis: Nimm dir Zeit für deine Einarbeitung. Deinen persönlichen Fortschritt findest du direkt im Lernhub.', studio: 'Alle Studios', priority: 'Info', target: 'learning', expires: '2026-12-31' },
-  { id: 'notice-3', title: 'Inventur am Freitag vorbereiten', body: 'Beispielhinweis für Studio 05: Bestände vor Ort zählen und mit der Lagerübersicht abgleichen.', studio: 'Studio 05', priority: 'Wichtig', target: 'inventory', expires: '2026-11-06' },
+  { id: 'notice-3', title: 'Inventur am Freitag vorbereiten', body: 'Beispielhinweis für Haselünne: Bestände vor Ort zählen und mit der Lagerübersicht abgleichen.', studio: 'Haselünne', priority: 'Wichtig', target: 'inventory', expires: '2026-11-06' },
 ];

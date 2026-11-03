@@ -32,7 +32,7 @@ test('create, filter, complete and persist a recurring task', async ({ page }) =
   await page.getByRole('textbox', { name: '', exact: true }).fill('Wiederkehrende Browserprüfung');
   await page.getByRole('button', { name: 'Erledigt', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Wiederkehrende Browserprüfung', exact: true })).toHaveCount(1);
-  await page.getByLabel('Studio auswählen').selectOption('Studio 07');
+  await page.getByLabel('Studio auswählen').selectOption('Werlte');
   await expect(page.getByRole('button', { name: 'Wiederkehrende Browserprüfung', exact: true })).toHaveCount(0);
 });
 
@@ -184,13 +184,13 @@ test('employee dashboard isolates assigned tasks, notice acknowledgements and le
 test('studio notices reach the right dashboard and personal statistics update', async ({ page }) => {
   await page.goto('/#employee');
   await page.getByRole('button', { name: 'Hinweis erstellen' }).click();
-  await page.getByLabel('Titel des Hinweises').fill('Testhinweis nur für Studio 02');
+  await page.getByLabel('Titel des Hinweises').fill('Testhinweis nur für Sögel');
   await page.getByLabel('Mitteilung', { exact: true }).fill('Eine organisatorische Information für das Team.');
-  await page.getByRole('dialog').getByLabel('Standort').selectOption('Studio 02');
+  await page.getByRole('dialog').getByLabel('Standort').selectOption('Sögel');
   await page.getByRole('button', { name: 'Hinweis lokal veröffentlichen' }).click();
-  await expect(page.getByRole('heading', { name: 'Testhinweis nur für Studio 02' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Testhinweis nur für Sögel' })).toBeVisible();
   await page.getByLabel('Mitarbeiteransicht auswählen').selectOption('p2');
-  await expect(page.getByRole('heading', { name: 'Testhinweis nur für Studio 02' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Testhinweis nur für Sögel' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Bestand an Proteinshakes prüfen erledigen' }).click();
   await page.goto('/#statistics');
   await expect(page.locator('.personal-statistics')).toContainText('Studioleitung');

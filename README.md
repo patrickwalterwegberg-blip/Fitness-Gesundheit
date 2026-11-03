@@ -18,7 +18,7 @@ npm run dev -- --port 5173
 npm run build
 ```
 
-`dist/Teamhub.html` ist eine eigenständig öffnungsfähige HTML-Datei inklusive JavaScript, CSS, Icons und Schriften. Sie kann heruntergeladen und direkt im Browser geöffnet werden. Alternativ `npm run preview` für den gebauten Stand starten. Die `dist`-Dateien lassen sich auf einem statischen Webhost veröffentlichen; eine Veröffentlichung ist noch nicht erfolgt.
+`dist/Teamhub.html` ist eine eigenständig öffnungsfähige HTML-Datei inklusive JavaScript, CSS, Icons und Schriften. Sie kann heruntergeladen und direkt im Browser geöffnet werden. Alternativ `npm run preview` für den gebauten Stand starten. Die `dist`-Dateien lassen sich auf einem statischen Webhost veröffentlichen. GitHub Pages wurde laut Deploymentanzeige und Bestätigung des Nutzers aktiviert; jeder neue Stand muss über den Build-Workflow bereitgestellt werden.
 
 ## GitHub Pages
 
@@ -34,11 +34,11 @@ npm test
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Zwölf Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Bestellung und Wareneingang, CRM-Stufen, persönlichen Lernfortschritt sowie mobile Bedienung ab. Das Mitarbeiterdashboard wird auf aufgabengenaue Zuweisung, standortbezogene Hinweise und getrennte Lesebestätigungen getestet. Die externe Statistikansicht wird mit einer simulierten Antwort geprüft; der tatsächliche externe Dienst konnte nicht verifiziert werden. Die Vorschau verwendet feste Beispieldaten zum 3. November 2026.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Bestellung und Wareneingang, CRM-Stufen, persönlichen Lernfortschritt sowie mobile Bedienung ab. Das Mitarbeiterdashboard wird auf aufgabengenaue Zuweisung, standortbezogene Hinweise und getrennte Lesebestätigungen getestet. Die externe Statistikansicht wird mit einer simulierten Antwort geprüft; der tatsächliche externe Dienst konnte nicht verifiziert werden. Die Vorschau verwendet feste Beispieldaten zum 3. November 2026.
 
 ## Funktionsumfang
 
-- Gesamtübersicht und Studiofilter (Dörpen; weitere sechs Studionamen sind Platzhalter)
+- Gesamtübersicht und Studiofilter für Sögel, Bersenbrück, Dörpen, Lathen, Haselünne, Löningen und Werlte
 - Persönliches Mitarbeiterdashboard mit Profilwahl, eigenen Aufgaben und Terminen, wichtigen Studiohinweisen mit Lesebestätigung, getrenntem Lernfortschritt und Schnellzugriffen
 - Aufgaben mit Verantwortlichen, Prioritäten und Wiederholungen; Kalender
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
@@ -65,3 +65,7 @@ Anonymes Feedback enthält kein Autor- oder Mitarbeiterfeld. Inhalt, Thema und S
 1&1, Dropbox, GoHighLevel und WhatsApp sind **nicht verbunden**. Einladungen, Erinnerungen, Kampagnen, Feedback und Bestellungen werden nicht versendet. Postfachpasswörter werden nicht abgefragt oder gespeichert. Das Mitarbeiterprofil ist ein Demo-Profil. Der globale Studiofilter ist eine Ansichtsauswahl und kein Zugriffsschutz.
 
 Für den Produktivbetrieb fehlen insbesondere Backend und Datenbank, authentifizierte Accounts und serverseitige Rollenrechte, sichere Dateiverarbeitung, verbindliche Feedback-Meldewege, geplanter E-Mail-Versand, überwachte Integrationen, Backups sowie die freigegebenen echten Inhalte und Standortdaten.
+
+## Bestehende Browserdaten nach der Standortbenennung
+
+Gespeicherte nummerierte Demo-Standorte werden beim Laden automatisch und wiederholbar umbenannt: Studio 02 → Sögel, Studio 03 → Bersenbrück, Studio 04 → Lathen, Studio 05 → Haselünne, Studio 06 → Löningen, Studio 07 → Werlte. Dörpen bleibt unverändert. Die Auswahl sowie Aufgaben, Dateien, Kontakte, Mitarbeiter, Hinweise, Geräte, Lager und Bestellungen behalten ihre übrigen Daten. Freitexte und hochgeladene Originaldateien werden nicht verändert; nur der ursprüngliche mitgelieferte Inventurhinweis wird angepasst. Es ist kein Löschen des Browser-Speichers notwendig.
