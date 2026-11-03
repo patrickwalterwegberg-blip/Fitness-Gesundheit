@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
+test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-03T09:00:00+01:00')); });
+
 test('dashboard and all modules render without runtime errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));

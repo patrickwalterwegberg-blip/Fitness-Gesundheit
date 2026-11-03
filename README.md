@@ -1,6 +1,6 @@
 # Fitness & Gesundheit · Teamhub
 
-Eigenständiger, responsiver Frontend-Prototyp für sieben Studios. Keine Abhängigkeit von der Unternehmenswebseite, keine extern geladenen Schriftdateien oder Bilder. Die vom Nutzer vorgegebene Fitness- und Gesundheitsgestaltung verwendet Schwarz und Gold mit hellen Inhaltsflächen für gute Lesbarkeit. Die exakte Gestaltung der Unternehmenswebseite konnte beim Aufbau nicht abgerufen werden.
+Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Module sind weiterhin eine lokale Demo. Ein separater Teamzugang mit E-Mail-Anmeldung und gemeinsam gespeicherten Aufgaben ist über Supabase vorbereitet, aber ohne Projekt noch nicht aktiv. Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
 
 ## Entwickeln
 
@@ -30,17 +30,21 @@ Anschließend den Workflow **Teamhub veröffentlichen** unter **Actions** ausfü
 
 ```sh
 npm test
+npm run test:db
 ```
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Bestellung und Wareneingang, CRM-Stufen, persönlichen Lernfortschritt sowie mobile Bedienung ab. Das Mitarbeiterdashboard wird auf aufgabengenaue Zuweisung, standortbezogene Hinweise und getrennte Lesebestätigungen getestet. Die externe Statistikansicht wird mit einer simulierten Antwort geprüft; der tatsächliche externe Dienst konnte nicht verifiziert werden. Die Vorschau verwendet feste Beispieldaten zum 3. November 2026.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Der Teamzugang wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. Zwölf zusätzliche PostgreSQL/PGlite-Prüfungen führen die echten SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
+
+Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich beim Tageswechsel. Die Browserprüfungen fixieren ihre eigene Uhr, um wiederholbare Ergebnisse zu erhalten. Einzelne ursprüngliche Demoereignisse enthalten weiterhin feste Beispieldaten.
 
 ## Funktionsumfang
 
 - Gesamtübersicht und Studiofilter für Sögel, Bersenbrück, Dörpen, Lathen, Haselünne, Löningen und Werlte
 - Persönliches Mitarbeiterdashboard mit Profilwahl, eigenen Aufgaben und Terminen, wichtigen Studiohinweisen mit Lesebestätigung, getrenntem Lernfortschritt und Schnellzugriffen
-- Aufgaben mit Verantwortlichen, Prioritäten und Wiederholungen; Kalender
+- Aufgaben mit standortbezogenen Verantwortlichen, Prioritäten, Wiederholungen, Beschreibung, Bearbeitung, Status, Rückmeldungen und lokalem Verlauf; Kalender mit aktuellem Datum
+- Separater Teamzugang für echte E-Mail-Anmeldung, serverseitige Rollen und gemeinsame einmalige Aufgaben mit Rückmeldungen (Projektkonfiguration erforderlich)
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
 - Lernhub mit Beispiellektionen und gespeichertem Fortschritt
 - Mitarbeiterprofile; keine echten Benutzerkonten
@@ -56,7 +60,9 @@ Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folge
 
 ## Daten und Grenzen
 
-Dies ist eine interaktive Demonstration, kein produktives Mitarbeitersystem. Datensätze liegen in `localStorage`, hochgeladene Dateien in IndexedDB des verwendeten Browsers. Die Daten sind nicht zwischen Geräten oder Mitarbeitern synchronisiert. Ein Wechsel von Datei-Öffnung zu einem Webhost verwendet einen anderen Browser-Speicher. Keine sensiblen, personenbezogenen oder echten betrieblichen Daten eingeben. Der Browser-Speicher kann vom Nutzer gelöscht oder vom Browser verworfen werden.
+In der **Demo** liegen Datensätze in `localStorage`, Dateien in IndexedDB. Diese Daten werden nicht zwischen Geräten synchronisiert und nicht automatisch an ein Backend übertragen. Ein Wechsel von Datei-Öffnung zu einem Webhost verwendet einen anderen Browser-Speicher. Keine sensiblen oder echten betrieblichen Daten in der Demo eingeben; Browser-Speicher kann gelöscht oder verworfen werden.
+
+Der **Teamzugang** verwendet ausschließlich Supabase-Anmeldung und Datenbanktabellen, sobald das Projekt konfiguriert ist. Ohne Konfiguration zeigt er nur die Einrichtungshilfe. Er lädt keine lokalen Demoaufgaben. Die Anbindung umfasst zunächst einmalige Aufgaben und Rückmeldungen; weitere Module und Automatisierungen müssen separat migriert werden. Authentifizierung, E-Mail-Zustellung und Regeln im echten Projekt sind vor Nutzung zu prüfen. Siehe [Einrichtung Schritt für Schritt](docs/BACKEND.md).
 
 Der Assistent durchsucht freigegebene TXT-, Markdown- und CSV-Texte (maximal 60.000 Zeichen je Datei) und vorbereitete Beispieldokumente. PDF, Office, Bild und Video werden gespeichert, aber nicht ausgelesen. Upload-Limit: 20 MB pro Datei. Hochgeladener Inhalt wird als Text angezeigt und nie als HTML ausgeführt. Dateien sind noch nicht serverseitig auf Schadsoftware geprüft.
 
@@ -64,7 +70,7 @@ Anonymes Feedback enthält kein Autor- oder Mitarbeiterfeld. Inhalt, Thema und S
 
 1&1, Dropbox, GoHighLevel und WhatsApp sind **nicht verbunden**. Einladungen, Erinnerungen, Kampagnen, Feedback und Bestellungen werden nicht versendet. Postfachpasswörter werden nicht abgefragt oder gespeichert. Das Mitarbeiterprofil ist ein Demo-Profil. Der globale Studiofilter ist eine Ansichtsauswahl und kein Zugriffsschutz.
 
-Für den Produktivbetrieb fehlen insbesondere Backend und Datenbank, authentifizierte Accounts und serverseitige Rollenrechte, sichere Dateiverarbeitung, verbindliche Feedback-Meldewege, geplanter E-Mail-Versand, überwachte Integrationen, Backups sowie die freigegebenen echten Inhalte und Standortdaten.
+Für den Produktivbetrieb fehlen insbesondere die Bereitstellung und Konfiguration des Backend-Projekts, echte Accounts und geprüfte Zustellung, sichere Dateiverarbeitung, verbindliche Feedback-Meldewege, geplante Erinnerungen, überwachte Integrationen, Backups sowie freigegebene echte Inhalte. SQL-Schema, Zugriffsschutz und erste Anmelde-/Aufgabenoberfläche sind vorbereitet und lokal getestet; sie sind noch nicht in einem echten Projekt validiert.
 
 ## Bestehende Browserdaten nach der Standortbenennung
 

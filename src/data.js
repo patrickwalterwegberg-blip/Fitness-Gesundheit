@@ -1,5 +1,6 @@
 export { studios } from './studios';
-export const today = '2026-11-03';
+import { berlinDay } from './clock';
+export const today = berlinDay();
 export const initialTasks = [
   { id: 't1', title: 'Wartung der Trainingsgeräte koordinieren', category: 'Technik', studio: 'Dörpen', person: 'Patrick Walter', due: today, priority: 'Hoch', done: false, repeat: 'Monatlich' },
   { id: 't2', title: 'Material für die Winteraktion vorbereiten', category: 'Marketing', studio: 'Sögel', person: 'Marketing-Team', due: today, priority: 'Normal', done: false, repeat: 'Einmalig' },

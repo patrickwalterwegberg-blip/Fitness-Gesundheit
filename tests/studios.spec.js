@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 const sites = ['Sögel', 'Bersenbrück', 'Dörpen', 'Lathen', 'Haselünne', 'Löningen', 'Werlte'];
 
+test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-03T09:00:00+01:00')); });
+
 test('all real studio names appear in selection, task assignment and statistics', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByLabel('Studio auswählen').locator('option')).toHaveText(['Alle Studios', ...sites]);

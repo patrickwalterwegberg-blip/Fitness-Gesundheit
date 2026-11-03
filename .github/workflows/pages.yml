@@ -28,8 +28,13 @@ jobs:
           cache: npm
       - name: Abhängigkeiten installieren
         run: npm ci --no-audit --no-fund
+      - name: Datenbank-Berechtigungen prüfen
+        run: npm run test:db
       - name: Eigenständige Webseite erstellen
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - name: GitHub Pages vorbereiten
         uses: actions/configure-pages@v5
       - name: Webseite bereitstellen
