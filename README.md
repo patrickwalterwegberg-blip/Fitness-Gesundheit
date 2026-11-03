@@ -1,6 +1,6 @@
 # Fitness & Gesundheit · Teamhub
 
-Eigenständiger, responsiver Frontend-Prototyp für sieben Studios. Keine Abhängigkeit von der Unternehmenswebseite, keine extern geladenen Schriftdateien oder Bilder. Die aktuelle Gestaltung ist vorläufig; die Unternehmenswebseite konnte beim Aufbau nicht abgerufen werden.
+Eigenständiger, responsiver Frontend-Prototyp für sieben Studios. Keine Abhängigkeit von der Unternehmenswebseite, keine extern geladenen Schriftdateien oder Bilder. Die vom Nutzer vorgegebene Fitness- und Gesundheitsgestaltung verwendet Schwarz und Gold mit hellen Inhaltsflächen für gute Lesbarkeit. Die exakte Gestaltung der Unternehmenswebseite konnte beim Aufbau nicht abgerufen werden.
 
 ## Entwickeln
 
@@ -34,11 +34,12 @@ npm test
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Geprüft werden Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Bestellung und Wareneingang, CRM-Stufen, Lernfortschritt sowie mobile Bedienung. Die Vorschau verwendet feste Beispieldaten zum 3. November 2026.
+Zwölf Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Bestellung und Wareneingang, CRM-Stufen, persönlichen Lernfortschritt sowie mobile Bedienung ab. Das Mitarbeiterdashboard wird auf aufgabengenaue Zuweisung, standortbezogene Hinweise und getrennte Lesebestätigungen getestet. Die externe Statistikansicht wird mit einer simulierten Antwort geprüft; der tatsächliche externe Dienst konnte nicht verifiziert werden. Die Vorschau verwendet feste Beispieldaten zum 3. November 2026.
 
 ## Funktionsumfang
 
-- Dashboard und Studiofilter (Dörpen; weitere sechs Studionamen sind Platzhalter)
+- Gesamtübersicht und Studiofilter (Dörpen; weitere sechs Studionamen sind Platzhalter)
+- Persönliches Mitarbeiterdashboard mit Profilwahl, eigenen Aufgaben und Terminen, wichtigen Studiohinweisen mit Lesebestätigung, getrenntem Lernfortschritt und Schnellzugriffen
 - Aufgaben mit Verantwortlichen, Prioritäten und Wiederholungen; Kalender
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
 - Lernhub mit Beispiellektionen und gespeichertem Fortschritt
@@ -48,7 +49,7 @@ Geprüft werden Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen,
 - Marketingkampagnen als interne Planung
 - Geräte mit Seriennummern und Status, Serviceaufgaben
 - Bestände, lokale Bestellvorgänge und Wareneingang je Studio
-- Aus lokalen Datensätzen berechnete Statistik und CSV-Export; Link zur vorhandenen Statistikseite
+- Persönliche und standortbezogene Statistik aus lokalen Datensätzen, CSV-Export sowie zusätzliche eingebettete Ansicht der vorhandenen Statistikseite mit Link als Alternative. Echte externe Zahlen werden nicht importiert; der externe Anbieter kann die Einbettung blockieren.
 - Interne Kontakte, separates Notrufangebot 112
 - Dokumentenassistent: lokale Stichwortsuche mit Quellen, keine angebundene generative KI
 - Einstellungsübersicht der noch einzurichtenden Integrationen

@@ -9,7 +9,7 @@ test('dashboard and all modules render without runtime errors', async ({ page })
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Guten Morgen, Patrick' })).toBeVisible();
   await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true });
-  for (const route of ['tasks', 'calendar', 'knowledge', 'files', 'learning', 'team', 'feedback', 'crm', 'marketing', 'equipment', 'inventory', 'statistics', 'contacts', 'mail', 'settings', 'assistant']) {
+  for (const route of ['employee', 'tasks', 'calendar', 'knowledge', 'files', 'learning', 'team', 'feedback', 'crm', 'marketing', 'equipment', 'inventory', 'statistics', 'contacts', 'mail', 'settings', 'assistant']) {
     await page.goto('/#' + route);
     await expect(page.locator('main h1')).toBeVisible();
   }
@@ -154,4 +154,61 @@ test('standalone HTML needs no asset requests and keeps local interactions offli
   await expect(page.getByRole('button', { name: 'Offline-Testaufgabe', exact: true })).toBeVisible();
   expect(errors).toEqual([]);
   expect(requests).toEqual(['http://127.0.0.1:5173/standalone-validation']);
+});
+
+test('employee dashboard isolates assigned tasks, notice acknowledgements and learning progress', async ({ page }) => {
+  await page.goto('/#employee');
+  await expect(page.locator('.employee-tasks')).toContainText('Wartung der Trainingsgeräte koordinieren');
+  await expect(page.locator('.employee-tasks')).not.toContainText('Bestand an Proteinshakes prüfen');
+  await page.getByLabel('Mitarbeiteransicht auswählen').selectOption('p2');
+  await expect(page.locator('.employee-tasks')).toContainText('Bestand an Proteinshakes prüfen');
+  await expect(page.locator('.employee-tasks')).not.toContainText('Wartung der Trainingsgeräte koordinieren');
+  await expect(page.locator('.employee-tasks')).not.toContainText('Neue Mitarbeiterin im Empfang einarbeiten');
+  await page.getByRole('button', { name: 'Gerätestörungen direkt melden als gelesen markieren' }).click();
+  await page.locator('.employee-learning').getByRole('button', { name: 'Weiterlernen', exact: true }).click();
+  await page.getByRole('button', { name: 'Gelesen & verstanden', exact: true }).click();
+  await page.getByRole('button', { name: 'Schließen', exact: true }).click();
+  await page.reload();
+  await expect(page.getByLabel('Mitarbeiteransicht auswählen')).toHaveValue('p2');
+  await expect(page.getByRole('button', { name: 'Gerätestörungen direkt melden als ungelesen markieren' })).toHaveAttribute('aria-pressed', 'true');
+  const progress = await page.evaluate(() => JSON.parse(localStorage.getItem('fg-hub-learning-progress')));
+  expect(progress.p2.c1).toEqual([0]);
+  await page.getByLabel('Mitarbeiteransicht auswählen').selectOption('p1');
+  await expect(page.getByRole('button', { name: 'Gerätestörungen direkt melden als gelesen markieren' })).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Alle meine Aufgaben' }).click();
+  await expect(page.getByLabel('Aufgabenansicht')).toHaveValue('mine');
+  await expect(page.getByRole('button', { name: 'Wartung der Trainingsgeräte koordinieren', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Bestand an Proteinshakes prüfen', exact: true })).toHaveCount(0);
+});
+
+test('studio notices reach the right dashboard and personal statistics update', async ({ page }) => {
+  await page.goto('/#employee');
+  await page.getByRole('button', { name: 'Hinweis erstellen' }).click();
+  await page.getByLabel('Titel des Hinweises').fill('Testhinweis nur für Studio 02');
+  await page.getByLabel('Mitteilung', { exact: true }).fill('Eine organisatorische Information für das Team.');
+  await page.getByRole('dialog').getByLabel('Standort').selectOption('Studio 02');
+  await page.getByRole('button', { name: 'Hinweis lokal veröffentlichen' }).click();
+  await expect(page.getByRole('heading', { name: 'Testhinweis nur für Studio 02' })).toBeVisible();
+  await page.getByLabel('Mitarbeiteransicht auswählen').selectOption('p2');
+  await expect(page.getByRole('heading', { name: 'Testhinweis nur für Studio 02' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Bestand an Proteinshakes prüfen erledigen' }).click();
+  await page.goto('/#statistics');
+  await expect(page.locator('.personal-statistics')).toContainText('Studioleitung');
+  await expect(page.locator('.personal-statistics strong').first()).toContainText('1');
+  await expect(page.locator('iframe')).toHaveCount(0);
+  // Inspect the external-view integration without relying on the external host.
+  await page.route('https://fg-gmbh-statistiken-2026.pwalter98.chatgpt.site/**', route => route.fulfill({ contentType: 'text/html', body: '<h1>Externe Statistik-Testseite</h1>' }));
+  await page.getByRole('button', { name: 'Bestehende Statistikseite', exact: true }).click();
+  await expect(page.getByTitle('Bestehende Statistikseite der FG GmbH 2026')).toHaveAttribute('src', 'https://fg-gmbh-statistiken-2026.pwalter98.chatgpt.site/');
+  await expect(page.getByRole('link', { name: 'Separat öffnen' })).toHaveAttribute('href', 'https://fg-gmbh-statistiken-2026.pwalter98.chatgpt.site/');
+});
+
+test('employee dashboard fits a mobile screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/#employee');
+  await page.getByLabel('Mitarbeiteransicht auswählen').selectOption('p2');
+  await expect(page.getByRole('heading', { name: 'Hallo, Studioleitung' })).toBeVisible();
+  await page.getByRole('button', { name: 'Gerätestörungen direkt melden als gelesen markieren' }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/employee-dashboard-mobile.png', fullPage: true });
 });

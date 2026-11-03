@@ -53,3 +53,8 @@ export const initialContacts = [
   { id: 'n2', name: 'Geräteservice', category: 'Technik & Geräte', studio: 'Alle Studios', phone: '', deputy: 'Noch festzulegen' },
   { id: 'n3', name: 'Zentrale Anlaufstelle', category: 'Allgemeine Anliegen', studio: 'Alle Studios', phone: '', deputy: 'Noch festzulegen' },
 ];
+export const initialNotices = [
+  { id: 'notice-1', title: 'Gerätestörungen direkt melden', body: 'Beispielhinweis: Bei einer Störung Gerät kennzeichnen und die Studioleitung informieren. Den Musterablauf findest du im Wissenshub.', studio: 'Alle Studios', priority: 'Wichtig', target: 'knowledge', expires: '2026-12-31' },
+  { id: 'notice-2', title: 'Dein nächster Lernschritt wartet', body: 'Beispielhinweis: Nimm dir Zeit für deine Einarbeitung. Deinen persönlichen Fortschritt findest du direkt im Lernhub.', studio: 'Alle Studios', priority: 'Info', target: 'learning', expires: '2026-12-31' },
+  { id: 'notice-3', title: 'Inventur am Freitag vorbereiten', body: 'Beispielhinweis für Studio 05: Bestände vor Ort zählen und mit der Lagerübersicht abgleichen.', studio: 'Studio 05', priority: 'Wichtig', target: 'inventory', expires: '2026-11-06' },
+];
