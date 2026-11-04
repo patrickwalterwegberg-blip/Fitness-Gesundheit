@@ -125,3 +125,29 @@ test('shared knowledge editor fits a phone', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/shared-knowledge-mobile.png', fullPage: true });
 });
+
+test('switching accounts clears the previous document before the new profile loads', async ({ page }) => {
+  await sharedBackend(page); await files(page);
+  await article(page, 'Privater Adminentwurf', 'Dieser Inhalt gehört zur vorherigen Sitzung.');
+  await expect(page.locator('.knowledge-article')).toBeVisible();
+  const nextUser = '00000000-0000-4000-8000-000000000009';
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('https://teamhub-test.supabase.co/rest/v1/profiles*', async route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('id') !== 'eq.' + nextUser) return route.fallback();
+    await gate;
+    return route.fulfill({ contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify([{ id: nextUser, full_name: 'Neue Person', role: 'employee', active: true }]) });
+  });
+  await page.evaluate(id => {
+    const key = 'sb-teamhub-test-auth-token';
+    const previous = JSON.parse(localStorage.getItem(key));
+    const session = { ...previous, user: { ...previous.user, id, email: 'neu@example.org' } };
+    localStorage.setItem(key, JSON.stringify(session));
+    const channel = new BroadcastChannel(key); channel.postMessage({ event: 'SIGNED_IN', session }); channel.close();
+  }, nextUser);
+  try { await expect(page.locator('.knowledge-article')).toHaveCount(0); }
+  finally { release(); }
+  await expect(page.getByRole('heading', { name: 'Hallo, Neue.', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true })).toHaveCount(0);
+});

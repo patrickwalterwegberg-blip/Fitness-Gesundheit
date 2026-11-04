@@ -60,8 +60,11 @@ export default function TeamWorkspace({ onDemo, config = backendConfig() }) {
     let live = true;
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, current) => {
       if (!live) return;
+      const currentId = current?.user.id || null;
+      const changedUser = activeUserId.current !== currentId;
+      activeUserId.current = currentId;
       setSession(current); setAuthLoading(false);
-      if (!current) { setProfile(null); setTasks([]); setComments([]); setSelected(null); setPeople([]); setSites([]); setMemberships([]); }
+      if (!current || changedUser) { request.current++; setProfile(null); setTasks([]); setTotal(0); setComments([]); setSelected(null); setEditor(null); setPeople([]); setSites([]); setMemberships([]); setArea('tasks'); setExtensionEntity(null); setPage(0); setSite('all'); setFilter('open'); }
     });
     const callbackError = new URLSearchParams(location.hash.slice(1)).has('error');
     client.auth.getSession().then(({ data, error: authError }) => { if (!live) return; setSession(data.session); setAuthLoading(false); if (data.session || callbackError) { const url = new URL(location.href); if (data.session) url.searchParams.delete('team'); url.hash = 'workspace'; history.replaceState(null, '', url.href); } if (authError || callbackError) setError('Der Anmeldelink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'); }).catch(() => { if (live) { setAuthLoading(false); setError('Die Anmeldung konnte nicht geprüft werden. Bitte lade die Seite erneut.'); } });
