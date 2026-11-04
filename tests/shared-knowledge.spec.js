@@ -126,6 +126,51 @@ test('shared knowledge editor fits a phone', async ({ page }) => {
   await page.screenshot({ path: 'test-results/shared-knowledge-mobile.png', fullPage: true });
 });
 
+test('an uploaded draft can be found, released and displayed in knowledge with filters reset', async ({ page }) => {
+  const backend = await sharedBackend(page); await files(page);
+  await upload(page, 'studio-anleitung.txt', 'text/plain', Buffer.from('Freigegebene Studioanleitung.'));
+  await expect(page.getByRole('status')).toContainText('Entwurf gemeinsam gespeichert');
+  await expect(page.locator('.knowledge-detail')).toContainText('Dieser Inhalt ist ein Entwurf');
+  await page.getByRole('button', { name: 'Wissenshub', exact: true }).click();
+  await expect(page.locator('.knowledge-empty')).toContainText('Neue Uploads bleiben bis zur Freigabe');
+  await page.getByRole('button', { name: 'Sichtbare Entwürfe anzeigen', exact: true }).click();
+  const card = page.locator('.shared-document-card').filter({ has: page.getByRole('heading', { name: 'studio-anleitung.txt', exact: true }) });
+  await card.click();
+  await expect(page.getByRole('button', { name: 'Version freigeben', exact: true })).toBeInViewport();
+  await page.getByRole('button', { name: 'Version freigeben', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Version freigegeben');
+  await expect(page.getByLabel('Freigabestatus', { exact: true })).toHaveValue('published');
+  await expect(card).toBeVisible();
+  await page.getByLabel('Thema', { exact: true }).selectOption('Einarbeitung');
+  await expect(card).toHaveCount(0);
+  await page.getByRole('button', { name: 'Filter zurücksetzen', exact: true }).click();
+  await expect(card).toBeVisible();
+  expect(backend.documents[0].published_version_id).toBe(backend.versions[0].id);
+});
+
+test('published files open the shared knowledge view directly', async ({ page }) => {
+  await sharedBackend(page); await files(page);
+  await upload(page, 'regelwerk.txt', 'text/plain', Buffer.from('Studio-Regelwerk.'));
+  await page.getByRole('button', { name: 'Version freigeben', exact: true }).click();
+  await page.getByRole('button', { name: 'Wissenshub öffnen', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Gutes Wissen. Für dein Team.', exact: true })).toBeVisible();
+  await expect(page.locator('.shared-document-card').filter({ hasText: 'regelwerk.txt' })).toBeVisible();
+});
+
+test('unfinished upload removal cannot report success after a Storage failure', async ({ page }) => {
+  const backend = await sharedBackend(page, { failUpload: true, failRemove: true }); await files(page);
+  await upload(page, 'unvollstaendig.txt', 'text/plain', Buffer.from('Unvollständig'));
+  await expect(page.getByRole('alert')).toContainText('unvollständiger Upload kann zurückgeblieben sein');
+  await page.getByRole('button', { name: 'Abbrechen', exact: true }).click();
+  await page.getByRole('button', { name: 'Dateien und Wissen aktualisieren', exact: true }).click();
+  await page.locator('.shared-document-card').filter({ hasText: 'unvollstaendig.txt' }).click();
+  await page.getByRole('button', { name: 'Unvollständigen Upload entfernen', exact: true }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('status')).toHaveCount(0);
+  expect(backend.versions).toHaveLength(1);
+  expect(backend.calls.some(c => c.path.endsWith('/cancel_knowledge_upload'))).toBe(false);
+});
+
 test('switching accounts clears the previous document before the new profile loads', async ({ page }) => {
   await sharedBackend(page); await files(page);
   await article(page, 'Privater Adminentwurf', 'Dieser Inhalt gehört zur vorherigen Sitzung.');

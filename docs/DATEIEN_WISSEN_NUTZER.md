@@ -25,6 +25,12 @@ Es werden keine neuen kostenpflichtigen Ressourcen gebucht. Dateien belegen Spei
 
 Für den Beginn eignen sich eine Empfangs-Arbeitsanweisung, eine Geräteanleitung, eine Einarbeitungsunterlage und eine Liste der Zuständigkeiten. Echte vertrauliche Inhalte erst nach Prüfung der Standort- und Rollenfreigaben mit getrennten Konten nutzen.
 
+### Ein Inhalt fehlt im Wissenshub
+
+Unter **Dateien** den Inhalt öffnen und den Status prüfen. **Entwurf speichern** legt eine noch nicht freigegebene Version an. **Version freigeben** steht für berechtigte Leitungen oben in den Details. Nach erfolgreicher Freigabe führt **Wissenshub öffnen** direkt zur Ansicht mit den veröffentlichten Inhalten. Beim Freigeben werden die aktiven Suchfilter zurückgesetzt, damit der gerade freigegebene Inhalt nicht durch den bisherigen Entwurfsfilter ausgeblendet bleibt.
+
+Ist ein Inhalt bereits freigegeben, **Filter zurücksetzen** verwenden. Ein leerer Wissenshub bietet außerdem **Sichtbare Entwürfe anzeigen** an; die vorhandenen Zugriffsregeln bleiben dabei wirksam. Fehlt die Datei auch unter **Dateien**, Uploadmeldungen und den verwendeten Bereich prüfen: Die lokale Demo ist von den gemeinsamen Dateien im echten Teamzugang getrennt.
+
 ### Dateien und Vorschauen
 
 Unterstützt werden PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, PNG, JPG/JPEG, WebP, TXT, Markdown, CSV sowie MP4 und WebM. Jede Datei darf maximal **50 MB** groß sein. Für längere Videos können später ein größerer Tarif beziehungsweise eine gesonderte Videoablage und Uploadtechnik nötig werden.

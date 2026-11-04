@@ -1,6 +1,6 @@
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 export const sharedIds = { user: id(1), colleague: id(2), studio: id(3), otherStudio: id(4) };
-export async function sharedBackend(page, { role = 'admin', failUpload = false, missingKnowledge = false, existingProfile = true } = {}) {
+export async function sharedBackend(page, { role = 'admin', failUpload = false, failRemove = false, missingKnowledge = false, existingProfile = true } = {}) {
   const calls = [], documents = [], versions = [];
   const profile = { id: id(1), full_name: 'Patrick Test', role, active: true };
   const user = { id: id(1), email: 'patrick@example.org', role: 'authenticated', aud: 'authenticated', user_metadata: {}, app_metadata: {} };
@@ -29,7 +29,7 @@ export async function sharedBackend(page, { role = 'admin', failUpload = false, 
     if (url.pathname === '/rest/v1/knowledge_versions') return send(versions.filter(v => url.searchParams.has('id') ? v.id === url.searchParams.get('id').slice(3) : v.document_id === url.searchParams.get('document_id')?.slice(3)).sort((a, b) => b.version - a.version));
     if (url.pathname === '/rest/v1/rpc/search_knowledge') {
       if (missingKnowledge) return send({ code: 'PGRST202', message: 'missing migration' }, 404);
-      const items = documents.filter(d => (body.p_state !== 'published' || d.published_version_id && !d.archived) && (body.p_state !== 'draft' || !d.published_version_id) && (body.p_state !== 'archived' || d.archived) && (!body.p_query || [d.title, d.summary, d.excerpt].join(' ').toLowerCase().includes(body.p_query.toLowerCase()))).map(d => ({ ...d, review_count: versions.filter(v => v.document_id === d.id && !v.published_at && v.state === 'ready').length }));
+      const items = documents.filter(d => (!body.p_studio || !d.studio_id || d.studio_id === body.p_studio) && (!body.p_category || d.category === body.p_category) && (body.p_state !== 'all' || !d.archived) && (body.p_state !== 'published' || d.published_version_id && !d.archived) && (body.p_state !== 'draft' || !d.published_version_id) && (body.p_state !== 'archived' || d.archived) && (!body.p_query || [d.title, d.summary, d.excerpt].join(' ').toLowerCase().includes(body.p_query.toLowerCase()))).map(d => ({ ...d, review_count: versions.filter(v => v.document_id === d.id && !v.published_at && v.state === 'ready').length }));
       return send({ items, total: items.length });
     }
     if (url.pathname === '/rest/v1/rpc/prepare_knowledge_version') {
@@ -53,7 +53,7 @@ export async function sharedBackend(page, { role = 'admin', failUpload = false, 
         const objectPath = url.pathname.split('team-knowledge/')[1]; originals.set(objectPath, Buffer.from(data, 'latin1'));
         return send({ Key: objectPath });
       }
-      if (method === 'DELETE') { for (const path of body.prefixes) originals.delete(path); return send([]); }
+      if (method === 'DELETE') { if (failRemove) return send({ statusCode: '500', error: 'error', message: 'Entfernen nicht bestätigt.' }, 500); for (const path of body.prefixes) originals.delete(path); return send([]); }
       if (method === 'GET') { const path = url.pathname.split('team-knowledge/')[1]; return route.fulfill({ status: 200, headers: { ...headers, 'content-type': versions.find(v => v.object_path === path)?.mime_type || 'application/octet-stream' }, body: originals.get(path) || Buffer.from('original') }); }
     }
     if (url.pathname === '/rest/v1/rpc/admin_team_directory') {
