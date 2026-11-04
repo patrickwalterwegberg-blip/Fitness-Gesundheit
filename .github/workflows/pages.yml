@@ -35,8 +35,10 @@ jobs:
       - name: Eigenständige Webseite erstellen
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # Public browser configuration for this Teamhub; repository variables
+          # can override both values when moving to a different project.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://ftcurcqduzrxsvkujfql.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ypzeISD-w_lwGXrihd_Zfg_HvmSBBt5' }}
       - name: GitHub Pages vorbereiten
         uses: actions/configure-pages@v5
       - name: Webseite bereitstellen

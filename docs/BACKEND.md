@@ -2,6 +2,8 @@
 
 Die veröffentlichte Seite bleibt eigenständig. GitHub Pages liefert die Oberfläche aus. Für Anmeldung und gemeinsame Daten ist eine Supabase-Anbindung vorbereitet. Ohne Projektkonfiguration zeigt **Teamzugang** eine Einrichtungsansicht; es wird keine Anmeldung simuliert und kein Demo-Datensatz hochgeladen.
 
+Einrichtungsstand: Der Nutzer hat das Projekt, alle drei SQL-Migrationen und das erste aktive Adminprofil erfolgreich angelegt. Im Pages-Workflow ist die öffentliche Projektkonfiguration als Standard hinterlegt. Ein authentifizierter Zugriff und die E-Mail-Zustellung wurden noch nicht bestätigt; der direkte Verbindungstest aus der Entwicklungsumgebung ist durch deren Netzwerkpolicy gesperrt. Die folgende Anleitung bleibt für Einrichtung und spätere Änderungen gültig.
+
 Für die vollständige Einrichtung einschließlich Einladungen über die Webseite die [Schritt-für-Schritt-Anleitung für Mitarbeiterzugänge](MITARBEITERZUGAENGE.md) verwenden. Sie umfasst alle drei Migrationen, den ersten Administrator und den geschützten Einladungsdienst.
 
 ## 1. Ein Datenbankprojekt anlegen
@@ -21,7 +23,7 @@ Die Regeln erlauben:
 - Mitarbeiter (`employee`): nur eigene Aufgaben in zugeordneten Studios lesen und deren Status ändern; Rückmeldungen dazu schreiben.
 - Nicht angemeldete oder deaktivierte Profile: kein Zugriff auf Teamdaten.
 
-Mitarbeiter können ihre Rolle, Standortzuordnung, Aufgabenbeschreibung und Fälligkeit nicht selbst ändern. Zeitstempel und Kommentarautoren werden serverseitig abgesichert. SQL-Tests prüfen diese Regeln mit PostgreSQL/PGlite; ein echtes Supabase-Projekt wurde noch nicht eingerichtet oder getestet.
+Mitarbeiter können ihre Rolle, Standortzuordnung, Aufgabenbeschreibung und Fälligkeit nicht selbst ändern. Zeitstempel und Kommentarautoren werden serverseitig abgesichert. SQL-Tests prüfen diese Regeln mit PostgreSQL/PGlite. Das Projekt wurde laut Einrichtungsrückmeldung angelegt; echte Anmeldungen und Zustellung sind noch zu prüfen.
 
 ## 3. Den ersten Administrator einrichten
 

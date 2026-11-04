@@ -1,6 +1,6 @@
 # Echte Mitarbeiterzugänge aktivieren
 
-E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Ein Supabase-Projekt und ein funktionierender Mailversand wurden noch nicht eingerichtet. Die öffentliche Demo erzeugt keine Konten und versendet keine Einladungen.
+E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Für diesen Teamhub wurde inzwischen ein Supabase-Projekt angelegt; die drei SQL-Migrationen und das erste aktive Adminprofil wurden laut Einrichtungsrückmeldungen erfolgreich installiert. Der Pages-Workflow enthält dessen öffentliche Projektkonfiguration. Rücksprungadressen, Mailzustellung und ein echter Login müssen noch geprüft werden. Der Einladungsdienst muss separat bereitgestellt werden. Die lokale Demo erzeugt keine Konten und versendet keine Einladungen.
 
 ## 1. Projekt anlegen
 
@@ -49,6 +49,8 @@ on conflict(id) do update set full_name=excluded.full_name,role='admin',active=t
 Administratoren haben Zugriff auf alle Studios; eine zusätzliche Studio-Mitgliedschaft ist dafür nicht erforderlich. Danach kann auf der Anmeldeseite ein neuer Link angefordert werden.
 
 ## 5. Webseite verbinden
+
+Für diesen Teamhub sind die öffentliche Projektadresse und der Publishable Key bereits als Standardwerte im Pages-Workflow eingetragen. Die Projektadresse lautet `https://ftcurcqduzrxsvkujfql.supabase.co`, ohne `/rest/v1/`. Der Schlüssel ist zur Verwendung im Browser bestimmt; private Service-Schlüssel werden nicht mit ausgeliefert. Die folgenden Repository-Variablen sind nur nötig, um die Standardwerte zu überschreiben. Bei einem Projektwechsel beide Werte zusammen ersetzen.
 
 Im GitHub-Repository **Settings → Secrets and variables → Actions → Variables** öffnen und diese Repository-Variablen anlegen:
 

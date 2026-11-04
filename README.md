@@ -1,6 +1,6 @@
 # Fitness & Gesundheit · Teamhub
 
-Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Module sind weiterhin eine lokale Demo. Ein separater Teamzugang mit E-Mail-Anmeldung und gemeinsam gespeicherten Aufgaben ist über Supabase vorbereitet, aber ohne Projekt noch nicht aktiv. Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
+Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Demo-Module verwenden Browserdaten. Der separate Teamzugang nutzt Supabase für E-Mail-Anmeldung und gemeinsame Aufgaben. Das Projekt mit den drei SQL-Migrationen und dem ersten Adminprofil wurde laut Einrichtungsrückmeldungen angelegt; der Veröffentlichungsworkflow enthält dessen öffentliche Konfiguration. Der echte Login, Rücksprungadressen und die Mailzustellung sind noch zu prüfen. Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
 
 ## Entwickeln
 
@@ -36,7 +36,7 @@ npm run test:access
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen beide Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle drei Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
 
 Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich beim Tageswechsel. Die Browserprüfungen fixieren ihre eigene Uhr, um wiederholbare Ergebnisse zu erhalten. Einzelne ursprüngliche Demoereignisse enthalten weiterhin feste Beispieldaten.
 
@@ -46,7 +46,7 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 - Persönliches Mitarbeiterdashboard mit Profilwahl, eigenen Aufgaben und Terminen, wichtigen Studiohinweisen mit Lesebestätigung, getrenntem Lernfortschritt und Schnellzugriffen
 - Aufgaben mit standortbezogenen Verantwortlichen, Prioritäten, Wiederholungen, Beschreibung, Bearbeitung, Status, Rückmeldungen und lokalem Verlauf; Kalender mit aktuellem Datum
 - Separater Teamzugang für echte E-Mail-Anmeldung, serverseitige Rollen und gemeinsame einmalige Aufgaben mit Rückmeldungen (Projektkonfiguration erforderlich)
-- Admin-Verwaltung für Mitarbeiterzugänge: Einladungen über eine geschützte Edge Function, erneute Anmeldelinks, Rollen, Studiozuordnungen und Sperren; [Einrichtung](docs/MITARBEITERZUGAENGE.md). Ein Supabase-Projekt und echter SMTP-Versand fehlen noch.
+- Admin-Verwaltung für Mitarbeiterzugänge: Einladungen über eine geschützte Edge Function, erneute Anmeldelinks, Rollen, Studiozuordnungen und Sperren; [Einrichtung](docs/MITARBEITERZUGAENGE.md). Einladungsdienst und echter Mailversand sind noch einzurichten und zu prüfen.
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
 - Lernhub mit Beispiellektionen, Wissenstests und individuellen Lernzielen; Lesen, Wissen und praktische Einweisung werden getrennt dokumentiert
 - Modulbaukasten für ausgewählte Bearbeiter: neue Formulare, Zusatzfelder, Entwürfe, getrennte Veröffentlichungsrechte, unveränderliche Versionen und Wiederherstellung; [Bedienung und Backend-Umfang](docs/MODULE_UND_CONTROLLING.md)
@@ -76,7 +76,7 @@ Anonymes Feedback enthält kein Autor- oder Mitarbeiterfeld. Inhalt, Thema und S
 
 1&1, Dropbox, GoHighLevel und WhatsApp sind **nicht verbunden**. Einladungen, Erinnerungen, Kampagnen, Feedback und Bestellungen werden nicht versendet. Postfachpasswörter werden nicht abgefragt oder gespeichert. Das Mitarbeiterprofil ist ein Demo-Profil. Der globale Studiofilter ist eine Ansichtsauswahl und kein Zugriffsschutz.
 
-Für den Produktivbetrieb fehlen insbesondere die Bereitstellung und Konfiguration des Backend-Projekts, echte Accounts und geprüfte Zustellung, sichere Dateiverarbeitung, verbindliche Feedback-Meldewege, geplante Erinnerungen, überwachte Integrationen, Backups sowie freigegebene echte Inhalte. SQL-Schema, Zugriffsschutz und erste Anmelde-/Aufgabenoberfläche sind vorbereitet und lokal getestet; sie sind noch nicht in einem echten Projekt validiert.
+Für den Produktivbetrieb fehlen insbesondere die Prüfung der echten Anmeldung und Zustellung, die Bereitstellung des Einladungsdienstes, sichere Dateiverarbeitung, verbindliche Feedback-Meldewege, geplante Erinnerungen, überwachte Integrationen, Backups sowie freigegebene echte Inhalte. Das Datenbankschema und das erste Adminprofil wurden laut Einrichtungsrückmeldungen angelegt. Lokale Prüfungen bestätigen die Anwendung und Zugriffsregeln; das Zusammenspiel mit dem echten Projekt und SMTP muss zusätzlich geprüft werden.
 
 ## Bestehende Browserdaten nach der Standortbenennung
 
