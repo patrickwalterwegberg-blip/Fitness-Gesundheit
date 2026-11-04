@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { sharedBackend, sharedIds } from './shared-backend';
 
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-04T10:00:00+01:00')); });
-async function users(page) { await page.goto('/tests/workspace.html'); await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click(); }
+async function users(page) { await page.goto('/tests/workspace.html'); if(page.viewportSize().width<=760)await page.getByRole('button',{name:'Menü öffnen'}).click(); await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click(); }
 
 test('user search and role filters are sent to the server', async ({ page }) => {
   const backend = await sharedBackend(page); await users(page);

@@ -4,6 +4,8 @@ Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Di
 
 Die [eigene Loginseite](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) unterstützt E-Mail und persönliches Passwort, erstmaliges Festlegen per bestätigtem E-Mail-Link, Passwortwiederherstellung und Abmelden. [Anleitung](docs/PASSWORT_ANMELDUNG.md). Das benötigt keine zusätzliche SQL-Migration.
 
+Der angemeldete Teamzugang verwendet die Gestaltung der Demo: feste Seitenleiste, Schwarz-Gold-Farben, Willkommensbereich und persönliche Übersichtskarten mit Serverdaten. Auf dem Handy öffnet sich die Navigation über das Menü; Abmelden und Chat-Hinweise bleiben im festen Kopfbereich erreichbar. Die Navigation zeigt ausschließlich freigegebene Bereiche. Diese Layoutänderung benötigt keine neue SQL-Migration.
+
 ## Entwickeln
 
 Voraussetzung: Node.js 22.12+ (validiert mit Node.js 24.22.1) und npm.

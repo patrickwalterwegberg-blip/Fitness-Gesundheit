@@ -262,6 +262,7 @@ test('employee access management fits a mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockBackend(page, { role: 'admin', access: true });
   await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Menü öffnen' }).click();
   await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click();
   await page.getByRole('button', { name: 'Mitarbeiter einladen', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -47,6 +47,8 @@ test('personal dashboard shows server totals, opens real tasks and diagnoses unp
   const state=await pilotBackend(page);await page.goto('/tests/workspace.html?start=dashboard');
   await expect(page.getByRole('heading',{name:'Meine Übersicht',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:/Heute fällig/})).toContainText('1');
+  await expect(page.getByRole('navigation',{name:'Teambereiche'})).toBeVisible();
+  await page.screenshot({path:'test-results/team-dashboard-desktop.png',fullPage:true});
   await expect(page.getByRole('button',{name:/Einarbeitung Empfang 0\/2/})).toBeVisible();
   await page.getByRole('button',{name:'Serverstatus prüfen'}).click();
   await expect(page.getByRole('status')).toContainText('2 Entwürfe');
@@ -92,7 +94,7 @@ test('administrator creates a course only on save and assigns it to their own re
   await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('heading',{name:'[TEST] Den Teamhub kennenlernen',exact:true})).toBeVisible();
   expect(state.courses).toHaveLength(1);expect(state.assignments).toHaveLength(0);
   await page.getByRole('button',{name:'Kurs zuweisen',exact:true}).click();
-  await expect(page.getByRole('status')).toContainText('Lernauftrag auf dem Server erstellt');
+  await expect(page.getByRole('status').filter({hasText:'Lernauftrag auf dem Server erstellt'})).toBeVisible();
   expect(state.assignments[0].learner_id).toBe(sharedIds.user);expect(state.assignments[0].requires_practice).toBe(false);
   await expect(page.getByRole('button',{name:'Lektion als gelesen bestätigen',exact:true})).toBeVisible();
 });
@@ -112,7 +114,15 @@ test('personal overview, course reader and editor fit a mobile viewport',async({
   await page.setViewportSize({width:390,height:844});await pilotBackend(page);await page.goto('/tests/workspace.html?start=dashboard');
   await expect(page.getByRole('heading',{name:'Meine Übersicht',exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.getByRole('button',{name:'Lernhub',exact:true}).click();await page.getByRole('button',{name:/Einarbeitung Empfang 0\/2/}).click();
+  await page.screenshot({path:'test-results/team-dashboard-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'Menü öffnen'}).click();
+  await expect(page.getByRole('button',{name:'Menü schließen'})).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button',{name:'Menü öffnen'})).toBeFocused();
+  await page.getByRole('button',{name:'Menü öffnen'}).click();
+  await page.screenshot({path:'test-results/team-navigation-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'Lernhub',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Menü öffnen'})).toHaveAttribute('aria-expanded','false');await page.getByRole('button',{name:/Einarbeitung Empfang 0\/2/}).click();
   await expect(page.getByText('Erst abschließen, dann als erledigt markieren.')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.getByRole('button',{name:'Kurs erstellen',exact:true}).click();await page.getByRole('button',{name:'Testvorlage einsetzen'}).click();
   await expect(page.getByRole('dialog')).toBeVisible();expect(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);

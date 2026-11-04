@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { sharedBackend, sharedIds } from './shared-backend';
 
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-04T10:00:00+01:00')); });
-async function files(page) { await page.goto('/tests/workspace.html'); await page.getByRole('button', { name: 'Dateien', exact: true }).click(); }
+async function files(page) { await page.goto('/tests/workspace.html'); if(page.viewportSize().width<=760)await page.getByRole('button',{name:'Menü öffnen'}).click(); await page.getByRole('button', { name: 'Dateien', exact: true }).click(); }
 async function article(page, title, text) {
   await page.getByRole('button', { name: 'Artikel schreiben', exact: true }).click();
   await page.getByLabel('Titel des Inhalts', { exact: true }).fill(title);

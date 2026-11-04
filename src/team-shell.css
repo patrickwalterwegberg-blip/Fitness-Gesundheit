@@ -1,0 +1,82 @@
+/* Shared live workspace uses the demo's shell and the same black/gold theme. */
+.team-online .team-main-shell{min-width:0}
+.team-online .team-sidebar{z-index:60}
+.team-sidebar .brand{font-size:13px}
+.team-sidebar .workspace-switch{cursor:default}
+.team-sidebar .workspace-switch small{max-width:145px;overflow-wrap:anywhere}
+.team-sidebar .nav-item{min-height:43px}
+.team-sidebar .team-support{padding:12px 12px 8px;font-size:11px;color:#dfc991;line-height:1.7}
+.team-sidebar .team-support small{display:block;font-size:9px;color:#bcb29d}
+.team-sidebar .profile>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.team-sidebar .profile small{font-size:9px;line-height:1.6}
+.team-online .team-shell-topbar{position:sticky;top:0;z-index:40;min-height:73px;height:auto;padding:15px 32px}
+.team-header-identity{display:flex;align-items:center;gap:9px;color:#76623b;font-size:12px}
+.team-online .team-shell-topbar .team-logout{min-height:40px;color:#211c13;background:linear-gradient(110deg,#e1c17a,#b58b35);border-color:#b38a36;font-size:11px}
+.team-online .team-context{max-width:1600px;margin:0 auto;padding:22px 32px 0;min-height:38px}
+.team-online .team-main{max-width:1600px;margin:0 auto;padding:24px 32px 65px}
+.team-online .team-main>.page-heading h1{font-size:30px}
+.team-online .team-main>.page-heading{margin-bottom:24px}
+.team-online .team-main>.page-heading .eyebrow{display:none}
+.team-online .team-main>.page-heading p{font-size:11px;color:#8c784c}
+.team-online .team-account-buttons .button{font-size:10px}
+.team-online .team-pilot>.content-toolbar h2{font-size:18px}
+.team-online .team-pilot>.content-toolbar .eyebrow{display:none}
+.team-online .team-pilot>.content-toolbar p{font-size:11px}
+.team-online .team-welcome{margin:6px 0 24px;min-height:244px}
+.team-online .team-welcome .welcome-copy{width:68%}
+.team-online .team-welcome .welcome-copy h2{font-size:28px;max-width:500px}
+.team-online .team-welcome .welcome-copy p{font-size:12px;max-width:380px}
+.team-online .team-welcome-art{position:absolute;right:5%;top:20%;height:170px;width:170px;display:grid;place-items:center;border-radius:50%;border:1px solid #cfb67855;box-shadow:0 0 0 25px #cfb67808,0 0 0 55px #cfb67806;color:#dbbd7a;transform:rotate(-8deg)}
+.team-online .team-welcome-art svg{width:90px;height:90px;stroke-width:1.2}
+.team-online .pilot-stats{gap:16px;margin:24px 0}
+.team-online .pilot-stats>button{min-height:148px;padding:20px;border:1px solid #e8dfcb;border-radius:9px;box-shadow:0 3px 8px #30271706}
+.team-online .pilot-stats strong{font-family:'Manrope Variable',sans-serif;font-size:34px;margin-top:14px}
+.team-online .pilot-stats span{font-size:12px}
+.team-online .pilot-stats svg{padding:9px;box-sizing:content-box;bottom:20px;right:18px;border-radius:9px;background:#f4eddd;color:#aa8433}
+.team-online .pilot-section{border-radius:10px}
+.team-online .pilot-section>.section-heading{padding:22px 24px}
+.team-online .pilot-row{min-height:83px}
+.team-online .pilot-row progress{max-width:280px}
+.team-online .pilot-columns{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.team-online .team-main>.team-detail{scroll-margin-top:95px}
+@media(max-width:1000px){
+ .team-online .team-shell-topbar{padding:14px 22px}
+ .team-online .team-main{padding:23px 22px 55px}
+ .team-online .team-context{padding:18px 22px 0}
+ .team-online .pilot-columns{grid-template-columns:1fr}
+ .team-online .team-header-identity{display:none}
+ .team-online .team-welcome .welcome-copy{width:76%}
+ .team-online .team-welcome-art{right:-65px}
+}
+@media(max-width:760px){
+ .team-online .team-sidebar{width:270px;transform:translateX(-100%);visibility:hidden;transition:transform .2s}
+ .team-online .team-sidebar.sidebar-open{transform:translateX(0);visibility:visible}
+ .team-online .team-main-shell{margin-left:0}
+ .team-online .team-shell-topbar .mobile-only,.team-sidebar .mobile-only{display:inline-flex!important}
+ .team-online .team-shell-topbar .desktop-only{display:none!important}
+ .team-online .sidebar-backdrop{position:fixed;inset:0;background:#10100db3;z-index:55;width:100%;height:100%;border-radius:0}
+ .team-online .team-shell-topbar{padding:12px 16px;gap:10px;min-height:66px}
+ .team-online .team-shell-topbar .breadcrumb{gap:6px;min-width:0}
+ .team-online .team-shell-topbar .breadcrumb strong{white-space:normal;font-size:12px}
+ .team-online .team-topbar-actions{gap:10px}
+ .team-online .team-context{padding:18px 16px 0;font-size:9px}
+ .team-online .team-context .context-date{display:none}
+ .team-online .team-main{padding:22px 16px 55px}
+ .team-online .team-main>.page-heading h1{font-size:26px}
+ .team-online .team-main>.page-heading p{overflow-wrap:anywhere}
+ .team-online .team-account-buttons{margin-top:16px}
+ .team-online .team-main>.page-heading{display:block}
+ .team-online .team-welcome{min-height:238px}
+ .team-online .team-welcome .welcome-copy{width:90%;padding:24px}
+ .team-online .team-welcome .welcome-copy h2{font-size:24px}
+ .team-online .team-welcome .welcome-copy p{font-size:11px}
+ .team-online .team-welcome-art{opacity:.16;right:-80px;top:25%}
+ .team-online .pilot-stats{grid-template-columns:1fr 1fr;gap:12px}
+ .team-online .pilot-stats>button{min-height:132px;padding:16px}
+ .team-online .pilot-stats span{font-size:11px}
+ .team-online .pilot-stats strong{font-size:29px}
+ .team-online .pilot-stats svg{width:16px;height:16px;padding:7px;bottom:17px;right:14px}
+ .team-online .pilot-section>.section-heading{padding:18px;flex-wrap:wrap}
+ .team-online .pilot-row{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){.team-online .team-sidebar{transition:none}}
