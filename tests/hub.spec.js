@@ -148,7 +148,7 @@ test('standalone HTML needs no asset requests and keeps local interactions offli
   // intercepted document request; all subsequent network access stays offline.
   await page.route('http://127.0.0.1:5173/standalone-validation', route => route.fulfill({ contentType: 'text/html', body: html }));
   await context.setOffline(true);
-  await page.goto('/standalone-validation');
+  await page.goto('/standalone-validation#overview');
   await expect(page.getByRole('heading', { name: 'Guten Morgen, Patrick' })).toBeVisible();
   await page.getByRole('button', { name: 'Aufgabe erstellen', exact: true }).click();
   await page.getByLabel('Was steht an?').fill('Offline-Testaufgabe');

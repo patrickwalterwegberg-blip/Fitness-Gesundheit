@@ -36,27 +36,29 @@ Die Übersicht unterscheidet **gelesen**, **Wissenstest bestanden** und **Praxis
 
 ## Gemeinsames Backend aktivieren
 
-Ein gehostetes Projekt wurde noch nicht eingerichtet. Zuerst die [Backend-Anleitung](BACKEND.md) durcharbeiten und beide Migrationen in Reihenfolge anwenden:
+Im bestehenden Projekt sind die ersten fünf Migrationen laut Einrichtungsrückmeldung installiert. Für neue Projekte zuerst die [Backend-Anleitung](BACKEND.md) durcharbeiten, beginnend mit:
 
 1. `backend/supabase/001_team.sql`
 2. `backend/supabase/002_modules_controlling.sql`
 
 Anschließend im echten **Teamzugang** anmelden und dort **Modulbaukasten**, **Eigene Module** oder **Controlling** öffnen. Diese Ansichten lesen ausschließlich Serverdaten und importieren keine lokalen Demo-Daten. Die zweite Migration trennt Entwürfe und veröffentlichte Versionen, schützt Rechte serverseitig und versieht Änderungen mit authentifizierter User-ID und Serverzeit. Alte Aufgabenabschlüsse erhalten keine rückwirkend erfundene ausführende Person.
 
-Im gemeinsamen Backend sind zunächst **eigenständige Module und Aufgaben-Zusatzfelder** angeschlossen. Andere Kernmodule und gemeinsame Datei-Uploads sind noch nicht angebunden; diese Auswahl ist im Online-Baukasten deaktiviert. Lokale Dateiwerte werden nicht ins Backend übertragen.
+Im gemeinsamen Backend sind zunächst **eigenständige Module und Aufgaben-Zusatzfelder** angeschlossen. Andere Kernmodule und Upload-Felder innerhalb eigener Formulare sind noch nicht angebunden; diese Auswahl ist im Online-Baukasten deaktiviert. Lokale Dateiwerte werden nicht ins Backend übertragen.
 
 ### Lernfortschritt im Backend
 
-Die Migration stellt Kursmetadaten, individuelle Lernziele, Lesefortschritt, getrennte Wissensbeurteilungen, Praxisbestätigungen und Ereignisprotokolle bereit. Es werden keine Beispielkurse oder Quizantworten angelegt. Die gemeinsame Lernoberfläche für echte Lektionen und automatisch bewertete Tests ist noch anzubinden. Der bestehende Lernhub mit Beispieltests bleibt lokal.
+Die Migration stellt Kursmetadaten, individuelle Lernziele, Lesefortschritt, getrennte Wissensbeurteilungen, Praxisbestätigungen und Ereignisprotokolle bereit. Es werden keine Beispielkurse oder Quizantworten angelegt. Migration 006 ergänzt die gemeinsame Oberfläche für Textlektionen und serverseitig bewertete Multiple-Choice-Tests. [Einrichtung und vollständiger Testlauf](PILOT_TESTBETRIEB.md). Der bestehende Demo-Lernhub mit Beispieltests bleibt lokal.
 
 Zur Integration einer tatsächlichen Akademie stehen folgende Schnittstellen bereit:
 
 | Schnittstelle | Berechtigung und Verhalten |
 | --- | --- |
-| `learning_courses` | Administratoren legen echte Kursmetadaten mit Titel und Lektionsanzahl an. Kursinhalte und Fragen sind darin noch nicht enthalten. |
+| `learning_courses` | Administratoren legen echte Kursmetadaten mit Titel und Lektionsanzahl an. Kursinhalte und öffentliche Fragen liegen separat in `learning_material`; Antwortschlüssel liegen geschützt im privaten Schema. |
 | `create_learning_assignment` | Administrator weist einen aktiven Kurs einem standortzugehörigen Mitarbeiter zu; auch über das Online-Controlling verfügbar. |
-| `report_learning_reads` | Mitarbeiter meldet ausschließlich seinen eigenen Lesestand, begrenzt auf die Lektionsanzahl. Dies ist eine Selbstrückmeldung. |
+| `report_learning_reads` | Nur für ältere externe Kurse. Online-Kurse verwenden einzelne Lesebestätigungen über `acknowledge_learning_lesson`. |
 | `record_learning_assessment` | Administrator erfasst das Ergebnis einer außerhalb des Systems durchgeführten Wissensprüfung mit Notiz. Kein Mitarbeiter kann sich selbst ein bestandenes Ergebnis setzen. |
+| `save_learning_course` | Administrator erstellt validierte Textlektionen/Quizfragen. Nach erster Zuweisung bleibt der Inhalt unverändert. |
+| `submit_learning_quiz` | Lernende reichen nach allen Lesebestätigungen Antworten ein; ausschließlich der Server bewertet. |
 | `confirm_learning_practice` | Administrator bestätigt nach erfüllten Voraussetzungen eine praktische Einweisung; auch über das Online-Controlling verfügbar. |
 | `admin_controlling` | Nur Administratoren erhalten die gemeinsame Aufgaben- und Lernübersicht. |
 

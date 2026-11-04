@@ -2,7 +2,7 @@
 
 Für den neu ergänzten gemeinsamen Datei-/Wissenshub und das erweiterte Nutzermanagement anschließend die [Migrationen 004 und 005](DATEIEN_WISSEN_NUTZER.md) installieren. Dafür ist keine erneute Token-Erstellung oder Veröffentlichung des Einladungsdienstes nötig.
 
-E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Für diesen Teamhub wurde inzwischen ein Supabase-Projekt angelegt; die drei SQL-Migrationen und das erste aktive Adminprofil wurden laut Einrichtungsrückmeldungen erfolgreich installiert. Der Pages-Workflow enthält dessen öffentliche Projektkonfiguration. Rücksprungadressen, Mailzustellung und ein echter Login müssen noch geprüft werden. Der Einladungsdienst muss separat bereitgestellt werden. Die lokale Demo erzeugt keine Konten und versendet keine Einladungen.
+E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Für diesen Teamhub wurde inzwischen ein Supabase-Projekt angelegt; die drei SQL-Migrationen und das erste aktive Adminprofil wurden laut Einrichtungsrückmeldungen erfolgreich installiert. Der Pages-Workflow enthält dessen öffentliche Projektkonfiguration. Rücksprungadressen, Mailzustellung und der eigene Admin-Login wurden inzwischen bestätigt, der Einladungsdienst wurde erfolgreich bereitgestellt. Ein separates Mitarbeiterkonto ist noch zu testen. Für die aktuelle gemeinsame Oberfläche sind zusätzlich die Erweiterungen 004–006 nötig; [Einrichtung und Testbetrieb](PILOT_TESTBETRIEB.md). Die lokale Demo erzeugt keine Konten und versendet keine Einladungen.
 
 ## 1. Projekt anlegen
 

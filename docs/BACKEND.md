@@ -2,9 +2,9 @@
 
 Die veröffentlichte Seite bleibt eigenständig. GitHub Pages liefert die Oberfläche aus. Für Anmeldung und gemeinsame Daten ist eine Supabase-Anbindung vorbereitet. Ohne Projektkonfiguration zeigt **Teamzugang** eine Einrichtungsansicht; es wird keine Anmeldung simuliert und kein Demo-Datensatz hochgeladen.
 
-Einrichtungsstand: Der Nutzer hat das Projekt, alle drei SQL-Migrationen und das erste aktive Adminprofil erfolgreich angelegt. Im Pages-Workflow ist die öffentliche Projektkonfiguration als Standard hinterlegt. Ein authentifizierter Zugriff und die E-Mail-Zustellung wurden noch nicht bestätigt; der direkte Verbindungstest aus der Entwicklungsumgebung ist durch deren Netzwerkpolicy gesperrt. Die folgende Anleitung bleibt für Einrichtung und spätere Änderungen gültig.
+Einrichtungsstand: Der Nutzer hat das Projekt, die SQL-Migrationen 001–005 und das erste aktive Adminprofil erfolgreich angelegt. Im Pages-Workflow ist die öffentliche Projektkonfiguration als Standard hinterlegt. Der eigene Admin-Login und die Mailzustellung wurden vom Nutzer bestätigt; ein zweites Mitarbeiterkonto ist noch zu testen; der direkte Verbindungstest aus der Entwicklungsumgebung ist durch deren Netzwerkpolicy gesperrt. Die folgende Anleitung bleibt für Einrichtung und spätere Änderungen gültig.
 
-Für die vollständige Einrichtung einschließlich Einladungen über die Webseite die [Schritt-für-Schritt-Anleitung für Mitarbeiterzugänge](MITARBEITERZUGAENGE.md) verwenden. Sie umfasst alle drei Migrationen, den ersten Administrator und den geschützten Einladungsdienst.
+Für die vollständige Einrichtung einschließlich Einladungen über die Webseite die [Schritt-für-Schritt-Anleitung für Mitarbeiterzugänge](MITARBEITERZUGAENGE.md) verwenden. Sie umfasst die ersten drei Migrationen, den ersten Administrator und den geschützten Einladungsdienst. Danach folgen 004–005 für Dateien/Nutzerverwaltung und [006 für den Testbetrieb](PILOT_TESTBETRIEB.md).
 
 ## 1. Ein Datenbankprojekt anlegen
 
@@ -23,7 +23,7 @@ Die Regeln erlauben:
 - Mitarbeiter (`employee`): nur eigene Aufgaben in zugeordneten Studios lesen und deren Status ändern; Rückmeldungen dazu schreiben.
 - Nicht angemeldete oder deaktivierte Profile: kein Zugriff auf Teamdaten.
 
-Mitarbeiter können ihre Rolle, Standortzuordnung, Aufgabenbeschreibung und Fälligkeit nicht selbst ändern. Zeitstempel und Kommentarautoren werden serverseitig abgesichert. SQL-Tests prüfen diese Regeln mit PostgreSQL/PGlite. Das Projekt wurde laut Einrichtungsrückmeldung angelegt; echte Anmeldungen und Zustellung sind noch zu prüfen.
+Mitarbeiter können ihre Rolle, Standortzuordnung, Aufgabenbeschreibung und Fälligkeit nicht selbst ändern. Zeitstempel und Kommentarautoren werden serverseitig abgesichert. SQL-Tests prüfen diese Regeln mit PostgreSQL/PGlite. Das Projekt wurde laut Einrichtungsrückmeldung angelegt; Login und Mailzustellung für das eigene Konto wurden bestätigt; ein separates Mitarbeiterkonto ist noch zu testen.
 
 ## 3. Den ersten Administrator einrichten
 
@@ -103,7 +103,7 @@ Nach `001_team.sql` im SQL-Editor auch `backend/supabase/002_modules_controlling
 
 Der Baukasten trennt Erstellen, Bearbeiten und Veröffentlichen, hält Entwürfe von normalen Lesern getrennt und bewahrt alte Formularversionen. Er unterstützt im Backend zunächst eigenständige Module und Zusatzfelder für echte Teamaufgaben. Andere Kernmodule und der gemeinsame Dateispeicher sind noch nicht angeschlossen.
 
-Das Controlling liest echte Aufgabenabschlüsse und zugewiesene Lernziele. Kursmetadaten und Schnittstellen für Lesen, externe Wissensbeurteilung und Praxisbestätigung sind vorbereitet. Eine gemeinsame Kurs- und Testoberfläche ist noch anzubinden; der bisherige Demo-Lernhub überträgt keine Ergebnisse. Einrichtung und Bedienung stehen in [Module und Controlling](MODULE_UND_CONTROLLING.md).
+Das Controlling liest echte Aufgabenabschlüsse und zugewiesene Lernziele. Kursmetadaten und Schnittstellen für Lesen, externe Wissensbeurteilung und Praxisbestätigung sind vorbereitet. Migration 006 ergänzt die gemeinsame Kurs- und Testoberfläche; der bisherige Demo-Lernhub überträgt keine Ergebnisse. [Einrichtung und Testdurchlauf](PILOT_TESTBETRIEB.md). Einrichtung und Bedienung stehen in [Module und Controlling](MODULE_UND_CONTROLLING.md).
 
 ## Zugangsverwaltung ergänzen
 
@@ -111,6 +111,6 @@ Nach den ersten beiden Migrationen `backend/supabase/003_team_access.sql` ausfü
 
 ## Umfang dieser Backend-Anbindung
 
-E-Mail-Anmeldung, Rollen, Studiozuordnung, einmalige gemeinsame Aufgaben, Rückmeldungen sowie die oben beschriebenen Module und Controlling-Schnittstellen sind vorbereitet. Die übrigen Bereiche bleiben lokale Demoansichten. Insbesondere Dateispeicher, Feedback-Meldewege, gemeinsame Lerninhalte und automatische Tests, automatische Wiederholungen und Erinnerungen, 1&1-Postfachverarbeitung, Dropbox, GoHighLevel und WhatsApp sind noch nicht Teil des gemeinsamen Backends. Bestehende Demo-Daten werden nicht automatisch übertragen. Die gemeinsame Ansicht lädt auf Anforderung; Live-Synchronisierung ist noch nicht eingebaut.
+E-Mail-Anmeldung, Rollen, Studiozuordnung, einmalige gemeinsame Aufgaben, Rückmeldungen sowie die oben beschriebenen Module und Controlling-Schnittstellen sind vorbereitet. Die übrigen Bereiche bleiben lokale Demoansichten. Gemeinsame Dateien und Wissen sind über Migration 004 angebunden, die Nutzerverwaltung über 005, persönliche Übersicht, Kalender und gemeinsame Textkurse/Online-Quiz über 006. Feedback-Meldewege, gemeinsame automatische Aufgabenwiederholungen und E-Mail-Erinnerungen, 1&1-Postfachverarbeitung, Dropbox, GoHighLevel und WhatsApp folgen separat. Bestehende Demo-Daten werden nicht automatisch übertragen. Die gemeinsame Ansicht lädt auf Anforderung; Live-Synchronisierung ist noch nicht eingebaut.
 
 Vor echten sensiblen Daten müssen organisatorische Zuständigkeiten, Datenverarbeitungsvereinbarung, Backup-/Wiederherstellung und Aufbewahrung für das gewählte Projekt geklärt und umgesetzt sein.

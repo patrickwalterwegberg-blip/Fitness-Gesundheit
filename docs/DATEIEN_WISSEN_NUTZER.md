@@ -68,7 +68,7 @@ Im Bereich **Mitarbeiterzugänge** stehen zusätzlich bereit:
 - Bearbeiterrechte für den Modulbaukasten, ohne automatisch Admin- oder Controllingrechte zu vergeben.
 - Import mit Vorschau aus CSV, XLSX oder eingefügten Kontakten.
 
-Die Aufgabenstatistik beschreibt den Status zugewiesener Aufgaben. Wer einen Abschluss tatsächlich ausgelöst hat, ist im Controlling dokumentiert. Lernübersichten stammen aus echten Datenbankzuweisungen; lokale Demo-Fortschritte werden nicht übernommen. Die gemeinsame Kurs- und Testoberfläche muss noch angeschlossen werden.
+Die Aufgabenstatistik beschreibt den Status zugewiesener Aufgaben. Wer einen Abschluss tatsächlich ausgelöst hat, ist im Controlling dokumentiert. Lernübersichten stammen aus echten Datenbankzuweisungen; lokale Demo-Fortschritte werden nicht übernommen. Die gemeinsame Kurs- und Testoberfläche wird mit [Migration 006](PILOT_TESTBETRIEB.md) angeschlossen.
 
 ### Mitarbeiter importieren
 
@@ -84,7 +84,7 @@ Der Import ändert keine bestehenden Konten. Globale Administratorrechte werden 
 
 ## Was weiterhin offen bleibt
 
-Supabase ist die zentrale Grundlage. Gemeinsam angebunden sind jetzt Zugänge, Studios, einmalige Aufgaben/Rückmeldungen, eigene Formularmodule und deren Rechte sowie – nach diesen Migrationen – Dateien, Wissen und die erweiterten Nutzerübersichten. Akademie-Zuweisungen und Fortschrittsschnittstellen liegen bereits in der Datenbank; die gemeinsame Lernoberfläche folgt separat.
+Supabase ist die zentrale Grundlage. Gemeinsam angebunden sind jetzt Zugänge, Studios, einmalige Aufgaben/Rückmeldungen, eigene Formularmodule und deren Rechte sowie – nach diesen Migrationen – Dateien, Wissen und die erweiterten Nutzerübersichten. Akademie-Zuweisungen und Fortschrittsschnittstellen liegen bereits in der Datenbank; die gemeinsame Lernoberfläche steht mit [Migration 006](PILOT_TESTBETRIEB.md) bereit.
 
 CRM, Marketing, Geräte, Lager/Bestellungen, Notfallkontakte, Feedback und weitere bisherige Vorschauansichten werden anschließend schrittweise migriert. Sie sind noch keine gemeinsamen Datenbankmodule. Die vorhandenen Demo-Daten werden nicht automatisch übernommen. Dropbox, GoHighLevel und WhatsApp bleiben bis zur jeweiligen Anbindung eigenständige Systeme.
 

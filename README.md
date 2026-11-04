@@ -1,6 +1,6 @@
 # Fitness & Gesundheit · Teamhub
 
-Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Demo-Module verwenden Browserdaten. Der separate Teamzugang nutzt Supabase für E-Mail-Anmeldung und gemeinsame Aufgaben. Das Projekt mit den drei SQL-Migrationen und dem ersten Adminprofil wurde laut Einrichtungsrückmeldungen angelegt; der Veröffentlichungsworkflow enthält dessen öffentliche Konfiguration. Der echte Login, Rücksprungadressen und die Mailzustellung sind noch zu prüfen. Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
+Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Demo-Module verwenden Browserdaten. Der separate Teamzugang nutzt Supabase für E-Mail-Anmeldung, Aufgaben, Wissen/Dateien, Nutzerverwaltung, eigene Formulare und Controlling. Die Einrichtung der Migrationen 001–005 sowie Login und Mailzustellung an das eigene Konto wurden vom Nutzer bestätigt; ein separates Mitarbeiterkonto ist noch zu testen. Mit Migration 006 kommen persönliche Übersicht, Aufgabenkalender und die gemeinsame Kurs-/Quizoberfläche hinzu. [Einrichten und vollständig testen](docs/PILOT_TESTBETRIEB.md). Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
 
 ## Entwickeln
 
@@ -36,7 +36,7 @@ npm run test:access
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle drei Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle sechs Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
 
 Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich beim Tageswechsel. Die Browserprüfungen fixieren ihre eigene Uhr, um wiederholbare Ergebnisse zu erhalten. Einzelne ursprüngliche Demoereignisse enthalten weiterhin feste Beispieldaten.
 
@@ -46,14 +46,15 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 - Persönliches Mitarbeiterdashboard mit Profilwahl, eigenen Aufgaben und Terminen, wichtigen Studiohinweisen mit Lesebestätigung, getrenntem Lernfortschritt und Schnellzugriffen
 - Aufgaben mit standortbezogenen Verantwortlichen, Prioritäten, Wiederholungen, Beschreibung, Bearbeitung, Status, Rückmeldungen und lokalem Verlauf; Kalender mit aktuellem Datum
 - Separater Teamzugang für echte E-Mail-Anmeldung, serverseitige Rollen und gemeinsame einmalige Aufgaben mit Rückmeldungen (Projektkonfiguration erforderlich)
-- Admin-Verwaltung für Mitarbeiterzugänge: Einladungen über eine geschützte Edge Function, erneute Anmeldelinks, Rollen, Studiozuordnungen und Sperren; [Einrichtung](docs/MITARBEITERZUGAENGE.md). Einladungsdienst und echter Mailversand sind noch einzurichten und zu prüfen.
+- Admin-Verwaltung für Mitarbeiterzugänge: Einladungen über eine geschützte Edge Function, erneute Anmeldelinks, Rollen, Studiozuordnungen und Sperren; [Einrichtung](docs/MITARBEITERZUGAENGE.md). Einladungsdienst ist bereitgestellt; Mailzustellung an das eigene Konto ist bestätigt.
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
 - Gemeinsame Dateien und Wissensartikel nach Migration 004: privater Dateispeicher, Standort-/Rollenfreigaben, Prüfung, unveränderte Originale, Versionen und Textsuche; PDF-, Bild- und Videovorschau, maximal 50 MB pro Datei. [Einrichtung](docs/DATEIEN_WISSEN_NUTZER.md)
 - Erweitertes Nutzermanagement nach Migration 005: Suche/Filter, Profilübersicht mit Aufgaben und Lernzielen, Modul-Bearbeiterrechte sowie CSV-/XLSX-/Kontaktimport mit Vorschau und ausdrücklich angeforderten Einladungen
-- Lernhub mit Beispiellektionen, Wissenstests und individuellen Lernzielen; Lesen, Wissen und praktische Einweisung werden getrennt dokumentiert
+- Lokaler Demo-Lernhub sowie gemeinsame Akademie nach Migration 006: Textkurse, Einzelzuweisungen, Lesebestätigungen und serverseitig ausgewertete Quizfragen. Lesen, Wissen und Praxis werden getrennt dokumentiert.
+- Persönliche gemeinsame Startseite und Aufgabenkalender mit serverseitigen Monatszahlen; [Testbetrieb und offene Anbindungen](docs/PILOT_TESTBETRIEB.md)
 - Modulbaukasten für ausgewählte Bearbeiter: neue Formulare, Zusatzfelder, Entwürfe, getrennte Veröffentlichungsrechte, unveränderliche Versionen und Wiederherstellung; [Bedienung und Backend-Umfang](docs/MODULE_UND_CONTROLLING.md)
 - Admin-Controlling mit Mitarbeiter-/Studiofiltern, Zeitraum für Aufgabenabschlüsse, dokumentierter ausführender Person, Lernfortschritt, Praxisbestätigung und CSV-Export
-- Mitarbeiterprofile; keine echten Benutzerkonten
+- Mitarbeiterprofile in der lokalen Demo; echte Konten werden separat im Teamzugang verwaltet
 - Namentliches oder anonymes Feedback mit thematischer Zuständigkeit, Status und Rückmeldecode
 - Lokale CRM-Pipeline nach der bestehenden Saleslift-/GoHighLevel-Struktur
 - Marketingkampagnen als interne Planung

@@ -39,6 +39,9 @@ await db.exec(knowledge);
 const users = await readFile('backend/supabase/005_user_management.sql','utf8');
 await db.exec(users);
 await db.exec(users);
+const pilot = await readFile('backend/supabase/006_pilot_learning.sql','utf8');
+await db.exec(pilot);
+await db.exec(pilot);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -381,4 +384,70 @@ test('management can clean an unfinished archived upload without removing approv
  await asUser('manager',tx=>tx.query('select public.cancel_knowledge_upload($1)',[pending.version_id]));
  assert.equal((await db.query('select * from public.knowledge_versions where id=$1',[pending.version_id])).rows.length,0);
  assert.equal((await db.query('select * from storage.objects where name=$1',[upload.object_path])).rows.length,1);
+});
+
+let pilotCourse, pilotAssignment;
+const pilotLessons=[{title:'Start',body:'Aufgaben sorgfältig bearbeiten.'},{title:'Wissen',body:'Freigegebene Unterlagen finden.'}];
+const pilotQuestions=[{prompt:'Wann erledigt?',options:['Beim Öffnen','Nach Abschluss'],answer:'must not leak'},{prompt:'Wer hilft?',options:['Patrick','Niemand']}];
+test('pilot course creation protects answer keys and normalizes public material',async()=>{
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4)', ['Test',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[1,0]'])),/Administrator required/);
+ const result=await asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Pilotkurs',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[1,0]']));
+ pilotCourse=result.rows[0].id;
+ const material=(await asUser('admin',tx=>tx.query('select * from public.learning_material where course_id=$1',[pilotCourse]))).rows[0];
+ assert.equal(material.questions[0].answer,undefined);
+ assert.equal((await asUser('employee',tx=>tx.query('select * from public.learning_material where course_id=$1',[pilotCourse]))).rows.length,0);
+ await assert.rejects(asUser('admin',tx=>tx.query('select * from app_private.learning_answer_keys')),/permission denied/);
+ await assert.rejects(asUser('employee',tx=>tx.query("insert into public.learning_material(course_id,lessons,questions) values($1,'[]','[]')",[pilotCourse])),/permission denied/);
+});
+test('pilot assignments expose content only to assigned active learners and administrators',async()=>{
+ pilotAssignment=(await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,true) as id',[ids.employee,pilotCourse,a]))).rows[0].id;
+ assert.equal((await asUser('employee',tx=>tx.query('select * from public.learning_material where course_id=$1',[pilotCourse]))).rows.length,1);
+ for(const who of ['manager','peer','other','inactive']) assert.equal((await asUser(who,tx=>tx.query('select * from public.learning_material where course_id=$1',[pilotCourse]))).rows.length,0);
+ await assert.rejects(asUser('peer',tx=>tx.query('select public.acknowledge_learning_lesson($1,0)',[pilotAssignment])),/Own learning assignment/);
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.report_learning_reads($1,2)',[pilotAssignment])),/Acknowledge individual lessons/);
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[pilotAssignment,'[1,0]'])),/Read every lesson/);
+});
+test('individual lesson acknowledgments are bounded, idempotent and server stamped',async()=>{
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.acknowledge_learning_lesson($1,2)',[pilotAssignment])),/Invalid lesson/);
+ for(let i=0;i<2;i++) assert.equal((await asUser('employee',tx=>tx.query('select public.acknowledge_learning_lesson($1,0) as count',[pilotAssignment]))).rows[0].count,1);
+ await asUser('employee',tx=>tx.query('select public.acknowledge_learning_lesson($1,1)',[pilotAssignment]));
+ assert.equal((await db.query('select lessons_read from public.learning_progress where assignment_id=$1',[pilotAssignment])).rows[0].lessons_read,2);
+ assert.equal((await asUser('employee',tx=>tx.query('select * from public.learning_reads where assignment_id=$1',[pilotAssignment]))).rows.length,2);
+ await assert.rejects(asUser('employee',tx=>tx.query('update public.learning_progress set quiz_passed=true where assignment_id=$1',[pilotAssignment])),/permission denied/);
+});
+test('online quiz is graded server side, throttled, and preserves an earned pass',async()=>{
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[pilotAssignment,'[true,0]'])),/Invalid quiz answer/);
+ const failed=(await asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2) as result',[pilotAssignment,'[0,0]']))).rows[0].result;
+ assert.deepEqual(failed,{correct:1,total:2,passed:false});
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[pilotAssignment,'[1,0]'])),/Wait ten seconds/);
+ await db.query("update public.learning_attempts set at=clock_timestamp()-interval '11 seconds' where assignment_id=$1",[pilotAssignment]);
+ assert.equal((await asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2) as result',[pilotAssignment,'[1,0]']))).rows[0].result.passed,true);
+ await db.query("update public.learning_attempts set at=clock_timestamp()-interval '11 seconds' where assignment_id=$1",[pilotAssignment]);
+ await asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[pilotAssignment,'[0,1]']));
+ assert.equal((await db.query('select quiz_passed from public.learning_progress where assignment_id=$1',[pilotAssignment])).rows[0].quiz_passed,true);
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.confirm_learning_practice($1)',[pilotAssignment])),/Administrator required/);
+ await asUser('admin',tx=>tx.query('select public.confirm_learning_practice($1)',[pilotAssignment]));
+ assert.equal((await db.query('select practice_confirmed from public.learning_progress where assignment_id=$1',[pilotAssignment])).rows[0].practice_confirmed,true);
+ assert.equal((await asUser('peer',tx=>tx.query('select * from public.learning_attempts where assignment_id=$1',[pilotAssignment]))).rows.length,0);
+});
+test('assigned course content cannot be rewritten after a learner earns progress',async()=>{
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.save_learning_course($1,$2,$3,$4,$5,1)',[pilotCourse,'Rewritten',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[0,0]'])),/Assigned courses are immutable/);
+ await assert.rejects(asUser('admin',tx=>tx.query('update public.learning_courses set lesson_count=1 where id=$1',[pilotCourse])),/Assigned course content is immutable/);
+ await assert.rejects(asUser('admin',tx=>tx.query("update public.learning_material set lessons='[]' where course_id=$1",[pilotCourse])),/permission denied/);
+});
+test('pilot dashboard totals and calendar aggregation retain row permissions without page truncation',async()=>{
+ await asUser('admin',async tx=>{
+  for(let i=0;i<55;i++)await tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date) values('Pilot calendar',$1,$2,'2030-02-01')",[a,ids.employee]);
+  await tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date) values('Other person',$1,$2,'2030-02-01')",[b,ids.other]);
+ });
+ const mine=(await asUser('employee',tx=>tx.query('select public.my_team_dashboard() as data'))).rows[0].data;
+ assert.equal(mine.learning.find(a=>a.id===pilotAssignment).quiz_passed,true);
+ assert.ok(mine.tasks.length<=8); assert.ok(mine.tasks.every(t=>t.assignee_id===ids.employee));
+ assert.equal((await asUser('employee',tx=>tx.query("select public.team_task_calendar('2030-02-01') as data"))).rows[0].data.days[0].total,55);
+ assert.equal((await asUser('admin',tx=>tx.query("select public.team_task_calendar('2030-02-01') as data"))).rows[0].data.days[0].total,56);
+ assert.equal((await asUser('employee',tx=>tx.query("select public.team_task_calendar('2030-02-01',$1) as data",[b]))).rows[0].data.days.length,0);
+ await assert.rejects(asUser('inactive',tx=>tx.query('select public.my_team_dashboard()')),/Active employee profile/);
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.admin_pilot_status()')),/Administrator required/);
+ assert.equal((await asUser('admin',tx=>tx.query('select public.admin_pilot_status() as data'))).rows[0].data.storage_private,true);
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select public.my_team_dashboard()');}),/permission denied/);
 });
