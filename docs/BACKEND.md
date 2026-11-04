@@ -2,6 +2,8 @@
 
 Die veröffentlichte Seite bleibt eigenständig. GitHub Pages liefert die Oberfläche aus. Für Anmeldung und gemeinsame Daten ist eine Supabase-Anbindung vorbereitet. Ohne Projektkonfiguration zeigt **Teamzugang** eine Einrichtungsansicht; es wird keine Anmeldung simuliert und kein Demo-Datensatz hochgeladen.
 
+Für die vollständige Einrichtung einschließlich Einladungen über die Webseite die [Schritt-für-Schritt-Anleitung für Mitarbeiterzugänge](MITARBEITERZUGAENGE.md) verwenden. Sie umfasst alle drei Migrationen, den ersten Administrator und den geschützten Einladungsdienst.
+
 ## 1. Ein Datenbankprojekt anlegen
 
 1. Bei [Supabase](https://supabase.com/) ein eigenes Konto und Projekt anlegen.
@@ -78,7 +80,7 @@ select 'MITARBEITER-USER-UUID'::uuid, id
 from public.studios where name = 'Dörpen';
 ```
 
-Für Studioleitungen `studio_manager` verwenden. Für weitere Standorte zusätzliche Mitgliedschaften anlegen. Die erste Version hat noch keine automatische Einladungsoberfläche; die Benutzerverwaltung erfolgt hier über das geschützte Anbieter-Dashboard.
+Für Studioleitungen `studio_manager` verwenden. Für weitere Standorte zusätzliche Mitgliedschaften anlegen. Mit Migration 003 und dem bereitgestellten Einladungsdienst können neue Mitarbeiter unter **Teamzugang → Mitarbeiterzugänge** eingeladen und verwaltet werden. Der manuelle SQL-Weg bleibt für den Datenbankinhaber verfügbar.
 
 Beim Ausscheiden das Profil mit `active = false` deaktivieren und offene Aufgaben neu zuweisen. Die Datenbank verweigert anschließend neue Zugriffe auch dann, wenn eine alte Sitzung noch angemeldet ist. Bereits zuvor heruntergeladene Inhalte lassen sich nicht aus dem Browser zurückholen.
 
@@ -100,6 +102,10 @@ Nach `001_team.sql` im SQL-Editor auch `backend/supabase/002_modules_controlling
 Der Baukasten trennt Erstellen, Bearbeiten und Veröffentlichen, hält Entwürfe von normalen Lesern getrennt und bewahrt alte Formularversionen. Er unterstützt im Backend zunächst eigenständige Module und Zusatzfelder für echte Teamaufgaben. Andere Kernmodule und der gemeinsame Dateispeicher sind noch nicht angeschlossen.
 
 Das Controlling liest echte Aufgabenabschlüsse und zugewiesene Lernziele. Kursmetadaten und Schnittstellen für Lesen, externe Wissensbeurteilung und Praxisbestätigung sind vorbereitet. Eine gemeinsame Kurs- und Testoberfläche ist noch anzubinden; der bisherige Demo-Lernhub überträgt keine Ergebnisse. Einrichtung und Bedienung stehen in [Module und Controlling](MODULE_UND_CONTROLLING.md).
+
+## Zugangsverwaltung ergänzen
+
+Nach den ersten beiden Migrationen `backend/supabase/003_team_access.sql` ausführen. Die Geschäftsführung kann im Teamzugang bestehende Zugänge umbenennen, Rollen und Studios gemeinsam ändern und Zugänge sperren. Neue Einladungen und zusätzliche Loginlinks benötigen außerdem die Edge Function `team-access` sowie funktionierenden SMTP-Versand. Der manuelle Workflow **Mitarbeiter-Einladungen einrichten** veröffentlicht die Funktion nach Konfiguration des geschützten Supabase Access Tokens. Siehe [vollständige Einrichtung](MITARBEITERZUGAENGE.md).
 
 ## Umfang dieser Backend-Anbindung
 

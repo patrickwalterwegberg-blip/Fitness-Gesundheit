@@ -1,0 +1,48 @@
+name: Mitarbeiter-Einladungen einrichten
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: 'Supabase Project Reference aus den Projekteinstellungen (kein Schlüssel)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: team-access-setup
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ inputs.project_ref }}
+      TEAMHUB_SITE_URL: https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/
+    steps:
+      - name: Repository laden
+        uses: actions/checkout@v4
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Einrichtung prüfen
+        run: |
+          node --input-type=module <<'JS'
+          if (!process.env.SUPABASE_ACCESS_TOKEN) throw Error('SUPABASE_ACCESS_TOKEN fehlt als GitHub Actions Secret. Siehe docs/MITARBEITERZUGAENGE.md.');
+          if (!/^[a-z0-9]{20}$/.test(process.env.SUPABASE_PROJECT_REF || '')) throw Error('Ungültige Supabase Project Reference. Bitte den Wert aus den Projekteinstellungen verwenden.');
+          JS
+      - name: Abhängigkeiten installieren
+        run: npm ci --no-audit --no-fund
+      - name: Zugriffsregeln prüfen
+        run: npm run test:db
+      - name: Einladungsdienst prüfen
+        run: npm run test:access
+      - name: Rücksprungadresse im Backend setzen
+        run: npx --yes supabase@2.122.1 --workdir backend secrets set TEAMHUB_SITE_URL="$TEAMHUB_SITE_URL" --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Einladungsdienst veröffentlichen
+        run: npx --yes supabase@2.122.1 --workdir backend functions deploy team-access --no-verify-jwt --use-api --project-ref "$SUPABASE_PROJECT_REF"

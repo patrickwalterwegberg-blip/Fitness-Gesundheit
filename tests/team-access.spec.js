@@ -6,11 +6,12 @@ const studioId = '00000000-0000-4000-8000-000000000003';
 const taskId = '00000000-0000-4000-8000-000000000004';
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-03T09:00:00+01:00')); });
 
-async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdate = false, administration = false } = {}) {
+async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdate = false, administration = false, access = false, inviteFailure = false, accessConflict = false, unknownEmail = false } = {}) {
   const calls = [];
   const user = { id: uid, email: 'test@example.org', aud: 'authenticated', role: 'authenticated', user_metadata: {}, app_metadata: {} };
   const profile = { id: uid, full_name: 'Test Mitarbeiter', role, active: true };
   const people = [profile, { id: employeeId, full_name: 'Teammitglied Zwei', role: 'employee', active: true }];
+  let accessMembers = people.map((p, i) => ({ ...p, email: i ? 'two@example.org' : 'test@example.org', studio_ids: [studioId], access_updated_at: '2026-11-04T09:00:00Z', last_sign_in_at: i ? null : '2026-11-03T09:00:00Z' }));
   let tasks = [{ id: taskId, title: 'Gemeinsame Testaufgabe', description: 'Beschreibung aus der Datenbank', studio_id: studioId, assignee_id: uid, due_date: '2026-11-04', priority: 'normal', status: 'open', studio: { name: 'Dörpen' }, assignee: { full_name: profile.full_name } }];
   const comments = [];
   let modules = [], versions = [];
@@ -27,7 +28,7 @@ async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdat
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS', 'content-type': 'application/json' };
     const send = (data, status = 200, extra = {}) => route.fulfill({ status, headers: { ...headers, ...extra }, body: status === 204 ? undefined : JSON.stringify(data) });
     if (method === 'OPTIONS') return send(null, 204);
-    if (url.pathname === '/auth/v1/otp') return send({});
+    if (url.pathname === '/auth/v1/otp') return unknownEmail ? send({ message: 'Signups not allowed for otp', code: 'signup_disabled' }, 400) : send({});
     if (url.pathname === '/auth/v1/logout') return send(null, 204);
     if (url.pathname === '/auth/v1/user') return send(user);
     if (url.pathname === '/rest/v1/profiles') return send(url.searchParams.has('id') ? [profile] : people);
@@ -61,6 +62,17 @@ async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdat
       return send({ id: mid, revision: 2, published_version_id: vid });
     }
     if (administration && url.pathname === '/rest/v1/rpc/admin_controlling') return send({ profiles: people, studios: [{ id: studioId, name: 'Dörpen' }], tasks, courses: [], assignments: [], progress: [] });
+    if (access && url.pathname === '/rest/v1/rpc/admin_team_directory') return send({ members: accessMembers, total: accessMembers.length, studios: [{ id: studioId, name: 'Dörpen' }] });
+    if (access && url.pathname === '/rest/v1/rpc/admin_set_team_access') {
+      if (accessConflict) return send({ code: '40001', message: 'revision changed' }, 409);
+      accessMembers = accessMembers.map(p => p.id === body.p_user ? { ...p, full_name: body.p_full_name, role: body.p_role, active: body.p_active, studio_ids: body.p_studio_ids, access_updated_at: '2026-11-04T10:00:00Z' } : p);
+      return send(null);
+    }
+    if (access && url.pathname === '/functions/v1/team-access') {
+      if (inviteFailure) return send({ code: 'invitation_not_confirmed' }, 502);
+      if (body.action === 'invite') accessMembers.push({ id: '00000000-0000-4000-8000-000000000030', full_name: body.fullName, email: body.email, role: body.role, active: true, studio_ids: body.studioIds, access_updated_at: '2026-11-04T10:00:00Z', last_sign_in_at: null });
+      return send({ code: body.action === 'invite' ? 'invitation_requested' : 'login_link_requested' });
+    }
     return send({ message: 'Unexpected test request' }, 404);
   });
   return calls;
@@ -164,4 +176,102 @@ test('shared controlling uses server tasks and opens their actual detail', async
   await expect(page.getByLabel('Bearbeitungsstatus')).toHaveValue('open');
   expect(calls.some(c => c.path === '/rest/v1/rpc/admin_controlling')).toBe(true);
   await expect(page.getByRole('heading', { name: 'Willkommen im Team', exact: true })).toHaveCount(0);
+});
+
+test('administrator invites an employee with role and studio through the server function', async ({ page }) => {
+  const calls = await mockBackend(page, { role: 'admin', access: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click();
+  await expect(page.getByText('two@example.org', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mitarbeiter einladen', exact: true }).click();
+  await page.getByLabel('Name des Mitarbeiters', { exact: true }).fill('Neues Teammitglied');
+  await page.getByLabel('Firmen-E-Mail für den Zugang', { exact: true }).fill('neu@example.org');
+  await page.getByRole('button', { name: 'Einladung anfordern', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Einladung beim E-Mail-Dienst angefordert');
+  await expect(page.getByText('neu@example.org', { exact: true })).toBeVisible();
+  const request = calls.find(c => c.path === '/functions/v1/team-access');
+  expect(request.body).toEqual({ action: 'invite', fullName: 'Neues Teammitglied', email: 'neu@example.org', role: 'employee', studioIds: [studioId] });
+  expect(await page.evaluate(() => localStorage.getItem('fg-hub-people'))).toBeNull();
+});
+
+test('invitation failure preserves the input and never claims success', async ({ page }) => {
+  await mockBackend(page, { role: 'admin', access: true, inviteFailure: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click();
+  await page.getByRole('button', { name: 'Mitarbeiter einladen', exact: true }).click();
+  await page.getByLabel('Name des Mitarbeiters', { exact: true }).fill('Nicht bestätigt');
+  await page.getByLabel('Firmen-E-Mail für den Zugang', { exact: true }).fill('nicht-bestaetigt@example.org');
+  await page.getByRole('button', { name: 'Einladung anfordern', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Einladung konnte beim E-Mail-Dienst nicht bestätigt');
+  await expect(page.getByLabel('Firmen-E-Mail für den Zugang', { exact: true })).toHaveValue('nicht-bestaetigt@example.org');
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('access updates include the previous revision and self-admin remains protected', async ({ page }) => {
+  const calls = await mockBackend(page, { role: 'admin', access: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click();
+  await page.getByRole('button', { name: 'Zugang für Test Mitarbeiter bearbeiten', exact: true }).click();
+  await expect(page.getByLabel('Rolle des Zugangs', { exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Zugang freigeschaltet', { exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Abbrechen', exact: true }).click();
+  await page.getByRole('button', { name: 'Zugang für Teammitglied Zwei bearbeiten', exact: true }).click();
+  await page.getByLabel('Zugang freigeschaltet', { exact: true }).uncheck();
+  await page.getByRole('button', { name: 'Zugang speichern', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Mitarbeiterzugang auf dem Server aktualisiert');
+  await expect(page.getByRole('button', { name: 'Anmeldelink für Teammitglied Zwei anfordern', exact: true })).toBeDisabled();
+  const request = calls.find(c => c.path === '/rest/v1/rpc/admin_set_team_access');
+  expect(request.body.p_expected_updated_at).toBe('2026-11-04T09:00:00Z');
+  expect(request.body.p_user).toBe(employeeId);
+  expect(request.body.p_active).toBe(false);
+});
+
+test('access revision conflict keeps the editor and reports a reload', async ({ page }) => {
+  await mockBackend(page, { role: 'admin', access: true, accessConflict: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click();
+  await page.getByRole('button', { name: 'Zugang für Teammitglied Zwei bearbeiten', exact: true }).click();
+  await page.getByLabel('Name des Mitarbeiters', { exact: true }).fill('Änderung behalten');
+  await page.getByRole('button', { name: 'Zugang speichern', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('inzwischen geändert');
+  await expect(page.getByLabel('Name des Mitarbeiters', { exact: true })).toHaveValue('Änderung behalten');
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('employee has no access management and signout clears team data', async ({ page }) => {
+  await mockBackend(page);
+  await page.goto('/tests/workspace.html');
+  await expect(page.getByRole('heading', { name: 'Gemeinsame Testaufgabe', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Abmelden', exact: true }).click();
+  await expect(page.getByLabel('Deine Firmen-E-Mail-Adresse')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Gemeinsame Testaufgabe', exact: true })).toHaveCount(0);
+});
+
+test('unknown email gets a neutral answer and prevents repeated immediate requests', async ({ page }) => {
+  const calls = await mockBackend(page, { loggedIn: false, unknownEmail: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('unknown@example.org');
+  await page.getByRole('button', { name: 'Anmeldelink anfordern', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Falls für diese Adresse ein Zugang eingerichtet ist');
+  await expect(page.getByRole('button', { name: /Erneut anfordern in/ })).toBeDisabled();
+  expect(calls.filter(c => c.path === '/auth/v1/otp')).toHaveLength(1);
+});
+
+test('employee access management fits a mobile viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockBackend(page, { role: 'admin', access: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Mitarbeiterzugänge', exact: true }).click();
+  await page.getByRole('button', { name: 'Mitarbeiter einladen', exact: true }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: 'test-results/team-access-mobile.png', fullPage: true });
+});
+
+test('expired login callback shows recovery and removes provider error details from the URL', async ({ page }) => {
+  await mockBackend(page, { loggedIn: false });
+  await page.goto('/tests/workspace.html?team=1#error=access_denied&error_code=otp_expired&error_description=Expired');
+  await expect(page.getByRole('alert')).toContainText('Anmeldelink ist ungültig oder abgelaufen');
+  await expect(page.getByRole('button', { name: 'Anmeldelink anfordern', exact: true })).toBeEnabled();
+  await expect(page).not.toHaveURL(/error_description/);
 });

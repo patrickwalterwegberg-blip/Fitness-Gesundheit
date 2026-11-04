@@ -13,7 +13,7 @@ await db.exec(`
   create role anon nologin;
   create role authenticated nologin;
   create schema auth;
-  create table auth.users(id uuid primary key);
+  create table auth.users(id uuid primary key,email text unique,raw_user_meta_data jsonb not null default '{}',last_sign_in_at timestamptz,invited_at timestamptz);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant usage on schema public, auth to authenticated, anon;
 `);
@@ -24,8 +24,11 @@ await db.exec(migration);
 const administration = await readFile('backend/supabase/002_modules_controlling.sql', 'utf8');
 await db.exec(administration);
 await db.exec(administration);
+const access = await readFile('backend/supabase/003_team_access.sql', 'utf8');
+await db.exec(access);
+await db.exec(access);
 for (const [role, uid] of Object.entries(ids)) {
-  await db.query('insert into auth.users(id) values ($1)', [uid]);
+  await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
 }
 const sites = (await db.query('select id,name from public.studios')).rows;
@@ -80,8 +83,8 @@ test('manager cannot assign an employee from another studio', async () => {
   await assert.rejects(asUser('manager', tx => tx.query('update public.tasks set assignee_id=$1 where id=$2', [ids.other, id(10)])), /belong to the studio/);
 });
 test('employee cannot promote their role or create a new membership', async () => {
-  assert.equal((await asUser('employee', tx => tx.query("update public.profiles set role='admin' where id=$1 returning id", [ids.employee]))).rows.length, 0);
-  await assert.rejects(asUser('employee', tx => tx.query('insert into public.studio_memberships values ($1,$2)', [ids.employee, b])), /row-level security/);
+  await assert.rejects(asUser('employee', tx => tx.query("update public.profiles set role='admin' where id=$1 returning id", [ids.employee])), /permission denied/);
+  await assert.rejects(asUser('employee', tx => tx.query('insert into public.studio_memberships values ($1,$2)', [ids.employee, b])), /permission denied/);
 });
 test('comments are visible only with task access and cannot impersonate others', async () => {
   await asUser('employee', tx => tx.query('insert into public.task_comments(task_id,body) values ($1,$2)', [id(10), 'My update']));
@@ -205,4 +208,60 @@ test('reopening and completing a task replaces the server completion actor', asy
   assert.equal(reopened.rows[0].completed_by, null);
   const done = await asUser('admin', tx => tx.query("update public.tasks set status='done',completed_by=$2 where id=$1 returning completed_by", [id(10), ids.employee]));
   assert.equal(done.rows[0].completed_by, ids.admin);
+});
+
+let invitedId = id(80);
+test('only administrators can read account emails and stage invitations', async () => {
+  const result = (await asUser('admin', tx => tx.query('select public.admin_team_directory() as data'))).rows[0].data;
+  assert.equal(result.members.length, 7);
+  assert.equal(result.members.find(m => m.id===ids.employee).email, 'employee@example.org');
+  assert.equal(result.studios.length, 7);
+  for (const who of ['employee','manager','inactive']) {
+    await assert.rejects(asUser(who, tx => tx.query('select public.admin_team_directory()')), /Administrator required/);
+    await assert.rejects(asUser(who, tx => tx.query('select public.admin_prepare_team_invitation($1,$2,$3,$4)', ['new@example.org','New colleague','admin',[]])), /Administrator required/);
+  }
+  await assert.rejects(asUser('employee', tx => tx.query('select * from app_private.team_invitations')), /permission denied/);
+});
+test('a staged invitation provisions its employee profile and studio atomically', async () => {
+  const pending = (await asUser('admin', tx => tx.query('select public.admin_prepare_team_invitation($1,$2,$3,$4) as id', [' Invited@example.org ','Invited colleague','employee',[a]]))).rows[0].id;
+  await db.query('insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)', [invitedId,'invited@example.org',JSON.stringify({team_invitation_id:pending,role:'admin'})]);
+  const profile = (await db.query('select * from public.profiles where id=$1',[invitedId])).rows[0];
+  assert.equal(profile.role,'employee'); assert.equal(profile.active,true);
+  assert.equal((await db.query('select studio_id from public.studio_memberships where user_id=$1',[invitedId])).rows[0].studio_id,a);
+  assert.equal((await db.query('select provisioned_user_id from app_private.team_invitations where id=$1',[pending])).rows[0].provisioned_user_id,invitedId);
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_prepare_team_invitation($1,$2,$3,$4)', ['invited@example.org','Duplicate','employee',[a]])), /Account already exists/);
+});
+test('uninvited auth metadata cannot create an administrator profile', async () => {
+  await db.query('insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)', [id(81),'not-invited@example.org',JSON.stringify({team_invitation_id:id(999),role:'admin',active:true})]);
+  assert.equal((await db.query('select * from public.profiles where id=$1',[id(81)])).rows.length,0);
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_prepare_team_invitation($1,$2,$3,$4)', ['nostudio@example.org','No site','employee',[]])), /require a studio/);
+});
+test('access updates are atomic, revision checked and cannot remove the acting admin', async () => {
+  const original = (await db.query('select access_updated_at from public.profiles where id=$1',[invitedId])).rows[0].access_updated_at;
+  await asUser('admin', tx => tx.query('select public.admin_set_team_access($1,$2,$3,$4,$5,$6)', [invitedId,'Studio colleague','studio_manager',[b],true,original]));
+  const changed = (await db.query('select * from public.profiles where id=$1',[invitedId])).rows[0];
+  assert.equal(changed.role,'studio_manager');
+  assert.deepEqual((await db.query('select studio_id from public.studio_memberships where user_id=$1',[invitedId])).rows.map(s=>s.studio_id),[b]);
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_set_team_access($1,$2,$3,$4,$5,$6)', [invitedId,'Stale overwrite','admin',[],true,original])), /access changed/);
+  const admin = (await db.query('select access_updated_at from public.profiles where id=$1',[ids.admin])).rows[0];
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_set_team_access($1,$2,$3,$4,$5,$6)', [ids.admin,'Admin','employee',[a],true,admin.access_updated_at])), /own administrator/);
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_set_team_access($1,$2,$3,$4,$5,$6)', [ids.admin,'Admin','admin',[],false,admin.access_updated_at])), /own administrator/);
+  await assert.rejects(asUser('employee', tx => tx.query('select public.admin_set_team_access($1,$2,$3,$4,$5,$6)', [invitedId,'Promotion','admin',[],true,changed.access_updated_at])), /Administrator required/);
+});
+test('login link targets reject inactive accounts and enforce a retry delay', async () => {
+  assert.equal((await asUser('admin', tx => tx.query('select public.admin_team_login_target($1) as email',[invitedId]))).rows[0].email,'invited@example.org');
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_team_login_target($1)',[invitedId])), /Wait 60 seconds/);
+  const current = (await db.query('select access_updated_at from public.profiles where id=$1',[invitedId])).rows[0];
+  await asUser('admin', tx => tx.query('select public.admin_set_team_access($1,$2,$3,$4,$5,$6)', [invitedId,'Studio colleague','studio_manager',[b],false,current.access_updated_at]));
+  await assert.rejects(asUser('admin', tx => tx.query('select public.admin_team_login_target($1)',[invitedId])), /Active provisioned/);
+  assert.equal((await asUser('employee', tx => tx.query('select * from public.team_access_events'))).rows.length,0);
+  assert.ok((await asUser('admin', tx => tx.query('select * from public.team_access_events'))).rows.length>0);
+});
+test('an invitation cannot provision access after its administrator is disabled', async () => {
+  const pending = (await asUser('admin', tx => tx.query('select public.admin_prepare_team_invitation($1,$2,$3,$4) as id', ['expired-admin@example.org','New colleague','employee',[a]]))).rows[0].id;
+  await db.query('update public.profiles set active=false where id=$1',[ids.admin]);
+  try { await assert.rejects(db.query('insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3)', [id(82),'expired-admin@example.org',JSON.stringify({team_invitation_id:pending})]), /no longer an administrator/); }
+  finally { await db.query('update public.profiles set active=true where id=$1',[ids.admin]); }
+  assert.equal((await db.query('select * from public.profiles where id=$1',[id(82)])).rows.length,0);
+  assert.equal((await db.query('select * from auth.users where id=$1',[id(82)])).rows.length,0);
 });

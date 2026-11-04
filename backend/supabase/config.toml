@@ -1,0 +1,6 @@
+project_id = "fitness-gesundheit"
+
+# Browser-facing Edge Function validates the user JWT with Auth.getUser itself,
+# then verifies the active administrator profile and checked database RPCs.
+[functions.team-access]
+verify_jwt = false

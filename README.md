@@ -31,6 +31,7 @@ Anschließend den Workflow **Teamhub veröffentlichen** unter **Actions** ausfü
 ```sh
 npm test
 npm run test:db
+npm run test:access
 ```
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
@@ -45,6 +46,7 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 - Persönliches Mitarbeiterdashboard mit Profilwahl, eigenen Aufgaben und Terminen, wichtigen Studiohinweisen mit Lesebestätigung, getrenntem Lernfortschritt und Schnellzugriffen
 - Aufgaben mit standortbezogenen Verantwortlichen, Prioritäten, Wiederholungen, Beschreibung, Bearbeitung, Status, Rückmeldungen und lokalem Verlauf; Kalender mit aktuellem Datum
 - Separater Teamzugang für echte E-Mail-Anmeldung, serverseitige Rollen und gemeinsame einmalige Aufgaben mit Rückmeldungen (Projektkonfiguration erforderlich)
+- Admin-Verwaltung für Mitarbeiterzugänge: Einladungen über eine geschützte Edge Function, erneute Anmeldelinks, Rollen, Studiozuordnungen und Sperren; [Einrichtung](docs/MITARBEITERZUGAENGE.md). Ein Supabase-Projekt und echter SMTP-Versand fehlen noch.
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
 - Lernhub mit Beispiellektionen, Wissenstests und individuellen Lernzielen; Lesen, Wissen und praktische Einweisung werden getrennt dokumentiert
 - Modulbaukasten für ausgewählte Bearbeiter: neue Formulare, Zusatzfelder, Entwürfe, getrennte Veröffentlichungsrechte, unveränderliche Versionen und Wiederherstellung; [Bedienung und Backend-Umfang](docs/MODULE_UND_CONTROLLING.md)
@@ -65,6 +67,8 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 In der **Demo** liegen Datensätze in `localStorage`, Dateien in IndexedDB. Diese Daten werden nicht zwischen Geräten synchronisiert und nicht automatisch an ein Backend übertragen. Ein Wechsel von Datei-Öffnung zu einem Webhost verwendet einen anderen Browser-Speicher. Keine sensiblen oder echten betrieblichen Daten in der Demo eingeben; Browser-Speicher kann gelöscht oder verworfen werden.
 
 Der **Teamzugang** verwendet ausschließlich Supabase-Anmeldung und Datenbanktabellen, sobald das Projekt konfiguriert ist. Ohne Konfiguration zeigt er nur die Einrichtungshilfe. Er lädt keine lokalen Demoaufgaben. Die Anbindung umfasst einmalige Aufgaben und Rückmeldungen sowie nach Migration 002 eigene Module, Aufgaben-Zusatzfelder und das Admin-Controlling. Die gemeinsame Lernoberfläche und der gemeinsame Dateispeicher fehlen noch; Kursmetadaten und getrennte Fortschritts-Schnittstellen sind vorbereitet. Weitere Kernmodule und Automatisierungen müssen separat migriert werden. Authentifizierung, E-Mail-Zustellung und Regeln im echten Projekt sind vor Nutzung zu prüfen. Siehe [Einrichtung Schritt für Schritt](docs/BACKEND.md).
+
+Migration 003 ergänzt die serverseitige Mitarbeiterverwaltung und stellt Profile/Studiozuordnungen auf geprüfte RPC-Änderungen um. Die Edge Function für Einladungen wird ausschließlich im Supabase-Backend bereitgestellt; ihre privaten Schlüssel sind kein Bestandteil des Webseiten-Builds. Der separate Workflow `team-access.yml` läuft nur bei manuellem Start mit dem im GitHub-Secret gespeicherten Bereitstellungstoken. Die lokalen Funktionstests prüfen unerlaubte Aufrufe, feste Rücksprungadressen und Versandfehler ohne E-Mails zu senden. Die Benutzeranleitung steht unter [Mitarbeiterzugänge](docs/MITARBEITERZUGAENGE.md).
 
 Der Assistent durchsucht freigegebene TXT-, Markdown- und CSV-Texte (maximal 60.000 Zeichen je Datei) und vorbereitete Beispieldokumente. PDF, Office, Bild und Video werden gespeichert, aber nicht ausgelesen. Upload-Limit: 20 MB pro Datei. Hochgeladener Inhalt wird als Text angezeigt und nie als HTML ausgeführt. Dateien sind noch nicht serverseitig auf Schadsoftware geprüft.
 
