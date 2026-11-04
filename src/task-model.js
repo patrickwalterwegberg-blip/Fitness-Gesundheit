@@ -25,13 +25,16 @@ export function setTaskStatus(tasks, id, status, actor) {
   const nextId = due && !tasks.some(t => t.parentId === old.id) ? crypto.randomUUID() : null;
   const updated = tasks.map(t => t.id === id ? {
     ...t, status, done: status === 'Erledigt',
+    completedAt: status === 'Erledigt' ? new Date().toISOString() : null,
+    completedById: status === 'Erledigt' ? actor.id : null,
+    completedByName: status === 'Erledigt' ? actor.name : null,
     advanced: t.advanced || !!nextId,
     updatedAt: new Date().toISOString(),
     history: [...(t.history || []), taskEvent(`Status: ${status}`, actor)],
   } : t);
   if (nextId) updated.push({
     ...old, id: nextId, parentId: old.id, due,
-    done: false, status: 'Offen', advanced: false,
+    done: false, status: 'Offen', advanced: false, completedAt: null, completedById: null, completedByName: null,
     comments: [], history: [taskEvent('Folgetermin automatisch erstellt', actor)],
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   });

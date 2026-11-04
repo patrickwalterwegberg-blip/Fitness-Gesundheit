@@ -35,7 +35,7 @@ npm run test:db
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Der Teamzugang wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. Zwölf zusätzliche PostgreSQL/PGlite-Prüfungen führen die echten SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen beide Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
 
 Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich beim Tageswechsel. Die Browserprüfungen fixieren ihre eigene Uhr, um wiederholbare Ergebnisse zu erhalten. Einzelne ursprüngliche Demoereignisse enthalten weiterhin feste Beispieldaten.
 
@@ -46,7 +46,9 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 - Aufgaben mit standortbezogenen Verantwortlichen, Prioritäten, Wiederholungen, Beschreibung, Bearbeitung, Status, Rückmeldungen und lokalem Verlauf; Kalender mit aktuellem Datum
 - Separater Teamzugang für echte E-Mail-Anmeldung, serverseitige Rollen und gemeinsame einmalige Aufgaben mit Rückmeldungen (Projektkonfiguration erforderlich)
 - Wissen und Dateiverwaltung mit lokalem Upload, Download, Zuordnung und Freigabe
-- Lernhub mit Beispiellektionen und gespeichertem Fortschritt
+- Lernhub mit Beispiellektionen, Wissenstests und individuellen Lernzielen; Lesen, Wissen und praktische Einweisung werden getrennt dokumentiert
+- Modulbaukasten für ausgewählte Bearbeiter: neue Formulare, Zusatzfelder, Entwürfe, getrennte Veröffentlichungsrechte, unveränderliche Versionen und Wiederherstellung; [Bedienung und Backend-Umfang](docs/MODULE_UND_CONTROLLING.md)
+- Admin-Controlling mit Mitarbeiter-/Studiofiltern, Zeitraum für Aufgabenabschlüsse, dokumentierter ausführender Person, Lernfortschritt, Praxisbestätigung und CSV-Export
 - Mitarbeiterprofile; keine echten Benutzerkonten
 - Namentliches oder anonymes Feedback mit thematischer Zuständigkeit, Status und Rückmeldecode
 - Lokale CRM-Pipeline nach der bestehenden Saleslift-/GoHighLevel-Struktur
@@ -62,7 +64,7 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 
 In der **Demo** liegen Datensätze in `localStorage`, Dateien in IndexedDB. Diese Daten werden nicht zwischen Geräten synchronisiert und nicht automatisch an ein Backend übertragen. Ein Wechsel von Datei-Öffnung zu einem Webhost verwendet einen anderen Browser-Speicher. Keine sensiblen oder echten betrieblichen Daten in der Demo eingeben; Browser-Speicher kann gelöscht oder verworfen werden.
 
-Der **Teamzugang** verwendet ausschließlich Supabase-Anmeldung und Datenbanktabellen, sobald das Projekt konfiguriert ist. Ohne Konfiguration zeigt er nur die Einrichtungshilfe. Er lädt keine lokalen Demoaufgaben. Die Anbindung umfasst zunächst einmalige Aufgaben und Rückmeldungen; weitere Module und Automatisierungen müssen separat migriert werden. Authentifizierung, E-Mail-Zustellung und Regeln im echten Projekt sind vor Nutzung zu prüfen. Siehe [Einrichtung Schritt für Schritt](docs/BACKEND.md).
+Der **Teamzugang** verwendet ausschließlich Supabase-Anmeldung und Datenbanktabellen, sobald das Projekt konfiguriert ist. Ohne Konfiguration zeigt er nur die Einrichtungshilfe. Er lädt keine lokalen Demoaufgaben. Die Anbindung umfasst einmalige Aufgaben und Rückmeldungen sowie nach Migration 002 eigene Module, Aufgaben-Zusatzfelder und das Admin-Controlling. Die gemeinsame Lernoberfläche und der gemeinsame Dateispeicher fehlen noch; Kursmetadaten und getrennte Fortschritts-Schnittstellen sind vorbereitet. Weitere Kernmodule und Automatisierungen müssen separat migriert werden. Authentifizierung, E-Mail-Zustellung und Regeln im echten Projekt sind vor Nutzung zu prüfen. Siehe [Einrichtung Schritt für Schritt](docs/BACKEND.md).
 
 Der Assistent durchsucht freigegebene TXT-, Markdown- und CSV-Texte (maximal 60.000 Zeichen je Datei) und vorbereitete Beispieldokumente. PDF, Office, Bild und Video werden gespeichert, aber nicht ausgelesen. Upload-Limit: 20 MB pro Datei. Hochgeladener Inhalt wird als Text angezeigt und nie als HTML ausgeführt. Dateien sind noch nicht serverseitig auf Schadsoftware geprüft.
 

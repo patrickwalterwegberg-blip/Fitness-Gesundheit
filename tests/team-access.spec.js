@@ -6,13 +6,14 @@ const studioId = '00000000-0000-4000-8000-000000000003';
 const taskId = '00000000-0000-4000-8000-000000000004';
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-03T09:00:00+01:00')); });
 
-async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdate = false } = {}) {
+async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdate = false, administration = false } = {}) {
   const calls = [];
   const user = { id: uid, email: 'test@example.org', aud: 'authenticated', role: 'authenticated', user_metadata: {}, app_metadata: {} };
   const profile = { id: uid, full_name: 'Test Mitarbeiter', role, active: true };
   const people = [profile, { id: employeeId, full_name: 'Teammitglied Zwei', role: 'employee', active: true }];
   let tasks = [{ id: taskId, title: 'Gemeinsame Testaufgabe', description: 'Beschreibung aus der Datenbank', studio_id: studioId, assignee_id: uid, due_date: '2026-11-04', priority: 'normal', status: 'open', studio: { name: 'Dörpen' }, assignee: { full_name: profile.full_name } }];
   const comments = [];
+  let modules = [], versions = [];
   if (loggedIn) {
     const payload = Buffer.from(JSON.stringify({ sub: uid, aud: 'authenticated', role: 'authenticated', exp: 2200000000 })).toString('base64url');
     const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' + payload + '.test-signature';
@@ -49,6 +50,17 @@ async function mockBackend(page, { loggedIn = true, role = 'employee', denyUpdat
       if (method === 'POST') { const c = { ...body, id: 'comment-1', created_at: '2026-11-03T09:00:00Z', author: { full_name: profile.full_name } }; comments.push(c); return send({ id: c.id }, 201); }
       return send(comments);
     }
+    if (['custom_modules', 'module_drafts', 'module_versions', 'module_records', 'module_permissions'].some(t => url.pathname === `/rest/v1/${t}`)) {
+      if (!administration) return send({ code: '42P01', message: 'migration missing' }, 404);
+      return send(url.pathname.endsWith('/custom_modules') ? modules : url.pathname.endsWith('/module_versions') ? versions : []);
+    }
+    if (administration && url.pathname === '/rest/v1/rpc/release_module') {
+      const mid = '00000000-0000-4000-8000-000000000020', vid = '00000000-0000-4000-8000-000000000021';
+      modules = [{ id: mid, owner_id: uid, revision: 2, published_version_id: vid, updated_at: '2026-11-04T09:00:00Z' }];
+      versions = [{ id: vid, module_id: mid, version: 1, schema: body.p_schema, published_by: uid, published_at: '2026-11-04T09:00:00Z' }];
+      return send({ id: mid, revision: 2, published_version_id: vid });
+    }
+    if (administration && url.pathname === '/rest/v1/rpc/admin_controlling') return send({ profiles: people, studios: [{ id: studioId, name: 'Dörpen' }], tasks, courses: [], assignments: [], progress: [] });
     return send({ message: 'Unexpected test request' }, 404);
   });
   return calls;
@@ -107,4 +119,49 @@ test('permission denial preserves old task status and is clearly reported', asyn
   await expect(page.getByRole('alert')).toContainText('Deine Berechtigung reicht');
   await expect(page.getByLabel('Bearbeitungsstatus')).toHaveValue('open');
   await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('shared administration reports a missing migration without importing local modules', async ({ page }) => {
+  await mockBackend(page, { role: 'admin' });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Modulbaukasten', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('zweite SQL-Migration');
+  await expect(page.getByRole('heading', { name: 'Studio-Check', exact: true })).toHaveCount(0);
+});
+
+test('shared builder publishes through the atomic server RPC', async ({ page }) => {
+  const calls = await mockBackend(page, { role: 'admin', administration: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Modulbaukasten', exact: true }).click();
+  await page.getByRole('button', { name: 'Neues Modul', exact: true }).click();
+  await page.getByLabel('Modulname', { exact: true }).fill('Gemeinsame Prüfung');
+  await page.getByRole('button', { name: 'Feld hinzufügen', exact: true }).click();
+  await page.getByLabel('Feldbezeichnung 1', { exact: true }).fill('Prüfnotiz');
+  await page.getByRole('button', { name: 'Veröffentlichen', exact: true }).click();
+  await expect(page.locator('.admin-success')).toContainText('Neue Modulversion veröffentlicht');
+  const released = calls.find(c => c.path === '/rest/v1/rpc/release_module');
+  expect(released.body.p_module_id).toBeNull();
+  expect(released.body.p_expected_revision).toBe(0);
+  expect(released.body.p_schema.fields[0].label).toBe('Prüfnotiz');
+  expect(await page.evaluate(() => localStorage.getItem('fg-hub-modules'))).toBeNull();
+});
+
+test('shared builder refuses an employee without design permissions', async ({ page }) => {
+  await mockBackend(page, { administration: true });
+  await page.goto('/tests/workspace.html');
+  await expect(page.getByRole('button', { name: 'Controlling', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Modulbaukasten', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Modulbaukasten nicht freigegeben' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Neues Modul', exact: true })).toHaveCount(0);
+});
+
+test('shared controlling uses server tasks and opens their actual detail', async ({ page }) => {
+  const calls = await mockBackend(page, { role: 'admin', administration: true });
+  await page.goto('/tests/workspace.html');
+  await page.getByRole('button', { name: 'Controlling', exact: true }).click();
+  await page.getByRole('button', { name: 'Details zu Test Mitarbeiter', exact: true }).click();
+  await page.getByRole('button', { name: /Gemeinsame Testaufgabe/ }).click();
+  await expect(page.getByLabel('Bearbeitungsstatus')).toHaveValue('open');
+  expect(calls.some(c => c.path === '/rest/v1/rpc/admin_controlling')).toBe(true);
+  await expect(page.getByRole('heading', { name: 'Willkommen im Team', exact: true })).toHaveCount(0);
 });

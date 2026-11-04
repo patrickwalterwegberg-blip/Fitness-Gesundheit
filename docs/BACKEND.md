@@ -93,8 +93,16 @@ Beim Ausscheiden das Profil mit `active = false` deaktivieren und offene Aufgabe
 
 Erst diese echten Projekt-, Zustellungs- und Browserprüfungen bestätigen die Einsatzbereitschaft. Die vorhandenen automatischen Tests ersetzen weder die Projektkonfiguration noch die Prüfung der echten Einladungszustellung.
 
-## Umfang dieser ersten Backend-Anbindung
+## Module und Controlling ergänzen
 
-E-Mail-Anmeldung, Rollen, Studiozuordnung, einmalige gemeinsame Aufgaben und Rückmeldungen sind vorbereitet. Die übrigen Module bleiben lokale Demoansichten. Insbesondere Dateispeicher, Feedback-Meldewege, Lernkurse, automatische Wiederholungen und Erinnerungen, 1&1-Postfachverarbeitung, Dropbox, GoHighLevel und WhatsApp sind noch nicht Teil des gemeinsamen Backends. Bestehende Demo-Daten werden nicht automatisch übertragen. Die gemeinsame Ansicht lädt auf Anforderung; Live-Synchronisierung ist noch nicht eingebaut.
+Nach `001_team.sql` im SQL-Editor auch `backend/supabase/002_modules_controlling.sql` ausführen. Anschließend stehen im **Teamzugang** eigene Module, der Baukasten und das Admin-Controlling zur Verfügung. Ohne diese zweite Migration meldet die Oberfläche die fehlende Erweiterung. Beide Migrationen können erneut ausgeführt werden; vorhandene Datensätze werden nicht neu angelegt oder gelöscht.
+
+Der Baukasten trennt Erstellen, Bearbeiten und Veröffentlichen, hält Entwürfe von normalen Lesern getrennt und bewahrt alte Formularversionen. Er unterstützt im Backend zunächst eigenständige Module und Zusatzfelder für echte Teamaufgaben. Andere Kernmodule und der gemeinsame Dateispeicher sind noch nicht angeschlossen.
+
+Das Controlling liest echte Aufgabenabschlüsse und zugewiesene Lernziele. Kursmetadaten und Schnittstellen für Lesen, externe Wissensbeurteilung und Praxisbestätigung sind vorbereitet. Eine gemeinsame Kurs- und Testoberfläche ist noch anzubinden; der bisherige Demo-Lernhub überträgt keine Ergebnisse. Einrichtung und Bedienung stehen in [Module und Controlling](MODULE_UND_CONTROLLING.md).
+
+## Umfang dieser Backend-Anbindung
+
+E-Mail-Anmeldung, Rollen, Studiozuordnung, einmalige gemeinsame Aufgaben, Rückmeldungen sowie die oben beschriebenen Module und Controlling-Schnittstellen sind vorbereitet. Die übrigen Bereiche bleiben lokale Demoansichten. Insbesondere Dateispeicher, Feedback-Meldewege, gemeinsame Lerninhalte und automatische Tests, automatische Wiederholungen und Erinnerungen, 1&1-Postfachverarbeitung, Dropbox, GoHighLevel und WhatsApp sind noch nicht Teil des gemeinsamen Backends. Bestehende Demo-Daten werden nicht automatisch übertragen. Die gemeinsame Ansicht lädt auf Anforderung; Live-Synchronisierung ist noch nicht eingebaut.
 
 Vor echten sensiblen Daten müssen organisatorische Zuständigkeiten, Datenverarbeitungsvereinbarung, Backup-/Wiederherstellung und Aufbewahrung für das gewählte Projekt geklärt und umgesetzt sein.
