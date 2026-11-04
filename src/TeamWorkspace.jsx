@@ -33,6 +33,8 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
   const [passwordRequest,setPasswordRequest]=useState(false);
   const [loginMode,setLoginMode]=useState('password');
   const passwordOperation=useRef(false);
+  const logoutOperation=useRef(false);
+  const [loggingOut,setLoggingOut]=useState(false);
   const client = useMemo(() => {
     if (!config.url || !config.publishableKey) return null;
     try { return createClient(config.url, config.publishableKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }); }
@@ -155,11 +157,16 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
 
   const canManage = profile?.role === 'admin' || profile?.role === 'studio_manager';
   async function signOut() {
+    if(logoutOperation.current)return false;
+    logoutOperation.current=true;setLoggingOut(true);
+    try{
     const previousUser=activeUserId.current;
     setError(''); const {error:e}=await client.auth.signOut({scope:'local'});
     if(activeUserId.current&&activeUserId.current!==previousUser)return false;
     if(e){const checked=await client.auth.getSession();if(checked.data.session){setError('Die Abmeldung konnte nicht bestätigt werden. Bitte erneut versuchen.');return false;}setError('Du bist auf diesem Gerät abgemeldet. Die serverseitige Abmeldung konnte nicht bestätigt werden.');}
-    recoveryUser.current=null;recoveryIntent.current=false;forgetRecovery();clearPrivateViews();setPasswordState('none');setSession(null);setLoginMode('password');setNotice('Du bist auf diesem Gerät abgemeldet.');return true;
+    recoveryUser.current=null;recoveryIntent.current=false;forgetRecovery();clearPrivateViews();setPasswordState('none');setSession(null);setLoginMode('password');setNotice('Du bist auf diesem Gerät abgemeldet.');window.scrollTo({top:0,behavior:'instant'});return true;
+    }catch{setError('Die Abmeldung konnte nicht bestätigt werden. Bitte erneut versuchen.');return false;}
+    finally{logoutOperation.current=false;setLoggingOut(false);}
   }
   async function savePassword(password){
     const userId=recoveryUser.current;
@@ -208,9 +215,9 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
   }
 
   return <div className="team-workspace">
-    <header className="team-topbar"><div className="team-brand-group"><div className="brand"><span className="brand-mark"><Activity size={25}/></span><div>Fitness <span className="brand-amp">&</span> Gesundheit<small>GEMEINSAMER TEAMZUGANG</small></div></div><span className="app-release">{appVersionLabel}</span></div><button className="button button-secondary" onClick={onDemo}><ArrowLeft size={15}/>Zur Demo</button></header>
+    <header className="team-topbar"><div className="team-brand-group"><div className="brand"><span className="brand-mark"><Activity size={25}/></span><div>Fitness <span className="brand-amp">&</span> Gesundheit<small>GEMEINSAMER TEAMZUGANG</small></div></div><span className="app-release">{appVersionLabel}</span></div><button className={session?'button team-logout':'button button-secondary'} disabled={loggingOut} onClick={session?()=>signOut():onDemo}>{session?<><LogOut size={17}/>{loggingOut?'Abmelden …':'Abmelden'}</>:<><ArrowLeft size={15}/>Zur Demo</>}</button></header>
     <main className="team-main">
-      <div className="page-heading"><div><div className="eyebrow">DEIN TEAM · DEINE STUDIOS</div><h1>{profile ? `Hallo, ${profile.full_name.split(' ')[0]}.` : 'Dein Zugang zum Team.'}</h1><p>{profile ? `${roles[profile.role]} · ${session.user.email}` : 'Melde dich mit deiner persönlichen Firmen-E-Mail-Adresse an.'}</p></div>{session && <div className="team-account-buttons">{profile&&passwordState==='none'&&<button className="button button-secondary" onClick={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}}><KeyRound size={15}/>Passwort festlegen / ändern</button>}<button className="button button-secondary" onClick={()=>signOut()}><LogOut size={15}/>Abmelden</button></div>}</div>
+      <div className="page-heading"><div><div className="eyebrow">DEIN TEAM · DEINE STUDIOS</div><h1>{profile ? `Hallo, ${profile.full_name.split(' ')[0]}.` : 'Dein Zugang zum Team.'}</h1><p>{profile ? `${roles[profile.role]} · ${session.user.email}` : 'Melde dich mit deiner persönlichen Firmen-E-Mail-Adresse an.'}</p></div>{session && <div className="team-account-buttons">{profile&&passwordState==='none'&&<button className="button button-secondary" onClick={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}}><KeyRound size={15}/>Passwort festlegen / ändern</button>}<button className="button button-secondary" onClick={onDemo}><ArrowLeft size={15}/>Zur Demo</button></div>}</div>
       {error && <div className="team-error" role="alert">{error}</div>}{notice && <div className="team-notice" role="status"><CheckCircle2 size={16}/>{notice}</div>}
       {!client ? <section className="panel team-setup"><span className="assistant-big"><ShieldCheck size={32}/></span><span className="badge">Backend noch nicht eingerichtet</span><h2>Die Grundlage ist vorbereitet.</h2><p>Für echte Mitarbeiterzugänge und gemeinsame Aufgaben wird einmalig ein Supabase-Projekt benötigt. Diese Ansicht simuliert keine Anmeldung und verwendet keine lokalen Demodaten.</p><ol><li>Supabase-Projekt in einer EU-Region anlegen.</li><li>Das vorbereitete Datenbankschema installieren und den ersten Administrator einrichten.</li><li>Projektadresse und öffentlichen Publishable Key als GitHub-Repository-Variablen hinterlegen und neu veröffentlichen.</li></ol><a className="button button-secondary" href="https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/blob/main/docs/MITARBEITERZUGAENGE.md" target="_blank" rel="noreferrer">Einrichtung Schritt für Schritt<ExternalLink size={14}/></a><small>Keine Passwörter, Secret Keys oder service_role-Schlüssel im Frontend hinterlegen.</small></section>
       : authLoading ? <div className="team-loading"><LoaderCircle size={25}/>Anmeldung wird geprüft …</div>

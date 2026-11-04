@@ -40,6 +40,7 @@ test('email and personal password sign in, never auto-register, and logout clear
  expect(await page.evaluate(password=>JSON.stringify({...localStorage,...sessionStorage}).includes(password),initialPassword)).toBe(false);
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();await expect(page.getByRole('button',{name:'Anmelden',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:/Geschützte Teamaufgabe/})).toHaveCount(0);
  expect(await page.getByLabel('Dein Teamhub-Passwort',{exact:true}).inputValue()).toBe('');
+ await page.reload();await expect(page.getByRole('button',{name:'Anmelden',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:/Geschützte Teamaufgabe/})).toHaveCount(0);
 });
 test('incorrect password stays on login without reading any team data',async({page})=>{
  const {calls}=await authBackend(page);await page.goto('/tests/workspace.html');await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('patrick@example.org');await page.getByLabel('Dein Teamhub-Passwort',{exact:true}).fill('wrong-password');await page.getByRole('button',{name:'Anmelden',exact:true}).click();
@@ -87,6 +88,10 @@ test('successful password save with failed logout clearly reports both outcomes'
 });
 test('signed-in staff can request password setup for their own email',async({page})=>{
  const {calls}=await authBackend(page,{loggedIn:true});await page.goto('/tests/workspace.html');await page.getByRole('button',{name:'Passwort festlegen / ändern'}).click();await expect(page.getByLabel('Deine Firmen-E-Mail-Adresse')).toHaveAttribute('readonly','');await page.getByRole('button',{name:'Link zum Passwort festlegen senden'}).click();await expect(page.getByRole('status')).toContainText('E-Mail zum Festlegen deines Passworts');expect(calls.find(c=>c.path==='/auth/v1/recover').body.email).toBe('patrick@example.org');
+});
+test('logged-in staff can always reach logout in the fixed mobile header',async({page})=>{
+ await page.setViewportSize({width:390,height:640});await authBackend(page,{loggedIn:true});await page.goto('/tests/workspace.html');await page.getByRole('button',{name:'Passwort festlegen / ändern'}).click();await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));
+ const logout=page.getByRole('banner').getByRole('button',{name:'Abmelden',exact:true});await expect(logout).toBeInViewport();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await logout.click();await expect(page.getByRole('button',{name:'Anmelden',exact:true})).toBeVisible();expect(await page.evaluate(()=>window.scrollY)).toBe(0);
 });
 test('logout clears local private views even when server revocation cannot be confirmed',async({page})=>{
  await authBackend(page,{loggedIn:true,failLogout:true});await page.goto('/tests/workspace.html');await expect(page.getByRole('button',{name:/Geschützte Teamaufgabe/})).toBeVisible();await page.getByRole('button',{name:'Abmelden',exact:true}).click();await expect(page.getByRole('button',{name:'Anmelden',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:/Geschützte Teamaufgabe/})).toHaveCount(0);await expect(page.getByRole('alert')).toContainText('serverseitige Abmeldung konnte nicht bestätigt werden');

@@ -14,7 +14,7 @@ Jeder Mitarbeiter verwendet ein eigenes Passwort. Das Teamhub-Passwort ist unabh
 
 ## Später anmelden und abmelden
 
-E-Mail und Passwort ausfüllen und **Anmelden** klicken. Ein bestehendes aktives Mitarbeiterprofil bleibt Voraussetzung für den Zugriff auf Teamdaten. **Abmelden** beendet die Sitzung auf diesem Gerät; die Oberfläche entfernt die privaten Ansichten. Bei Verwendung gemeinsam genutzter Rechner nach der Arbeit abmelden.
+E-Mail und Passwort ausfüllen und **Anmelden** klicken. Ein bestehendes aktives Mitarbeiterprofil bleibt Voraussetzung für den Zugriff auf Teamdaten. **Abmelden** steht im Teamzugang dauerhaft oben rechts, auch beim Scrollen auf dem Handy. Der Knopf beendet die Sitzung auf diesem Gerät; die Oberfläche entfernt die privaten Ansichten. Bei Verwendung gemeinsam genutzter Rechner nach der Arbeit abmelden.
 
 Nach erfolgreichem Festlegen eines neuen Passworts fordert die Seite zusätzlich die Abmeldung bestehender Sitzungen beim Anmeldedienst an. Falls diese serverseitige Bestätigung fehlschlägt, benennt die Oberfläche die erfolgreiche Passwortänderung und den fehlgeschlagenen Teil getrennt. Bereits ausgestellte Zugriffstokens richten sich weiterhin nach ihrer serverseitigen Gültigkeitsdauer.
 
