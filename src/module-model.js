@@ -1,9 +1,9 @@
 import { studios } from './studios';
 
-export const roleLabels = { admin: 'Geschäftsführung', studio_manager: 'Studioleitung', employee: 'Mitarbeiter' };
+export const roleLabels = { admin: 'Admin / Geschäftsleitung', studio_manager: 'Studioleitung', employee: 'Mitarbeiter' };
 export const targets = { standalone: 'Eigenständiges Modul', tasks: 'Aufgaben – Zusatzfelder', equipment: 'Geräte – Zusatzfelder', inventory: 'Lager – Zusatzfelder', team: 'Mitarbeiter – Zusatzfelder', crm: 'Kontakte & CRM – Zusatzfelder', marketing: 'Marketing – Zusatzfelder', knowledge: 'Dateien & Wissen – Zusatzfelder', contacts: 'Notfallkontakte – Zusatzfelder' };
 export const fieldTypes = { text: 'Text', textarea: 'Langer Text', number: 'Zahl', date: 'Datum', select: 'Auswahl', checkbox: 'Checkbox', file: 'Datei', member: 'Mitarbeiter' };
-export const roleKey = actor => actor?.role === 'admin' || actor?.role === 'Geschäftsführung' ? 'admin' : actor?.role === 'studio_manager' || actor?.role === 'Studioleitung' ? 'studio_manager' : 'employee';
+export const roleKey = actor => actor?.role === 'admin' || actor?.role === 'Geschäftsführung' || actor?.role === 'Admin / Geschäftsleitung' ? 'admin' : actor?.role === 'studio_manager' || actor?.role === 'Studioleitung' ? 'studio_manager' : 'employee';
 export const isAdmin = actor => actor && actor.active !== false && roleKey(actor) === 'admin';
 export function hasDesignRight(actor, grants, right) { return !!actor && actor.active !== false && (isAdmin(actor) || grants[actor.id]?.[right] === true); }
 export function blankSchema() { return { title: '', description: '', target: 'standalone', studios: ['Alle Studios'], readerRoles: Object.keys(roleLabels), writerRoles: Object.keys(roleLabels), fields: [] }; }

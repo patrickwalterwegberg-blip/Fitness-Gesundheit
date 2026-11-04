@@ -159,13 +159,11 @@ test('shared builder publishes through the atomic server RPC', async ({ page }) 
   expect(await page.evaluate(() => localStorage.getItem('fg-hub-modules'))).toBeNull();
 });
 
-test('shared builder refuses an employee without design permissions', async ({ page }) => {
-  await mockBackend(page, { administration: true });
+test('ordinary employee does not see builder, file management or controlling', async ({ page }) => {
+  await mockBackend(page, { administration: true, role: 'employee' });
   await page.goto('/tests/workspace.html');
-  await expect(page.getByRole('button', { name: 'Controlling', exact: true })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Modulbaukasten', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Modulbaukasten nicht freigegeben' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Neues Modul', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Aufgaben', exact: true })).toBeVisible();
+  for(const name of ['Modulbaukasten','Dateien','Eigene Module','Controlling','Mitarbeiterzugänge'])await expect(page.getByRole('button',{name,exact:true})).toHaveCount(0);
 });
 
 test('shared controlling uses server tasks and opens their actual detail', async ({ page }) => {

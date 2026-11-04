@@ -42,10 +42,14 @@ await db.exec(users);
 const pilot = await readFile('backend/supabase/006_pilot_learning.sql','utf8');
 await db.exec(pilot);
 await db.exec(pilot);
+const communication=await readFile('backend/supabase/007_chat_feedback_access.sql','utf8');
+await db.exec(communication);await db.exec(communication);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
 }
+// Existing module/file scenarios explicitly grant their non-default areas.
+for(const who of ['employee','peer','other','reader'])await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,app_private.default_team_pages('studio_manager'),$2)",[ids[who],ids.admin]);
 const sites = (await db.query('select id,name from public.studios')).rows;
 a = sites.find(s => s.name === 'Dörpen').id;
 b = sites.find(s => s.name === 'Sögel').id;
@@ -450,4 +454,109 @@ test('pilot dashboard totals and calendar aggregation retain row permissions wit
  await assert.rejects(asUser('employee',tx=>tx.query('select public.admin_pilot_status()')),/Administrator required/);
  assert.equal((await asUser('admin',tx=>tx.query('select public.admin_pilot_status() as data'))).rows[0].data.storage_private,true);
  await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select public.my_team_dashboard()');}),/permission denied/);
+});
+
+let studioChat,globalChat,crossChat,chatMessage,feedbackId,anonReference;
+const staff=id(701),outsider=id(702),standardPages=['dashboard','tasks','calendar','learning','knowledge','chat','feedback'];
+test('ordinary employees get exactly the approved seven areas and cannot grant themselves access',async()=>{
+ ids.staff=staff;ids.outsider=outsider;
+ for(const [uid,name]of[[staff,'new staff'],[outsider,'outside studio']]){await db.query('insert into auth.users(id,email) values($1,$2)',[uid,name.replaceAll(' ','')+'@example.org']);await db.query("insert into public.profiles(id,full_name,role) values($1,$2,'employee')",[uid,name]);}
+ await db.query('insert into public.studio_memberships values($1,$2),($3,(select id from public.studios where name=$4))',[staff,a,outsider,'Werlte']);
+ const access=(await asUser('staff',tx=>tx.query('select public.team_access_context() as data'))).rows[0].data;
+ assert.deepEqual(access.pages,standardPages);assert.equal(access.can_design,false);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.admin_page_access($1,$2)',[staff,['files']])),/Administrator required/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2)',[ids.admin,[]])),/always have full access/);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.custom_modules'))).rows.length,0);
+ await assert.rejects(asUser('staff',tx=>tx.query("select public.prepare_knowledge_version(null,null,'Blocked','','Sonstiges','{}',$1,array['employee'],'article',null,null,null,'Not allowed')",[a])),/File contribution not granted/);
+});
+test('page grants are revision checked and revocation also removes API and Storage access',async()=>{
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2,null)',[staff,[...standardPages,'files']]));
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2,null)',[staff,standardPages])),/Page access changed/);
+ const ownDraft=(await asUser('staff',tx=>tx.query("select public.prepare_knowledge_version(null,null,'Own private draft','','Sonstiges','{}',$1,array['employee'],'article',null,null,null,'Private draft body') as data",[a]))).rows[0].data.document_id;
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.knowledge_documents where id=$1',[ownDraft]))).rows.length,1);
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2,1)',[staff,standardPages]));
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.knowledge_documents where id=$1',[ownDraft]))).rows.length,0);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.knowledge_versions where document_id=$1',[ownDraft]))).rows.length,0);
+ await asUser('admin',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date) values('Permission test',$1,$2,'2030-01-01')",[a,staff]));
+ await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false)',[staff,pilotCourse,a]));
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.tasks'))).rows.length,1);
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2,2)',[staff,['dashboard','chat','feedback']]));
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.tasks'))).rows.length,0);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.learning_material'))).rows.length,0);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.knowledge_documents'))).rows.length,0);
+ assert.equal((await asUser('staff',tx=>tx.query("select * from storage.objects where bucket_id='team-knowledge'"))).rows.length,0);
+ await assert.rejects(asUser('staff',tx=>tx.query("select public.team_task_calendar('2030-01-01')")),/Active employee profile required/);
+ const dashboard=(await asUser('staff',tx=>tx.query('select public.my_team_dashboard() as data'))).rows[0].data;
+ assert.equal(dashboard.counts.open,0);assert.equal(dashboard.learning.length,0);assert.equal(dashboard.knowledge.length,0);
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,null,3,true)',[staff]));
+});
+test('chat channels restrict studio messages and cross-studio groups while preserving the global team',async()=>{
+ globalChat=(await db.query("select id from public.team_chat_channels where kind='all'")).rows[0].id;
+ studioChat=(await db.query("select id from public.team_chat_channels where kind='studio' and studio_ids=array[$1::uuid]",[a])).rows[0].id;
+ assert.equal((await asUser('staff',tx=>tx.query('select public.team_chat_inbox() as data'))).rows[0].data.channels.length,2);
+ await assert.rejects(asUser('staff',tx=>tx.query("select public.admin_chat_channel(null,'Forbidden',$1,true)",[[a,b]])),/Administrator required/);
+ crossChat=(await asUser('admin',tx=>tx.query("select public.admin_chat_channel(null,'Dörpen und Sögel',$1,true) as id",[[a,b]]))).rows[0].id;
+ assert.equal((await asUser('other',tx=>tx.query('select * from public.team_chat_channels where id=$1',[crossChat]))).rows.length,1);
+ assert.equal((await asUser('outsider',tx=>tx.query('select * from public.team_chat_channels where id=$1',[crossChat]))).rows.length,0);
+ await assert.rejects(asUser('other',tx=>tx.query('select public.team_chat_history($1)',[studioChat])),/Channel not granted/);
+});
+test('chat sends are attributed by server, retry safe, and unread cursors cannot cross channels',async()=>{
+ const nonce=id(710);
+ chatMessage=(await asUser('staff',tx=>tx.query('select public.send_team_chat($1,$2,$3) as id',[studioChat,'Shared message',nonce]))).rows[0].id;
+ assert.equal((await asUser('staff',tx=>tx.query('select public.send_team_chat($1,$2,$3) as id',[studioChat,'Shared message',nonce]))).rows[0].id,chatMessage);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.send_team_chat($1,$2,$3)',[studioChat,'Changed retry',nonce])),/retry changed/);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.send_team_chat($1,$2,$3)',[studioChat,'Rate limited',id(711)])),/Wait one second/);
+ const inbox=(await asUser('peer',tx=>tx.query('select public.team_chat_inbox() as data'))).rows[0].data;
+ assert.equal(inbox.channels.find(c=>c.id===studioChat).unread,1);
+ await assert.rejects(asUser('peer',tx=>tx.query('select public.mark_team_chat_read($1,$2)',[globalChat,chatMessage])),/Only loaded channel messages/);
+ await assert.rejects(asUser('peer',tx=>tx.query('select public.mark_team_chat_read($1,$2)',[studioChat,chatMessage+1000])),/Only loaded channel messages/);
+ await asUser('peer',tx=>tx.query('select public.mark_team_chat_read($1,$2)',[studioChat,chatMessage]));
+ await asUser('peer',tx=>tx.query('select public.mark_team_chat_read($1,0)',[studioChat]));
+ assert.equal((await asUser('peer',tx=>tx.query('select public.team_chat_inbox() as data'))).rows[0].data.unread,0);
+ assert.equal((await asUser('other',tx=>tx.query('select * from public.team_chat_messages where id=$1',[chatMessage]))).rows.length,0);
+ await assert.rejects(asUser('staff',tx=>tx.query("update public.team_chat_messages set sender_id=$1 where id=$2",[ids.admin,chatMessage])),/permission denied/);
+});
+test('feedback routes to active authorized staff and only author, assignee and admin can read',async()=>{
+ await asUser('admin',tx=>tx.query('select public.admin_feedback_route($1,$2,$3)',[a,'technik',ids.peer]));
+ feedbackId=id(720);
+ const report=(await asUser('staff',tx=>tx.query('select public.submit_team_feedback($1,$2,$3,$4,$5,false) as data',[feedbackId,a,'technik','Test feedback','A useful suggestion']))).rows[0].data;
+ assert.equal(report.routed,true);
+ await asUser('staff',tx=>tx.query('select public.submit_team_feedback($1,$2,$3,$4,$5,false)',[feedbackId,a,'technik','Test feedback','A useful suggestion']));
+ assert.equal((await db.query('select count(*)::int as n from public.team_feedback where id=$1',[feedbackId])).rows[0].n,1);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_feedback where id=$1',[feedbackId]))).rows.length,1);
+ assert.equal((await asUser('peer',tx=>tx.query('select * from public.team_feedback where id=$1',[feedbackId]))).rows.length,1);
+ assert.equal((await asUser('other',tx=>tx.query('select * from public.team_feedback where id=$1',[feedbackId]))).rows.length,0);
+ await assert.rejects(asUser('staff',tx=>tx.query("select public.update_team_feedback($1,'done','Self approved',$2,1)",[feedbackId,ids.peer])),/management not granted/);
+ await asUser('peer',tx=>tx.query("select public.update_team_feedback($1,'in_progress','We are checking this.',$2,1)",[feedbackId,ids.peer]));
+ await assert.rejects(asUser('peer',tx=>tx.query("select public.update_team_feedback($1,'done','Old update',$2,1)",[feedbackId,ids.peer])),/Feedback changed/);
+ await assert.rejects(asUser('peer',tx=>tx.query("select public.update_team_feedback($1,'done','Reassign',$2,2)",[feedbackId,ids.admin])),/Only admin can reassign/);
+});
+test('anonymous feedback does not store an author and receipts reveal only status and reply',async()=>{
+ const report=(await asUser('staff',tx=>tx.query('select public.submit_team_feedback($1,$2,$3,$4,$5,true) as data',[id(721),a,'technik','Anonymous idea','Unlinked report content']))).rows[0].data;anonReference=report.reference;
+ assert.equal((await db.query('select author_id from public.team_feedback where id=$1',[id(721)])).rows[0].author_id,null);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_feedback where id=$1',[id(721)]))).rows.length,0);
+ const items=(await asUser('admin',tx=>tx.query('select public.team_feedback_list() as data'))).rows[0].data.items;
+ assert.equal(items.find(f=>f.id===id(721)).author_name,null);
+ const tracked=(await asUser('other',tx=>tx.query('select public.track_team_feedback($1) as data',[anonReference]))).rows[0].data;
+ assert.deepEqual(Object.keys(tracked).sort(),['reference','reply','status','updated_at']);
+ const controlling=(await asUser('admin',tx=>tx.query('select public.admin_controlling() as data'))).rows[0].data;
+ assert.equal(JSON.stringify(controlling).includes('Unlinked report content'),false);
+});
+test('removing communication pages or disabling accounts closes both RPC and direct table access',async()=>{
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2)',[staff,['dashboard']]));
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.team_chat_inbox()')),/Chat not granted/);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.team_feedback_list()')),/Feedback not granted/);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.track_team_feedback($1)',[anonReference])),/Feedback not granted/);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_chat_messages'))).rows.length,0);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_feedback'))).rows.length,0);
+ await assert.rejects(asUser('inactive',tx=>tx.query('select public.team_chat_inbox()')),/Chat not granted/);
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select public.team_chat_inbox()');}),/permission denied/);
+});
+test('feedback routing skips handlers whose page was revoked and falls back to global management',async()=>{
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,null,1,true)',[staff]));
+ await asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2,1)',[ids.peer,standardPages.filter(p=>p!=='feedback')]));
+ const unrouted=(await asUser('staff',tx=>tx.query("select public.submit_team_feedback($1,$2,'technik','New report','No hidden assignee',false) as data",[id(722),a]))).rows[0].data;assert.equal(unrouted.routed,false);
+ await asUser('admin',tx=>tx.query("select public.admin_feedback_route(null,'technik',$1)",[ids.admin]));
+ await asUser('staff',tx=>tx.query("select public.submit_team_feedback($1,$2,'technik','Another report','Management fallback',false)",[id(723),a]));
+ assert.equal((await db.query('select assignee_id from public.team_feedback where id=$1',[id(723)])).rows[0].assignee_id,ids.admin);
 });

@@ -1,6 +1,6 @@
 # Fitness & Gesundheit · Teamhub
 
-Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Demo-Module verwenden Browserdaten. Der separate Teamzugang nutzt Supabase für E-Mail-Anmeldung, Aufgaben, Wissen/Dateien, Nutzerverwaltung, eigene Formulare und Controlling. Die Einrichtung der Migrationen 001–005 sowie Login und Mailzustellung an das eigene Konto wurden vom Nutzer bestätigt; ein separates Mitarbeiterkonto ist noch zu testen. Mit Migration 006 kommen persönliche Übersicht, Aufgabenkalender und die gemeinsame Kurs-/Quizoberfläche hinzu. [Einrichten und vollständig testen](docs/PILOT_TESTBETRIEB.md). Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
+Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Demo-Module verwenden Browserdaten. Der separate Teamzugang nutzt Supabase für E-Mail-Anmeldung, Aufgaben, Wissen/Dateien, Nutzerverwaltung, eigene Formulare und Controlling. Die Einrichtung der Migrationen 001–005 sowie Login und Mailzustellung an das eigene Konto wurden vom Nutzer bestätigt; ein separates Mitarbeiterkonto ist noch zu testen. Mit Migration 006 kommen persönliche Übersicht, Aufgabenkalender und die gemeinsame Kurs-/Quizoberfläche hinzu. Migration 007 ergänzt gemeinsame Chats, Feedback und individuelle Bereichsfreigaben. [Einrichten und vollständig testen](docs/PILOT_TESTBETRIEB.md). Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
 
 Die [eigene Loginseite](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) unterstützt E-Mail und persönliches Passwort, erstmaliges Festlegen per bestätigtem E-Mail-Link, Passwortwiederherstellung und Abmelden. [Anleitung](docs/PASSWORT_ANMELDUNG.md). Das benötigt keine zusätzliche SQL-Migration.
 
@@ -38,7 +38,7 @@ npm run test:access
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle sechs Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle sieben Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
 
 Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich beim Tageswechsel. Die Browserprüfungen fixieren ihre eigene Uhr, um wiederholbare Ergebnisse zu erhalten. Einzelne ursprüngliche Demoereignisse enthalten weiterhin feste Beispieldaten.
 
@@ -57,7 +57,8 @@ Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich b
 - Modulbaukasten für ausgewählte Bearbeiter: neue Formulare, Zusatzfelder, Entwürfe, getrennte Veröffentlichungsrechte, unveränderliche Versionen und Wiederherstellung; [Bedienung und Backend-Umfang](docs/MODULE_UND_CONTROLLING.md)
 - Admin-Controlling mit Mitarbeiter-/Studiofiltern, Zeitraum für Aufgabenabschlüsse, dokumentierter ausführender Person, Lernfortschritt, Praxisbestätigung und CSV-Export
 - Mitarbeiterprofile in der lokalen Demo; echte Konten werden separat im Teamzugang verwaltet
-- Namentliches oder anonymes Feedback mit thematischer Zuständigkeit, Status und Rückmeldecode
+- Gemeinsamer Chat, Feedback und Bereichsfreigaben nach Migration 007: Studio-/Teamkanäle, Zähler für ungelesene Nachrichten, Zuständigkeiten, Antworten und Rückmeldecode; [Einrichtung und Rechte](docs/CHAT_FEEDBACK_RECHTE.md)
+- Lokale Feedbackvorschau bleibt getrennt
 - Lokale CRM-Pipeline nach der bestehenden Saleslift-/GoHighLevel-Struktur
 - Marketingkampagnen als interne Planung
 - Geräte mit Seriennummern und Status, Serviceaufgaben

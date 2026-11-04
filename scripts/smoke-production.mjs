@@ -35,6 +35,8 @@ try {
     assert.equal(credentials.password,'Smoke-Test-Passphrase-2026!');
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
+   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:7,pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
+   else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
    else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile];
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
    else if(['/rest/v1/tasks','/rest/v1/studios','/rest/v1/studio_memberships','/rest/v1/learning_courses','/rest/v1/learning_assignments','/rest/v1/learning_progress','/rest/v1/learning_material','/rest/v1/learning_reads'].includes(url.pathname))body=[];

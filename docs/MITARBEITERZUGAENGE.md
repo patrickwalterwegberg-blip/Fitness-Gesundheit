@@ -6,6 +6,8 @@ Für den neu ergänzten gemeinsamen Datei-/Wissenshub und das erweiterte Nutzerm
 
 E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Für diesen Teamhub wurde inzwischen ein Supabase-Projekt angelegt; die drei SQL-Migrationen und das erste aktive Adminprofil wurden laut Einrichtungsrückmeldungen erfolgreich installiert. Der Pages-Workflow enthält dessen öffentliche Projektkonfiguration. Rücksprungadressen, Mailzustellung und der eigene Admin-Login wurden inzwischen bestätigt, der Einladungsdienst wurde erfolgreich bereitgestellt. Ein separates Mitarbeiterkonto ist noch zu testen. Für die aktuelle gemeinsame Oberfläche sind zusätzlich die Erweiterungen 004–006 nötig; [Einrichtung und Testbetrieb](PILOT_TESTBETRIEB.md). Die lokale Demo erzeugt keine Konten und versendet keine Einladungen.
 
+Für gemeinsame Chats, Feedback und die vereinbarten Mitarbeiterbereiche anschließend [Migration 007](CHAT_FEEDBACK_RECHTE.md) installieren. Bereichsfreigaben werden dann im Nutzerprofil verwaltet.
+
 ## 1. Projekt anlegen
 
 1. Das [Supabase Dashboard](https://supabase.com/dashboard) öffnen und mit deinem eigenen Konto anmelden.

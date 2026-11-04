@@ -58,7 +58,7 @@ test('shared file upload preserves original bytes and older versions', async ({ 
 });
 
 test('employee can suggest content only for own studio and cannot release it', async ({ page }) => {
-  const backend = await sharedBackend(page, { role: 'employee' }); await files(page);
+  const backend = await sharedBackend(page, { role: 'employee', pages: ['dashboard','tasks','calendar','learning','knowledge','chat','feedback','files'] }); await files(page);
   await article(page, 'Vorschlag vom Empfang', 'Hinweise zur morgendlichen Kontrolle.');
   await expect(page.locator('.knowledge-detail')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Version freigeben', exact: true })).toHaveCount(0);

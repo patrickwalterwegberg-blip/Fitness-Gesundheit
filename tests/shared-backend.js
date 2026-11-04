@@ -1,6 +1,6 @@
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 export const sharedIds = { user: id(1), colleague: id(2), studio: id(3), otherStudio: id(4) };
-export async function sharedBackend(page, { role = 'admin', failUpload = false, failRemove = false, missingKnowledge = false, existingProfile = true } = {}) {
+export async function sharedBackend(page, { role = 'admin', failUpload = false, failRemove = false, missingKnowledge = false, existingProfile = true, pages = null } = {}) {
   const calls = [], documents = [], versions = [];
   const profile = { id: id(1), full_name: 'Patrick Test', role, active: true };
   const user = { id: id(1), email: 'patrick@example.org', role: 'authenticated', aud: 'authenticated', user_metadata: {}, app_metadata: {} };
@@ -56,6 +56,9 @@ export async function sharedBackend(page, { role = 'admin', failUpload = false, 
       if (method === 'DELETE') { if (failRemove) return send({ statusCode: '500', error: 'error', message: 'Entfernen nicht bestätigt.' }, 500); for (const path of body.prefixes) originals.delete(path); return send([]); }
       if (method === 'GET') { const path = url.pathname.split('team-knowledge/')[1]; return route.fulfill({ status: 200, headers: { ...headers, 'content-type': versions.find(v => v.object_path === path)?.mime_type || 'application/octet-stream' }, body: originals.get(path) || Buffer.from('original') }); }
     }
+    if (url.pathname === '/rest/v1/rpc/team_access_context') return send({version:7,pages:pages || (role==='admin'?['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling']:['dashboard','tasks','calendar','learning','knowledge','chat','feedback']),can_design:role==='admin'});
+    if (url.pathname === '/rest/v1/rpc/team_chat_inbox') return send({channels:[],unread:0});
+    if (url.pathname === '/rest/v1/rpc/admin_page_access') return send({pages:['dashboard','tasks','calendar','learning','knowledge','chat','feedback'],revision:null,defaulted:true,role:'employee'});
     if (url.pathname === '/rest/v1/rpc/admin_team_directory') {
       const query = (body.p_query || '').toLowerCase(); const filtered = members.filter(m => (m.full_name + ' ' + m.email).toLowerCase().includes(query) && (!body.p_role || m.role === body.p_role) && (body.p_status === 'all' || !body.p_status || m.active === (body.p_status === 'active')));
       return send({ members: filtered, total: filtered.length, studios });

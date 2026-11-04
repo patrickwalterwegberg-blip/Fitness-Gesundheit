@@ -70,11 +70,11 @@ Sobald eine zweite Firmenadresse verfügbar ist: **Mitarbeiterzugänge** öffnen
 | Controlling | Aufgaben und getrennte Lern-/Quiz-/Praxisnachweise |
 | Eigene Formulare | Berechtigte Bearbeiter, Entwürfe, veröffentlichte Versionen, Aufgaben-Zusatzfelder |
 
-Wiederkehrende gemeinsame Aufgaben, automatische E-Mail-Erinnerungen, freies Hinweisboard, gemeinsame Notfallkontakte, Feedback, Geräte, Inventur, Marketing/CRM-Automatisierung, Dropbox und KI-Postfachverarbeitung sind noch nicht vollständig an die zentrale Datenbank angeschlossen. Die entsprechenden vorhandenen Demoansichten bleiben als Vorschau getrennt. Die persönliche Übersicht zeigt aktuelle veröffentlichte Wissensinhalte; sie ersetzt noch kein Hinweisboard mit Lesebestätigungen. Die Ansicht aktualisiert sich beim Öffnen oder über den jeweiligen Aktualisieren-Knopf, nicht live per Push.
+Gemeinsame Chats, Feedback und Bereichsfreigaben werden mit [Migration 007](CHAT_FEEDBACK_RECHTE.md) ergänzt. Wiederkehrende gemeinsame Aufgaben, automatische E-Mail-Erinnerungen, freies Hinweisboard, gemeinsame Notfallkontakte, Geräte, Inventur, Marketing/CRM-Automatisierung, Dropbox und KI-Postfachverarbeitung sind noch nicht vollständig an die zentrale Datenbank angeschlossen. Die entsprechenden vorhandenen Demoansichten bleiben als Vorschau getrennt. Die persönliche Übersicht zeigt aktuelle veröffentlichte Wissensinhalte; sie ersetzt noch kein Hinweisboard mit Lesebestätigungen. Die Ansicht aktualisiert sich beim Öffnen oder über den jeweiligen Aktualisieren-Knopf, nicht live per Push.
 
 ## Technische Prüfung
 
-- `npm run test:db`: Alle sechs Migrationen jeweils zweimal auf PostgreSQL/PGlite anwenden; echte Rollen, RLS, Quizbewertung, Nachweise und Idempotenz prüfen.
+- `npm run test:db`: Alle sieben Migrationen jeweils zweimal auf PostgreSQL/PGlite anwenden; echte Rollen, RLS, Quizbewertung, Nachweise und Idempotenz prüfen.
 - `npm run test:access`: Geschützten Einladungsdienst ohne echten Mailversand prüfen.
 - `npm test`: Browserabläufe mit simuliertem Supabase-HTTP einschließlich fehlender Migration, fehlgeschlagener Speicherung und mobiler Ansicht prüfen.
 - `npm run build`: Statische Veröffentlichung und eigenständige Vorschau erstellen.

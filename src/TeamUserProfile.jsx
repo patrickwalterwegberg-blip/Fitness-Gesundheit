@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, ClipboardList, GraduationCap, LoaderCircle, Settings2, ShieldCheck, X } from 'lucide-react';
 import { roleLabels } from './module-model';
+import TeamPageAccess from './TeamPageAccess';
 
 const time = value => value ? new Date(value).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' }) : 'Noch nicht angemeldet';
 export default function TeamUserProfile({ client, member, studios, onClose, onEdit, onChanged }) {
@@ -33,6 +34,7 @@ export default function TeamUserProfile({ client, member, studios, onClose, onEd
       <h3><ClipboardList size={17}/>Zugewiesene Aufgaben · Gesamtstand</h3><div className="user-stat-grid">{[['Zugewiesen', data.tasks.total], ['Erledigt', data.tasks.done], ['Offen', data.tasks.open], ['Überfällig', data.tasks.overdue]].map(([label, value]) => <div key={label}><strong>{value}</strong><small>{label}</small></div>)}</div>
       <h3><GraduationCap size={17}/>Zugewiesene Lernziele</h3>{data.courses.length ? data.courses.map(course => <div className="user-course" key={course.id}><div><strong>{course.title}</strong><small>{course.lessons_read}/{course.lesson_count} Lektionen gelesen{course.due_date ? ` · Zieltermin ${course.due_date}` : ''}</small></div><div><span className="badge">{course.quiz_passed ? 'Wissen geprüft' : 'Wissen offen'}</span>{course.practice_required && <span className="badge">{course.practice_confirmed ? 'Praxis bestätigt' : 'Praxis offen'}</span>}</div></div>) : <p className="user-empty-note">Noch keine individuellen Lernziele zugewiesen.</p>}
       <h3><ShieldCheck size={17}/>Bearbeiterrechte im Modulbaukasten</h3><form className="user-editor-rights" onSubmit={save}>{[['edit', 'Module bearbeiten'], ['create', 'Neue Module erstellen'], ['publish', 'Modulversionen veröffentlichen']].map(([right, label]) => <label key={right}><input type="checkbox" checked={current.role === 'admin' || rights[right]} disabled={busy || current.role === 'admin'} onChange={e => choose(right, e.target.checked)}/>{label}</label>)}<p>Diese Rechte erlauben die Gestaltung von Modulen. Zugriffe auf deren Einträge folgen weiterhin den Standort- und Leserfreigaben. Admin- und Controllingrechte werden separat über die Rolle vergeben.</p>{current.role !== 'admin' && <button className="button button-secondary" type="submit" disabled={busy}>Modulrechte speichern</button>}</form>
+      <TeamPageAccess client={client} member={current} onChanged={onChanged}/>
     </>}
   </div></dialog>;
 }
