@@ -1,5 +1,7 @@
 # Echte Mitarbeiterzugänge aktivieren
 
+Die aktuelle Loginseite bietet E-Mail und persönliches Passwort. [Passwort erstmals festlegen und anmelden](PASSWORT_ANMELDUNG.md). Bestehende Anmeldelinks bleiben als Alternative erhalten. Dafür sind keine neuen Migrationen erforderlich.
+
 Für den neu ergänzten gemeinsamen Datei-/Wissenshub und das erweiterte Nutzermanagement anschließend die [Migrationen 004 und 005](DATEIEN_WISSEN_NUTZER.md) installieren. Dafür ist keine erneute Token-Erstellung oder Veröffentlichung des Einladungsdienstes nötig.
 
 E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Für diesen Teamhub wurde inzwischen ein Supabase-Projekt angelegt; die drei SQL-Migrationen und das erste aktive Adminprofil wurden laut Einrichtungsrückmeldungen erfolgreich installiert. Der Pages-Workflow enthält dessen öffentliche Projektkonfiguration. Rücksprungadressen, Mailzustellung und der eigene Admin-Login wurden inzwischen bestätigt, der Einladungsdienst wurde erfolgreich bereitgestellt. Ein separates Mitarbeiterkonto ist noch zu testen. Für die aktuelle gemeinsame Oberfläche sind zusätzlich die Erweiterungen 004–006 nötig; [Einrichtung und Testbetrieb](PILOT_TESTBETRIEB.md). Die lokale Demo erzeugt keine Konten und versendet keine Einladungen.
@@ -34,7 +36,7 @@ Unter **Authentication** E-Mail-Anmeldung aktivieren und öffentliche Selbstregi
 | Site URL | `https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/` |
 | Erlaubte Redirect URL | `https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/?team=1` |
 
-Die Mailvorlagen für **Invite user** und **Magic Link** müssen den von Supabase vorgesehenen Bestätigungslink verwenden. Keine feste Anmelde-URL ohne Bestätigungstoken einsetzen.
+Die Mailvorlagen für **Invite user**, **Magic Link** und **Reset Password** müssen den von Supabase vorgesehenen Bestätigungslink verwenden. Keine feste Anmelde-URL ohne Bestätigungstoken einsetzen.
 
 Für echte Mitarbeiter SMTP einrichten. Der eingeschränkte Standardversand des Anbieters ist nicht automatisch für alle Firmenadressen freigegeben. Für ein geeignetes 1&1-Postfach kann `smtp.1und1.de` verwendet werden. Port, Verschlüsselung und Absender anhand eurer tatsächlichen Einstellungen prüfen. Postfachpasswörter ausschließlich in den geschützten SMTP-Einstellungen von Supabase speichern. Der Versandabsender ist unabhängig von den persönlichen Empfängeradressen der Mitarbeiter.
 

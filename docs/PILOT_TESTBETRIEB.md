@@ -14,6 +14,10 @@ Die Migrationen 001–005 wurden bereits erfolgreich ausgeführt. Für persönli
 
 Vorhandene Aufgaben, Konten und Dateien bleiben erhalten. Es sind keine neuen Tokens, Passwörter oder SMTP-Einstellungen erforderlich. Der Entwickler kann die private Projektdatenbank aus dieser Entwicklungsumgebung wegen deren Netzwerkbeschränkung nicht selbst ändern. Der Veröffentlichungsworkflow veröffentlicht nur die Oberfläche und führt keine gehosteten SQL-Migrationen aus.
 
+## Anmeldung mit persönlichem Passwort
+
+Bestehende Konten können ein eigenes Teamhub-Passwort festlegen und sich danach mit E-Mail/Passwort anmelden. Dazu auf der [Loginseite](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) **Passwort festlegen / vergessen?** wählen oder im angemeldeten Konto **Passwort festlegen / ändern**. [Vollständiger Ablauf](PASSWORT_ANMELDUNG.md). Die bisherigen Anmeldelinks bleiben als Alternative verfügbar.
+
 ## 1. Aufgabe vom Anlegen bis zum Controlling
 
 1. **Aufgaben → Teamaufgabe erstellen** öffnen. Titel `[TEST] Empfang prüfen`, einen echten Standort, dich selbst als verantwortliche Person und das heutige Datum wählen. Speichern.

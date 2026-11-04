@@ -2,6 +2,8 @@
 
 Eigenständige, responsive Plattform in Schwarz und Gold für sieben Studios. Die bestehenden Demo-Module verwenden Browserdaten. Der separate Teamzugang nutzt Supabase für E-Mail-Anmeldung, Aufgaben, Wissen/Dateien, Nutzerverwaltung, eigene Formulare und Controlling. Die Einrichtung der Migrationen 001–005 sowie Login und Mailzustellung an das eigene Konto wurden vom Nutzer bestätigt; ein separates Mitarbeiterkonto ist noch zu testen. Mit Migration 006 kommen persönliche Übersicht, Aufgabenkalender und die gemeinsame Kurs-/Quizoberfläche hinzu. [Einrichten und vollständig testen](docs/PILOT_TESTBETRIEB.md). Keine Abhängigkeit von der Unternehmenswebseite; Schriften und Icons werden lokal ausgeliefert.
 
+Die [eigene Loginseite](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) unterstützt E-Mail und persönliches Passwort, erstmaliges Festlegen per bestätigtem E-Mail-Link, Passwortwiederherstellung und Abmelden. [Anleitung](docs/PASSWORT_ANMELDUNG.md). Das benötigt keine zusätzliche SQL-Migration.
+
 ## Entwickeln
 
 Voraussetzung: Node.js 22.12+ (validiert mit Node.js 24.22.1) und npm.

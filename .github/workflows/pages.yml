@@ -35,6 +35,7 @@ jobs:
       - name: Eigenständige Webseite erstellen
         run: npm run build
         env:
+          VITE_APP_VERSION: ${{ github.sha }}
           # Public browser configuration for this Teamhub; repository variables
           # can override both values when moving to a different project.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://ftcurcqduzrxsvkujfql.supabase.co' }}

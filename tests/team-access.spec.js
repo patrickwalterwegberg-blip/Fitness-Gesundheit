@@ -82,6 +82,7 @@ test('email sign-in does not auto-register users and keeps demo data separate', 
   const calls = await mockBackend(page, { loggedIn: false });
   await page.goto('/tests/workspace.html');
   await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('test@example.org');
+  await page.getByRole('button', { name: 'Mit Anmeldelink anmelden', exact: true }).click();
   await page.getByRole('button', { name: 'Anmeldelink anfordern' }).click();
   await expect(page.getByRole('status')).toContainText('Falls für diese Adresse ein Zugang eingerichtet ist');
   const otp = calls.find(c => c.path === '/auth/v1/otp');
@@ -252,6 +253,7 @@ test('unknown email gets a neutral answer and prevents repeated immediate reques
   const calls = await mockBackend(page, { loggedIn: false, unknownEmail: true });
   await page.goto('/tests/workspace.html');
   await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('unknown@example.org');
+  await page.getByRole('button', { name: 'Mit Anmeldelink anmelden', exact: true }).click();
   await page.getByRole('button', { name: 'Anmeldelink anfordern', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Falls für diese Adresse ein Zugang eingerichtet ist');
   await expect(page.getByRole('button', { name: /Erneut anfordern in/ })).toBeDisabled();
@@ -272,6 +274,7 @@ test('expired login callback shows recovery and removes provider error details f
   await mockBackend(page, { loggedIn: false });
   await page.goto('/tests/workspace.html?team=1#error=access_denied&error_code=otp_expired&error_description=Expired');
   await expect(page.getByRole('alert')).toContainText('Anmeldelink ist ungültig oder abgelaufen');
+  await page.getByRole('button', { name: 'Mit Anmeldelink anmelden', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Anmeldelink anfordern', exact: true })).toBeEnabled();
   await expect(page).not.toHaveURL(/error_description/);
 });

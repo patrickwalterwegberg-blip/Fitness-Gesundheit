@@ -26,4 +26,7 @@ html = html.replace(script[0], () => `<script type="module">${js.replace(/<\/scr
   .replace('href="/favicon.svg"', `href="data:image/svg+xml;base64,${favicon.toString('base64')}"`);
 await writeFile(resolve(root, 'index.html'), html);
 await writeFile(resolve(root, 'Teamhub.html'), html);
+// Dedicated, fresh entry URL for staff; authentication redirects keep the
+// existing allowlisted app root.
+await writeFile(resolve(root, 'login.html'), html);
 console.log(`Standalone preview: dist/Teamhub.html (${Math.round(Buffer.byteLength(html) / 1024)} KB)`);
