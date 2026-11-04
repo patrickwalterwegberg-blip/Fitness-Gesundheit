@@ -5,6 +5,7 @@ import { backendConfig } from './backend-config';
 import { berlinDay } from './clock';
 import TeamAdministration from './TeamAdministration';
 import TeamAccessManagement from './TeamAccessManagement';
+import TeamKnowledge from './TeamKnowledge';
 import './team-workspace.css';
 
 const roles = { admin: 'Geschäftsführung', studio_manager: 'Studioleitung', employee: 'Mitarbeiter' };
@@ -115,13 +116,14 @@ export default function TeamWorkspace({ onDemo, config = backendConfig() }) {
   async function sendLogin(e) {
     e.preventDefault(); if (loginOperation.current || loginCooldown) return; loginOperation.current = true; setLoginBusy(true); setError(''); setNotice('');
     const email = new FormData(e.currentTarget).get('email').trim();
-    const redirect = new URL(location.pathname, location.origin); redirect.searchParams.set('team', '1');
     try {
+      if (location.protocol === 'file:') throw new Error('Hosted sign-in required');
+      const redirect = new URL(location.pathname, location.origin); redirect.searchParams.set('team', '1');
       const { error: authError } = await client.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: redirect.href } });
       if (authError && !/signups? not allowed|user not found/i.test(authError.message)) throw authError;
       setNotice('Falls für diese Adresse ein Zugang eingerichtet ist, erhältst du einen Anmeldelink. Prüfe auch den Spamordner.');
       setLoginCooldown(60);
-    } catch { setError('Der Anmeldelink konnte nicht angefordert werden. Bitte versuche es später oder frage deine Studioleitung.'); }
+    } catch { setError(location.protocol === 'file:' ? 'Für die Anmeldung bitte die veröffentlichte Teamhub-Webseite öffnen. Eine lokal geöffnete HTML-Datei unterstützt keine Anmeldelinks.' : 'Der Anmeldelink konnte nicht angefordert werden. Bitte versuche es später oder frage deine Studioleitung.'); }
     finally { loginOperation.current = false; setLoginBusy(false); }
   }
   async function signOut() {
@@ -167,8 +169,8 @@ export default function TeamWorkspace({ onDemo, config = backendConfig() }) {
       : loading && !profile ? <div className="team-loading"><LoaderCircle size={25}/>Mitarbeiterprofil wird geladen …</div>
       : !profile ? <section className="panel team-setup"><ShieldCheck size={36}/><h2>Dein Zugang ist noch nicht freigeschaltet.</h2><p>Die Anmeldung ist erfolgt, aber es fehlt ein aktives Mitarbeiterprofil oder die Standortzuordnung. Bitte wende dich an die Geschäftsführung. Es werden keine Teamdaten angezeigt.</p></section>
       : <>
-        <div className="pill-tabs team-area-tabs">{[['tasks', 'Aufgaben'], ['modules', 'Eigene Module'], ['builder', 'Modulbaukasten'], ...(profile.role === 'admin' ? [['controlling', 'Controlling'], ['access', 'Mitarbeiterzugänge']] : [])].map(([id, title]) => <button key={id} className={area === id ? 'active' : ''} onClick={() => { setArea(id); setExtensionEntity(null); setEditor(null); setSelected(null); }}>{title}</button>)}</div>
-        {area === 'access' ? <TeamAccessManagement key={profile.id} client={client} profile={profile} onChanged={() => setRefresh(n => n + 1)}/> : area !== 'tasks' ? <TeamAdministration key={area} client={client} profile={profile} sites={sites} people={people} memberships={memberships} mode={area} entity={extensionEntity} onTaskOpen={t => { setArea('tasks'); setSelected(t); }}/>: <>
+        <div className="pill-tabs team-area-tabs">{[['tasks', 'Aufgaben'], ['knowledge', 'Wissenshub'], ['files', 'Dateien'], ['modules', 'Eigene Module'], ['builder', 'Modulbaukasten'], ...(profile.role === 'admin' ? [['controlling', 'Controlling'], ['access', 'Mitarbeiterzugänge']] : [])].map(([id, title]) => <button key={id} className={area === id ? 'active' : ''} onClick={() => { setArea(id); setExtensionEntity(null); setEditor(null); setSelected(null); }}>{title}</button>)}</div>
+        {['knowledge','files'].includes(area) ? <TeamKnowledge key={`${profile.id}-${profile.role}-${area}`} client={client} profile={profile} sites={sites} people={people} memberships={memberships} mode={area}/> : area === 'access' ? <TeamAccessManagement key={profile.id} client={client} profile={profile} onChanged={() => setRefresh(n => n + 1)}/> : area !== 'tasks' ? <TeamAdministration key={area} client={client} profile={profile} sites={sites} people={people} memberships={memberships} mode={area} entity={extensionEntity} onTaskOpen={t => { setArea('tasks'); setSelected(t); }}/>: <>
         <div className="content-toolbar"><div className="button-group"><label className="team-filter"><span>Standort</span><select value={site} onChange={e => { setSite(e.target.value); setPage(0); setSelected(null); }}><option value="all">Alle freigegebenen Studios</option>{sites.map(s => <option value={s.id} key={s.id}>{s.name}</option>)}</select></label><label className="team-filter"><span>Status</span><select value={filter} onChange={e => { setFilter(e.target.value); setPage(0); setSelected(null); }}><option value="all">Alle Status</option>{Object.entries(statuses).map(([id, label]) => <option value={id} key={id}>{label}</option>)}</select></label></div><div className="button-group"><button className="button button-secondary" disabled={loading} onClick={() => setRefresh(n => n + 1)}><RefreshCw size={14}/>Aktualisieren</button>{canManage && <button className="button" onClick={() => { setEditor({}); setSelected(null); }}><Plus size={15}/>Teamaufgabe erstellen</button>}</div></div>
         <div className="team-scope"><ShieldCheck size={14}/>{canManage ? 'Du siehst Aufgaben innerhalb deiner freigegebenen Standorte.' : 'Du siehst ausschließlich deine zugewiesenen Aufgaben.'} Änderungen werden auf dem Server geprüft.</div>
         {loading ? <div className="team-loading"><LoaderCircle size={23}/>Aufgaben werden geladen …</div> : <section className="panel team-task-list">{tasks.length ? tasks.map(t => <button key={t.id} onClick={() => { setSelected(t); setEditor(null); }}><span className={'team-task-state ' + t.status}>{t.status === 'done' ? <CheckCircle2 size={19}/> : <Activity size={19}/>}</span><div><h3>{t.title}</h3><p>{t.studio?.name || 'Freigegebener Standort'} · {t.assignee?.full_name || 'Zugewiesene Person'} · {dateLabel(t.due_date)}</p></div><span className="badge">{statuses[t.status]}</span><ArrowRight size={15}/></button>) : <div className="empty"><CheckCircle2 size={30}/><h3>Keine Aufgaben für diese Auswahl.</h3><p>Ändere den Filter oder lass dir eine Aufgabe zuweisen.</p></div>}</section>}

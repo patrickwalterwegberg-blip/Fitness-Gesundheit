@@ -16,6 +16,12 @@ await db.exec(`
   create table auth.users(id uuid primary key,email text unique,raw_user_meta_data jsonb not null default '{}',last_sign_in_at timestamptz,invited_at timestamptz);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   grant usage on schema public, auth to authenticated, anon;
+  create schema storage;
+  create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+  create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text,metadata jsonb,unique(bucket_id,name));
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to authenticated,anon;
+  grant select,insert,update,delete on storage.objects to authenticated,anon;
 `);
 const migration = await readFile('backend/supabase/001_team.sql', 'utf8');
 await db.exec(migration);
@@ -27,6 +33,12 @@ await db.exec(administration);
 const access = await readFile('backend/supabase/003_team_access.sql', 'utf8');
 await db.exec(access);
 await db.exec(access);
+const knowledge = await readFile('backend/supabase/004_knowledge_files.sql','utf8');
+await db.exec(knowledge);
+await db.exec(knowledge);
+const users = await readFile('backend/supabase/005_user_management.sql','utf8');
+await db.exec(users);
+await db.exec(users);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -264,4 +276,109 @@ test('an invitation cannot provision access after its administrator is disabled'
   finally { await db.query('update public.profiles set active=true where id=$1',[ids.admin]); }
   assert.equal((await db.query('select * from public.profiles where id=$1',[id(82)])).rows.length,0);
   assert.equal((await db.query('select * from auth.users where id=$1',[id(82)])).rows.length,0);
+});
+
+let knowledgeDoc, articleOne, articleTwo, upload;
+const knowledgeArgs = (overrides={}) => {
+ const p = { document:null,revision:0,title:'Empfangsleitfaden',summary:'Gemeinsame Arbeitsanweisung',category:'Empfang & Service',tags:['Empfang','Ablagekennwort'],studio:a,roles:['admin','studio_manager','employee'],kind:'article',name:null,mime:null,size:null,text:'Das blaue Handtuch liegt neben dem Empfang. Sicherheitsprüfung vor Öffnung.',...overrides };
+ return [p.document,p.revision,p.title,p.summary,p.category,p.tags,p.studio,p.roles,p.kind,p.name,p.mime,p.size,p.text];
+};
+const prepareKnowledge = (who,overrides={}) => asUser(who,tx=>tx.query('select public.prepare_knowledge_version($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) as result',knowledgeArgs(overrides))).then(r=>r.rows[0].result);
+test('knowledge storage remains private and a draft is visible only to its creator and studio management',async()=>{
+ assert.equal((await db.query("select public,file_size_limit from storage.buckets where id='team-knowledge'")).rows[0].public,false);
+ const result = await prepareKnowledge('employee');knowledgeDoc=result.document_id;articleOne=result.version_id;
+ assert.equal((await asUser('employee',tx=>tx.query('select * from public.knowledge_documents'))).rows.length,1);
+ assert.equal((await asUser('reader',tx=>tx.query('select * from public.knowledge_documents'))).rows.length,0);
+ assert.equal((await asUser('manager',tx=>tx.query('select * from public.knowledge_documents'))).rows.length,1);
+ assert.equal((await asUser('other',tx=>tx.query('select * from public.knowledge_documents'))).rows.length,0);
+ await assert.rejects(prepareKnowledge('employee',{studio:null}),/studio not granted/);
+ await assert.rejects(prepareKnowledge('employee',{studio:b}),/studio not granted/);
+});
+test('only appropriate management publishes and search returns approved scoped contents',async()=>{
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.publish_knowledge_version($1,$2,1)',[knowledgeDoc,articleOne])),/publication requires/);
+ await asUser('manager',tx=>tx.query('select public.publish_knowledge_version($1,$2,1)',[knowledgeDoc,articleOne]));
+ assert.equal((await asUser('reader',tx=>tx.query('select * from public.knowledge_documents'))).rows.length,1);
+ const found=(await asUser('reader',tx=>tx.query("select public.search_knowledge('Handtuch') as result"))).rows[0].result;
+ assert.equal(found.total,1);assert.match(found.items[0].excerpt,/blaue/);
+ assert.equal((await asUser('reader',tx=>tx.query("select public.search_knowledge('Ablagekennwort') as result"))).rows[0].result.total,1);
+ assert.equal((await asUser('other',tx=>tx.query("select public.search_knowledge('Handtuch') as result"))).rows[0].result.total,0);
+});
+test('new document versions preserve approved metadata and stay hidden until release',async()=>{
+ const result=await prepareKnowledge('employee',{document:knowledgeDoc,revision:2,title:'Neuer Leitfaden',text:'Unveröffentlichter Ablauf mit geheimem Suchwort Teekanne.'});articleTwo=result.version_id;
+ assert.equal((await asUser('reader',tx=>tx.query('select title from public.knowledge_documents where id=$1',[knowledgeDoc]))).rows[0].title,'Empfangsleitfaden');
+ assert.equal((await asUser('reader',tx=>tx.query('select * from public.knowledge_versions where id=$1',[articleTwo]))).rows.length,0);
+ assert.equal((await asUser('reader',tx=>tx.query("select public.search_knowledge('Teekanne') as result"))).rows[0].result.total,0);
+ await assert.rejects(prepareKnowledge('employee',{document:knowledgeDoc,revision:2}),/revision changed/);
+ await asUser('manager',tx=>tx.query('select public.publish_knowledge_version($1,$2,3)',[knowledgeDoc,articleTwo]));
+ assert.equal((await asUser('reader',tx=>tx.query('select text_content from public.knowledge_versions where id=$1',[articleOne]))).rows[0].text_content,knowledgeArgs()[12]);
+ await assert.rejects(asUser('employee',tx=>tx.query("update public.knowledge_versions set text_content='rewritten' where id=$1",[articleOne])),/permission denied/);
+});
+test('published access restrictions apply to authors, search and version contents',async()=>{
+ await asUser('manager',tx=>tx.query('select public.set_knowledge_access($1,4,$2,$3,false)',[knowledgeDoc,a,['studio_manager']]));
+ for(const who of ['employee','reader']){
+  assert.equal((await asUser(who,tx=>tx.query('select * from public.knowledge_documents where id=$1',[knowledgeDoc]))).rows.length,0);
+  assert.equal((await asUser(who,tx=>tx.query('select * from public.knowledge_versions where document_id=$1',[knowledgeDoc]))).rows.length,0);
+ }
+ await assert.rejects(asUser('manager',tx=>tx.query('select public.set_knowledge_access($1,5,null,$2,false)',[knowledgeDoc,['employee']])),/studio management/);
+});
+test('files cannot be published before upload and require a reserved immutable object path',async()=>{
+ upload=await prepareKnowledge('employee',{kind:'file',name:'training.mp4',mime:'video/mp4',size:128,text:''});
+ await assert.rejects(asUser('manager',tx=>tx.query('select public.publish_knowledge_version($1,$2,1)',[upload.document_id,upload.version_id])),/Ready document/);
+ await assert.rejects(asUser('employee',tx=>tx.query("insert into storage.objects(bucket_id,name,metadata) values('team-knowledge',$1,$2)",['arbitrary-path.mp4',JSON.stringify({size:128,mimetype:'video/mp4'})])),/row-level security/);
+ await assert.rejects(asUser('reader',tx=>tx.query("insert into storage.objects(bucket_id,name,metadata) values('team-knowledge',$1,$2)",[upload.object_path,JSON.stringify({size:128,mimetype:'video/mp4'})])),/row-level security/);
+ await asUser('employee',tx=>tx.query("insert into storage.objects(bucket_id,name,metadata) values('team-knowledge',$1,$2)",[upload.object_path,JSON.stringify({size:128,mimetype:'video/mp4'})]));
+ await asUser('employee',tx=>tx.query('select public.finish_knowledge_upload($1)',[upload.version_id]));
+ await asUser('employee',tx=>tx.query('select public.finish_knowledge_upload($1)',[upload.version_id]));
+ const updated=await asUser('employee',tx=>tx.query("update storage.objects set metadata='{}' where name=$1 returning name",[upload.object_path]));assert.equal(updated.rows.length,0);
+ const removed=await asUser('employee',tx=>tx.query('delete from storage.objects where name=$1 returning name',[upload.object_path]));assert.equal(removed.rows.length,0);
+});
+test('private storage uses the same studio and publication rules as document metadata',async()=>{
+ assert.equal((await asUser('reader',tx=>tx.query('select * from storage.objects where name=$1',[upload.object_path]))).rows.length,0);
+ await asUser('manager',tx=>tx.query('select public.publish_knowledge_version($1,$2,2)',[upload.document_id,upload.version_id]));
+ assert.equal((await asUser('reader',tx=>tx.query('select * from storage.objects where name=$1',[upload.object_path]))).rows.length,1);
+ assert.equal((await asUser('other',tx=>tx.query('select * from storage.objects where name=$1',[upload.object_path]))).rows.length,0);
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select * from public.knowledge_documents');}),/permission denied/);
+ await asUser('manager',tx=>tx.query('select public.set_knowledge_access($1,3,$2,$3,true)',[upload.document_id,a,['employee']]));
+ assert.equal((await asUser('reader',tx=>tx.query('select * from storage.objects where name=$1',[upload.object_path]))).rows.length,0);
+});
+test('oversize, executable and mismatched file types are rejected; unfinished upload cleanup preserves ready files',async()=>{
+ await assert.rejects(prepareKnowledge('employee',{kind:'file',name:'large.mp4',mime:'video/mp4',size:52428801,text:''}),/file name or size/);
+ await assert.rejects(prepareKnowledge('employee',{kind:'file',name:'script.html',mime:'text/html',size:10,text:''}),/Unsupported file type/);
+ await assert.rejects(prepareKnowledge('employee',{kind:'file',name:'image.png',mime:'video/mp4',size:10,text:''}),/Unsupported file type/);
+ const pending=await prepareKnowledge('employee',{kind:'file',name:'test.txt',mime:'text/plain',size:12,text:'test'});
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.finish_knowledge_upload($1)',[pending.version_id])),/metadata not confirmed/);
+ await asUser('employee',tx=>tx.query('select public.cancel_knowledge_upload($1)',[pending.version_id]));
+ assert.equal((await db.query('select * from public.knowledge_versions where id=$1',[pending.version_id])).rows.length,0);
+});
+
+test('user directory filters are server-side and personal statistics remain administrator-only',async()=>{
+ const found=(await asUser('admin',tx=>tx.query('select public.admin_team_directory(0,50,$1) as data',['employee@example.org']))).rows[0].data;
+ assert.equal(found.total,1);assert.equal(found.members[0].id,ids.employee);
+ const disabled=(await asUser('admin',tx=>tx.query("select public.admin_team_directory(0,50,'','','inactive') as data"))).rows[0].data;
+ assert.ok(disabled.members.every(m=>!m.active));
+ const summary=(await asUser('admin',tx=>tx.query('select public.admin_team_member_detail($1) as data',[ids.employee]))).rows[0].data;
+ assert.equal(summary.member.id,ids.employee);assert.equal(summary.tasks.total,1);assert.equal(summary.tasks.done,1);
+ assert.equal(summary.courses[0].lessons_read,2);assert.equal(summary.courses[0].practice_confirmed,true);
+ assert.equal(summary.design_rights.edit,true);assert.equal(summary.design_rights.publish,false);
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.admin_team_member_detail($1)',[ids.employee])),/Administrator required/);
+ await assert.rejects(asUser('manager',tx=>tx.query('select public.admin_team_directory()')),/Administrator required/);
+});
+
+test('bucket guards withstand unrelated broad Storage policies without exposing private originals',async()=>{
+ await db.exec("create policy external_broad_storage_policy on storage.objects for all to authenticated,anon using(true) with check(true)");
+ try {
+  assert.equal((await asUser('other',tx=>tx.query('select * from storage.objects'))).rows.length,0);
+  assert.equal((await db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select * from storage.objects');})).rows.length,0);
+  assert.equal((await asUser('admin',tx=>tx.query("update storage.objects set metadata='{}' where name=$1 returning name",[upload.object_path]))).rows.length,0);
+ } finally { await db.exec('drop policy external_broad_storage_policy on storage.objects'); }
+});
+
+test('management can clean an unfinished archived upload without removing approved files',async()=>{
+ const pending=await prepareKnowledge('employee',{kind:'file',name:'pending.csv',mime:'text/csv',size:12,text:'text'});
+ await asUser('employee',tx=>tx.query("insert into storage.objects(bucket_id,name,metadata) values('team-knowledge',$1,$2)",[pending.object_path,JSON.stringify({size:12,mimetype:'text/csv'})]));
+ await asUser('manager',tx=>tx.query('select public.set_knowledge_access($1,1,$2,$3,true)',[pending.document_id,a,['employee']]));
+ const removed=await asUser('manager',tx=>tx.query('delete from storage.objects where name=$1 returning name',[pending.object_path]));assert.equal(removed.rows.length,1);
+ await asUser('manager',tx=>tx.query('select public.cancel_knowledge_upload($1)',[pending.version_id]));
+ assert.equal((await db.query('select * from public.knowledge_versions where id=$1',[pending.version_id])).rows.length,0);
+ assert.equal((await db.query('select * from storage.objects where name=$1',[upload.object_path])).rows.length,1);
 });

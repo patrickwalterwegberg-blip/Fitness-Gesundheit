@@ -7,6 +7,7 @@ import { useStudioClock } from './clock';
 import { taskStatus, setTaskStatus, taskEvent } from './task-model';
 import { TaskEditor, TaskDetails } from './TaskForms';
 import TeamWorkspace from './TeamWorkspace';
+import { backendConfig } from './backend-config';
 import ModuleBuilder from './ModuleBuilder';
 import ModuleRecords from './ModuleRecords';
 import ControllingCenter from './ControllingCenter';
@@ -29,6 +30,12 @@ const NAV = [
 NAV.push({ label: 'VERWALTUNG', items: [['controlling', 'Controlling', ClipboardList], ['builder', 'Modulbaukasten', Settings]] });
 const titles = Object.fromEntries(NAV.flatMap(g => g.items.map(([id, name]) => [id, name])));
 Object.assign(titles, { settings: 'Einstellungen', assistant: 'KI-Assistent' });
+function initialRoute() {
+  if (new URLSearchParams(location.search).get('team') === '1' || location.hash.includes('access_token=') || location.hash.includes('error_description=')) return 'workspace';
+  if (titles[location.hash.slice(1)]) return location.hash.slice(1);
+  const config = backendConfig();
+  return location.protocol !== 'file:' && config.url && config.publishableKey ? 'workspace' : 'overview';
+}
 const initials = name => name.split(' ').map(s => s[0]).slice(0, 2).join('');
 const date = value => new Date(value + 'T12:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 function useSaved(key, initial) {
@@ -72,7 +79,7 @@ function Modal({ title, children, close, wide = false }) {
 
 function App() {
   const { today, now, greeting, fullDate, shortDate } = useStudioClock();
-  const [page, setPage] = useState(() => new URLSearchParams(location.search).get('team') === '1' || location.hash.includes('access_token=') || location.hash.includes('error_description=') ? 'workspace' : titles[location.hash.slice(1)] ? location.hash.slice(1) : 'overview');
+  const [page, setPage] = useState(initialRoute);
   const [studio, setStudio] = useSaved('studio', 'Alle Studios');
   const [tasks, setTasks] = useSaved('tasks', initialTasks);
   const [docs, setDocs] = useSaved('docs', initialDocs);
@@ -112,7 +119,7 @@ function App() {
   const chatRef = useRef(null);
   const notify = message => setToast(message);
   const go = target => { const url = new URL(location.href); if (url.searchParams.has('team')) { url.searchParams.delete('team'); history.replaceState(null, '', url.href); } location.hash = target; setPage(target); setSidebar(false); setFilter('Alle'); setSearch(''); setModal(null); window.scrollTo({ top: 0 }); };
-  useEffect(() => { const onHash = () => { const id = location.hash.slice(1); setPage(titles[id] ? id : 'overview'); setFilter('Alle'); setSearch(''); }; window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash); }, []);
+  useEffect(() => { const onHash = () => { setPage(initialRoute()); setFilter('Alle'); setSearch(''); }; window.addEventListener('hashchange', onHash); return () => window.removeEventListener('hashchange', onHash); }, []);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4500); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' }); }, [messages]);
   const inStudio = item => studio === 'Alle Studios' || item.studio === studio || item.studio === 'Alle Studios';

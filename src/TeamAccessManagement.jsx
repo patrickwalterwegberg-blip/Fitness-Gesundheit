@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, LoaderCircle, Mail, Plus, RefreshCw, Save, Settings2, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, FileSpreadsheet, LoaderCircle, Mail, Plus, RefreshCw, Save, Search, Settings2, ShieldCheck, UserRound, X } from 'lucide-react';
 import { roleLabels } from './module-model';
 import './team-access.css';
+import TeamUserProfile from './TeamUserProfile';
+import TeamUserImport from './TeamUserImport';
 
 const pageSize = 50;
 const messages = {
@@ -31,6 +33,8 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [editor, setEditor] = useState(null);
+  const [input, setInput] = useState(''), [query, setQuery] = useState(''), [roleFilter, setRoleFilter] = useState(''), [statusFilter, setStatusFilter] = useState('all'), [studioFilter, setStudioFilter] = useState('');
+  const [selectedMember, setSelectedMember] = useState(null), [importing, setImporting] = useState(false), [legacy, setLegacy] = useState(false);
   const generation = useRef(0); const mounted = useRef(true); const operation = useRef(false);
   const allowed = profile?.active && profile.role === 'admin';
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -39,14 +43,19 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
     setDirectory({ members: [], studios: [], total: 0 });
     if (!allowed) { setLoading(false); return; }
     setLoading(true); setError('');
-    client.rpc('admin_team_directory', { p_page: page, p_size: pageSize }).then(({ data, error: failure }) => {
+    (async () => {
+      let result = await client.rpc('admin_team_directory', { p_page: page, p_size: pageSize, p_query: query, p_role: roleFilter, p_status: statusFilter, p_studio: studioFilter || null });
+      let old = false;
+      if (result.error?.code === 'PGRST202' && !query && !roleFilter && statusFilter === 'all' && !studioFilter) { result = await client.rpc('admin_team_directory', { p_page: page, p_size: pageSize }); old = !result.error; }
+      return { ...result, legacy: old };
+    })().then(({ data, error: failure, legacy: old }) => {
       if (!live || generation.current !== version) return;
       if (failure) setError(explain(failure));
       else if (!data || !Array.isArray(data.members) || !Array.isArray(data.studios)) setError('Die Zugangsliste konnte nicht bestätigt werden.');
-      else setDirectory(data);
+      else { setDirectory(data); setLegacy(old); }
     }).catch(() => { if (live) setError(explain(null)); }).finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
-  }, [client, profile?.id, allowed, page, refresh]);
+  }, [client, profile?.id, allowed, page, refresh, query, roleFilter, statusFilter, studioFilter]);
 
   async function run(action, success) {
     if (operation.current) return false;
@@ -72,11 +81,16 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
   }
   if (!allowed) return <section className="panel access-locked"><ShieldCheck size={32}/><h2>Zugänge verwaltet die Geschäftsführung.</h2></section>;
   return <section className="access-management">
-    <div className="page-heading"><div><div className="eyebrow">MITARBEITER & ZUGRIFF</div><h2>Die richtigen Menschen. Der passende Zugang.</h2><p>Firmen-E-Mail, Rolle und Studios zentral verwalten.</p></div><button className="button" disabled={busy || loading || !directory.studios.length} onClick={() => { setEditor({}); setError(''); setNotice(''); }}><Plus size={15}/>Mitarbeiter einladen</button></div>
+    <div className="page-heading"><div><div className="eyebrow">NUTZERMANAGEMENT</div><h2>Die richtigen Menschen. Der passende Zugang.</h2><p>Profile, Aufgaben, Lernziele und Rechte deiner Mitarbeiter im Überblick.</p></div><div className="button-group"><button className="button button-secondary" disabled={busy || loading || !directory.studios.length} onClick={() => setImporting(v => !v)}><FileSpreadsheet size={15}/>Nutzer importieren</button><button className="button" disabled={busy || loading || !directory.studios.length} onClick={() => { setEditor({}); setError(''); setNotice(''); }}><Plus size={15}/>Mitarbeiter einladen</button></div></div>
     {error && <div className="team-error" role="alert">{error}</div>}{notice && <div className="team-notice" role="status"><CheckCircle2 size={16}/>{notice}</div>}
     <div className="content-toolbar"><span className="badge"><ShieldCheck size={12}/>Nur Geschäftsführung · Serverdaten</span><button className="button button-secondary" disabled={loading || busy} onClick={() => { setEditor(null); setRefresh(n => n + 1); }}><RefreshCw size={14}/>Zugangsliste aktualisieren</button></div>
-    {loading ? <div className="team-loading"><LoaderCircle size={23}/>Zugänge werden geladen …</div> : <section className="panel access-directory"><div className="table-wrap"><table><thead><tr><th>Mitarbeiter</th><th>Rolle & Studios</th><th>Zugang</th><th>Letzte Anmeldung</th><th>Verwalten</th></tr></thead><tbody>{directory.members.map(p => <tr key={p.id}><td><strong>{p.full_name}</strong><small>{p.email}</small></td><td>{roleLabels[p.role]}<small>{p.role === 'admin' ? 'Alle Studios' : p.studio_ids.map(id => directory.studios.find(s => s.id === id)?.name || 'Unbekannter Standort').join(', ') || 'Kein Studio zugeordnet'}</small></td><td><span className="badge">{p.active ? 'Freigeschaltet' : 'Gesperrt'}</span></td><td>{stamp(p.last_sign_in_at)}</td><td><div className="access-row-actions"><button className="button button-secondary" aria-label={`Zugang für ${p.full_name} bearbeiten`} disabled={busy} onClick={() => { setEditor(p); setError(''); setNotice(''); }}><Settings2 size={13}/>Bearbeiten</button><button className="text-link" disabled={busy || !p.active} onClick={() => run(() => invoke({ action: 'send_login', userId: p.id }), 'Anmeldelink beim E-Mail-Dienst angefordert. Die Zustellung ist damit noch nicht bestätigt.')} aria-label={`Anmeldelink für ${p.full_name} anfordern`}><Mail size={13}/>Anmeldelink anfordern</button></div></td></tr>)}</tbody></table></div>{!directory.members.length && <div className="empty"><h3>Keine Mitarbeiterzugänge auf dieser Seite.</h3></div>}</section>}
+    {legacy && <div className="info-note"><ShieldCheck size={15}/><span>Die bisherigen Zugänge sind verfügbar. Für Suche, Filter und Nutzerstatistiken bitte zusätzlich Migration 005 installieren.</span></div>}
+    <form className="user-directory-search" onSubmit={e => { e.preventDefault(); setQuery(input.trim()); setPage(0); }}><Search size={17}/><input aria-label="Nutzer nach Name oder E-Mail suchen" placeholder="Name oder E-Mail suchen …" value={input} maxLength={200} disabled={busy || legacy} onChange={e => setInput(e.target.value)}/><button className="button button-secondary" disabled={busy || legacy} type="submit">Nutzer suchen</button></form>
+    <div className="user-directory-filters"><label className="field"><span>Rolle filtern</span><select aria-label="Rolle filtern" value={roleFilter} disabled={busy || legacy} onChange={e => { setRoleFilter(e.target.value); setPage(0); }}><option value="">Alle Rollen</option>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="field"><span>Zugangsstatus filtern</span><select aria-label="Zugangsstatus filtern" value={statusFilter} disabled={busy || legacy} onChange={e => { setStatusFilter(e.target.value); setPage(0); }}><option value="all">Alle Zugänge</option><option value="active">Freigeschaltet</option><option value="inactive">Gesperrt</option></select></label><label className="field"><span>Studio filtern</span><select aria-label="Studio filtern" value={studioFilter} disabled={busy || legacy} onChange={e => { setStudioFilter(e.target.value); setPage(0); }}><option value="">Alle Studios</option>{directory.studios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label></div>
+    {loading ? <div className="team-loading"><LoaderCircle size={23}/>Zugänge werden geladen …</div> : <section className="panel access-directory"><div className="table-wrap"><table><thead><tr><th>Mitarbeiter</th><th>Rolle & Studios</th><th>Zugang</th><th>Letzte Anmeldung</th><th>Verwalten</th></tr></thead><tbody>{directory.members.map(p => <tr key={p.id}><td><button className="user-profile-open" aria-label={`Nutzerprofil ${p.full_name} öffnen`} onClick={() => setSelectedMember(p)}><UserRound size={15}/><strong>{p.full_name}</strong></button><small>{p.email}</small>{p.module_editor && <span className="badge">Modulbearbeiter</span>}</td><td>{roleLabels[p.role]}<small>{p.role === 'admin' ? 'Alle Studios' : p.studio_ids.map(id => directory.studios.find(s => s.id === id)?.name || 'Unbekannter Standort').join(', ') || 'Kein Studio zugeordnet'}</small></td><td><span className="badge">{p.active ? 'Freigeschaltet' : 'Gesperrt'}</span></td><td>{stamp(p.last_sign_in_at)}</td><td><div className="access-row-actions"><button className="button button-secondary" aria-label={`Zugang für ${p.full_name} bearbeiten`} disabled={busy} onClick={() => { setEditor(p); setError(''); setNotice(''); }}><Settings2 size={13}/>Bearbeiten</button><button className="text-link" disabled={busy || !p.active} onClick={() => run(() => invoke({ action: 'send_login', userId: p.id }), 'Anmeldelink beim E-Mail-Dienst angefordert. Die Zustellung ist damit noch nicht bestätigt.')} aria-label={`Anmeldelink für ${p.full_name} anfordern`}><Mail size={13}/>Anmeldelink anfordern</button></div></td></tr>)}</tbody></table></div>{!directory.members.length && <div className="empty"><h3>Keine Mitarbeiterzugänge auf dieser Seite.</h3></div>}</section>}
     <div className="team-pagination"><span>{directory.total} Zugänge · Seite {page + 1} von {Math.max(1, Math.ceil(directory.total / pageSize))}</span><div className="button-group"><button className="button button-secondary" disabled={loading || busy || page === 0} onClick={() => { setEditor(null); setPage(p => p - 1); }}>Zurück</button><button className="button button-secondary" disabled={loading || busy || (page + 1) * pageSize >= directory.total} onClick={() => { setEditor(null); setPage(p => p + 1); }}>Weitere Zugänge</button></div></div>
+    {selectedMember && <TeamUserProfile key={selectedMember.id} client={client} member={selectedMember} studios={directory.studios} onClose={() => setSelectedMember(null)} onEdit={member => { setSelectedMember(null); setEditor(member); }} onChanged={() => { setRefresh(n => n + 1); onChanged(); }}/ >}
+    {importing && <TeamUserImport studios={directory.studios} knownMembers={directory.members} invoke={invoke} onComplete={() => { setRefresh(n => n + 1); onChanged(); }} onClose={() => setImporting(false)}/ >}
     {editor && <AccessForm key={editor.id || 'new'} initial={editor} studios={directory.studios} own={editor.id === profile.id} busy={busy} onSave={save} onCancel={() => setEditor(null)}/>}
     <div className="info-note"><ShieldCheck size={17}/><span>Eine Einladung erzeugt einen persönlichen Zugang. Studiozuordnung und Rolle werden serverseitig geprüft. „Gesperrt“ beendet den Zugriff auf neue Teamdaten; bereits zuvor heruntergeladene Inhalte bleiben auf dem Gerät. Bereitschaft und Zustellung des E-Mail-Dienstes müssen im echten Projekt geprüft werden.</span></div>
   </section>;
