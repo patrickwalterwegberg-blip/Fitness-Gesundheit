@@ -36,10 +36,13 @@ try {
     assert.equal(credentials.password,'Smoke-Test-Passphrase-2026!');
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
-   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:9,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
+   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:10,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
    else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[],total:0,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
    else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
+   else if(url.pathname==='/rest/v1/rpc/team_notification_inbox')body={items:[],unread:0,total:0};
+   else if(url.pathname==='/rest/v1/rpc/team_schedule_month')body={days:[]};
+   else if(url.pathname==='/rest/v1/calendar_events')body=[];
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
    else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile];
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
@@ -56,6 +59,16 @@ try {
  await page.getByRole('button',{name:'Mein Mitarbeiterprofil öffnen'}).click();
  await page.getByRole('dialog',{name:'Mein Mitarbeiterprofil'}).getByText('Produktionstest',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Mein Profil schließen'}).click();
+ await page.getByRole('button',{name:'Kalender',exact:true}).click();
+ await page.getByRole('heading',{name:'Kalender & Aufgaben',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Termin anlegen',exact:true}).click();
+ const appointment=page.getByRole('dialog',{name:'Termin anlegen',exact:true});
+ await appointment.waitFor();
+ assert.ok(await appointment.getByLabel('Termintitel').evaluate(el=>el===document.activeElement),'Appointment must focus the title field');
+ await appointment.getByRole('button',{name:'Fenster schließen'}).click();
+ await page.getByRole('button',{name:'Benachrichtigungen: 0 ungelesen'}).click();
+ await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByText('Du hast noch keine Benachrichtigungen.').waitFor();
+ await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByRole('button',{name:'Fenster schließen'}).click();
  await page.getByRole('button',{name:'Mitarbeiterzugänge',exact:true}).click();
  await page.getByRole('button',{name:'Mitarbeiter einladen',exact:true}).click();
  const inviteDialog=page.getByRole('dialog',{name:'Neuen Mitarbeiter einladen',exact:true});
@@ -76,5 +89,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation dialog, academy, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, academy, logout and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}

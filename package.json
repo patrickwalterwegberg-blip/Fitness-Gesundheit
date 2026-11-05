@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
     "test:production": "node scripts/smoke-production.mjs",
-    "test:db": "node --test --test-isolation=none tests/database.test.mjs",
+    "test:db": "node --test --test-isolation=none tests/database.test.mjs tests/schedule-model.test.mjs",
     "test:access": "node --test --test-isolation=none tests/team-access-function.test.mjs"
   },
   "dependencies": {

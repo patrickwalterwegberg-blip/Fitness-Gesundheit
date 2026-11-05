@@ -12,7 +12,7 @@ def change(s,old,new):
  return s.replace(old,new)
 parts=['-- Apply after 001–007. Includes idempotent 008 setup. Existing roles remain unchanged.\nbegin;']
 home=(root/'backend/supabase/008_home_portal.sql').read_text();home=re.sub(r'^begin;\s*|^commit;\s*|^notify pgrst.*?;\s*','',home,flags=re.M);parts.append(home)
-catalog=json.loads((root/'src/function-catalog.json').read_text());payload=json.dumps(catalog,ensure_ascii=False).replace("'","''")
+catalog=[c for c in json.loads((root/'src/function-catalog.json').read_text()) if c.get('since',9)<=9];payload=json.dumps(catalog,ensure_ascii=False).replace("'","''")
 parts.append("create or replace function app_private.function_catalog() returns table(key text,label text,page text,roles text[],requires text[]) language sql immutable set search_path='' as $$ select key,label,page,roles,requires from jsonb_to_recordset('"+payload+"'::jsonb) as c(key text,label text,page text,roles text[],requires text[]); $$;")
 parts.append((root/'scripts/permissions/base.sql').read_text())
 s=fn('public.admin_page_access');s=change(s,"'builder','chat','feedback'))", "'builder','chat','feedback','access','controlling'))");parts.append(s)

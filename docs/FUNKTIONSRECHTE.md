@@ -32,7 +32,7 @@ Bei Abhängigkeiten wird die notwendige zusätzliche Funktion sichtbar genannt u
 
 ## Umfang und Grenzen
 
-Die Matrix umfasst 45 Aktionen in Aufgaben, Lernhub, Dateien/Wissen, Modulbaukasten, Startseite, Chat, Feedback, Nutzerverwaltung und Controlling. Seiten wie Kalender, Wissenshub oder Chat bleiben zusätzlich über die bestehende Bereichsfreigabe steuerbar. Passwort, eigenes Profil und Abmelden bleiben persönliche Kontofunktionen.
+Die Matrix umfasst nach Erweiterung 010 insgesamt 50 Aktionen in Aufgaben, Lernhub, Dateien/Wissen, Modulbaukasten, Startseite, Chat, Feedback, Nutzerverwaltung und Controlling. Termine und Gerätewartung besitzen mit Erweiterung 010 ebenfalls einzelne Funktionsrechte. Seiten wie Kalender, Wissenshub oder Chat bleiben zusätzlich über die bestehende Bereichsfreigabe steuerbar. Passwort, eigenes Profil und Abmelden bleiben persönliche Kontofunktionen.
 
 Grundrollen ändern, Adminzugänge verwalten, Rechte vergeben und technische Serverdiagnosen bleiben bei Admin und Geschäftsleitung. Ein delegierter Nutzerverwalter kann weder sich selbst noch andere durch Rollen- oder Funktionsänderungen zum Admin machen. Die Einladungsfunktion prüft die konkrete Berechtigung erneut vor dem privilegierten Aufruf; bei der späteren Profilanlage werden Rechte und Studios des Einladenden erneut geprüft.
 

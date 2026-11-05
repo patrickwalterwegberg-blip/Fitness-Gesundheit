@@ -46,6 +46,7 @@ const communication=await readFile('backend/supabase/007_chat_feedback_access.sq
 await db.exec(communication);await db.exec(communication);
 const home=await readFile('backend/supabase/008_home_portal.sql','utf8');await db.exec(home);await db.exec(home);
 const functions=await readFile('backend/supabase/009_function_permissions.sql','utf8');await db.exec(functions);await db.exec(functions);
+const schedule=await readFile('backend/supabase/010_calendar_tasks_notifications.sql','utf8');await db.exec(schedule);await db.exec(schedule);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -721,4 +722,121 @@ test('staged delegated invitations also stop after the access area is removed',a
  const invitation=(await asUser('cap',tx=>tx.query('select public.admin_prepare_team_invitation($1,$2,\'employee\',$3) as id',['no-area@example.org','Access revoked',[a]]))).rows[0].id;
  await db.query('update public.team_page_access set pages=\'{}\' where user_id=$1',[capUid]);
  await assert.rejects(db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)',[id(902),'no-area@example.org',JSON.stringify({team_invitation_id:invitation})]),/Invitation creator/);
+});
+
+// Schedule scenarios use fresh people so earlier permission tests cannot mask access.
+let privateTask, repeatingTask, planId, eventId, notificationId;
+const scheduleWorker=id(1200),schedulePeer=id(1201),scheduleManager=id(1202);
+test('schedule setup adds individual functions without changing roles',async()=>{
+ for(const [key,uid,role] of [['scheduleWorker',scheduleWorker,'employee'],['schedulePeer',schedulePeer,'employee'],['scheduleManager',scheduleManager,'studio_manager']]){
+  ids[key]=uid;await db.query('insert into auth.users(id,email) values($1,$2)',[uid,key+'@example.org']);await db.query('insert into public.profiles(id,full_name,role) values($1,$2,$3)',[uid,key,role]);await db.query('insert into public.studio_memberships values($1,$2)',[uid,a]);
+ }
+ const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as result'))).rows[0].result;
+ assert.equal(ctx.version,10);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
+});
+test('employee private tasks stay invisible to peers, leadership, directory statistics and controlling',async()=>{
+ privateTask=(await asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Private confidential task',$1,$2,current_date,true) returning id",[a,scheduleWorker]))).rows[0].id;
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set title='Updated private task' where id=$1",[privateTask]));
+ await asUser('scheduleWorker',tx=>tx.query("insert into public.task_comments(task_id,body) values($1,'Private comment')",[privateTask]));
+ for(const who of ['schedulePeer','scheduleManager','admin']){
+  assert.equal((await asUser(who,tx=>tx.query('select id from public.tasks where id=$1',[privateTask]))).rows.length,0);
+  assert.equal((await asUser(who,tx=>tx.query('select id from public.task_comments where task_id=$1',[privateTask]))).rows.length,0);
+  assert.equal((await asUser(who,tx=>tx.query("update public.tasks set title='No' where id=$1 returning id",[privateTask]))).rows.length,0);
+ }
+ const detail=(await asUser('admin',tx=>tx.query('select public.admin_team_member_detail($1) as r',[scheduleWorker]))).rows[0].r;
+ assert.equal(detail.tasks.total,0);
+ const control=(await asUser('admin',tx=>tx.query('select public.admin_controlling() as r'))).rows[0].r;
+ assert.ok(!control.tasks.some(t=>t.id===privateTask));
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('update public.tasks set private=false where id=$1',[privateTask])),/immutable/);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('update public.tasks set assignee_id=$2 where id=$1',[privateTask,schedulePeer])),/assignment not granted/);
+});
+test('employees cannot create shared assignments or private tasks for another person or studio',async()=>{
+ for(const [site,person,privacy] of [[a,schedulePeer,true],[b,scheduleWorker,true],[a,schedulePeer,false]])await assert.rejects(asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Invalid task',$1,$2,current_date,$3)",[site,person,privacy])));
+});
+test('leadership assigns recurring tasks and completion creates exactly one anchored six-month successor',async()=>{
+ repeatingTask=(await asUser('scheduleManager',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,repeat_unit,repeat_every) values('Half-year task',$1,$2,'2026-08-31','month',6) returning id",[a,scheduleWorker]))).rows[0].id;
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='done' where id=$1",[repeatingTask]));
+ let rows=(await asUser('scheduleWorker',tx=>tx.query('select id,due_date::text,created_by,repeat_anchor from public.tasks where previous_task_id=$1',[repeatingTask]))).rows;
+ assert.equal(rows.length,1);assert.equal(rows[0].due_date,'2027-02-28');assert.equal(rows[0].created_by,scheduleManager);assert.equal(rows[0].repeat_anchor,31);
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='done' where id=$1",[repeatingTask]));
+ assert.equal((await db.query('select id from public.tasks where previous_task_id=$1',[repeatingTask])).rows.length,1);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='open' where id=$1",[repeatingTask])),/successor/);
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='done' where id=$1",[rows[0].id]));
+ assert.equal((await db.query('select due_date::text from public.tasks where previous_task_id=$1',[rows[0].id])).rows[0].due_date,'2027-08-31');
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private,previous_task_id) values('Forged',$1,$2,current_date,true,$3)",[a,scheduleWorker,privateTask])),/server managed/);
+});
+test('private recurring tasks carry their privacy and original author to the successor',async()=>{
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set repeat_unit='week',repeat_every=2 where id=$1",[privateTask]));
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='done' where id=$1",[privateTask]));
+ const next=(await asUser('scheduleWorker',tx=>tx.query('select * from public.tasks where previous_task_id=$1',[privateTask]))).rows[0];
+ assert.equal(next.private,true);assert.equal(next.assignee_id,scheduleWorker);assert.equal(next.created_by,scheduleWorker);
+ assert.equal((await asUser('admin',tx=>tx.query('select * from public.tasks where id=$1',[next.id]))).rows.length,0);
+});
+test('maintenance planning creates a calendar task and advances plan and task together',async()=>{
+ planId=(await asUser('scheduleManager',tx=>tx.query("select public.save_maintenance_plan(null,'Laufband','SN-42','Riemen prüfen',$1,$2,'2026-11-30',6) as id",[a,scheduleWorker]))).rows[0].id;
+ const task=(await asUser('scheduleWorker',tx=>tx.query('select * from public.tasks where maintenance_plan_id=$1',[planId]))).rows[0];assert.equal(task.title,'Wartung: Laufband');assert.equal(task.repeat_every,6);
+ const month=(await asUser('scheduleWorker',tx=>tx.query("select public.team_schedule_month('2026-11-01',$1) as r",[a]))).rows[0].r;assert.equal(month.days.find(d=>d.day==='2026-11-30').maintenance,1);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("update public.tasks set due_date='2026-12-01' where id=$1",[task.id])));
+ await asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='done' where id=$1",[task.id]));
+ assert.equal((await db.query('select due_date::text from public.maintenance_plans where id=$1',[planId])).rows[0].due_date,'2027-05-30');
+ assert.equal((await db.query("select due_date::text from public.tasks where maintenance_plan_id=$1 and status<>'done'",[planId])).rows[0].due_date,'2027-05-30');
+});
+test('maintenance editing checks studio permission, stale versions and synchronizes the pending task',async()=>{
+ const p=(await db.query('select * from public.maintenance_plans where id=$1',[planId])).rows[0];
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("select public.save_maintenance_plan(null,'No','','',$1,$2,current_date,6)",[a,scheduleWorker])),/not granted/);
+ await assert.rejects(asUser('scheduleManager',tx=>tx.query("select public.save_maintenance_plan(null,'No','','',$1,$2,current_date,6)",[b,ids.other])),/not granted/);
+ await assert.rejects(asUser('scheduleManager',tx=>tx.query("select public.save_maintenance_plan($1,'Changed','','',$2,$3,current_date,6,null)",[planId,a,scheduleWorker])),/changed/);
+ await asUser('scheduleManager',tx=>tx.query("select public.save_maintenance_plan($1,'Laufband neu','SN-42','Ölen',$2,$3,'2027-06-10',3,$4)",[planId,a,scheduleWorker,p.updated_at]));
+ const task=(await db.query("select title,description,due_date::text,repeat_every,repeat_anchor from public.tasks where maintenance_plan_id=$1 and status<>'done'",[planId])).rows[0];assert.equal(task.title,'Wartung: Laufband neu');assert.equal(task.due_date,'2027-06-10');assert.equal(task.repeat_every,3);assert.equal(task.repeat_anchor,10);
+});
+test('calendar privacy, editing and overnight month aggregation follow Berlin days',async()=>{
+ eventId=(await asUser('scheduleWorker',tx=>tx.query("insert into public.calendar_events(title,studio_id,starts_at,ends_at) values('Privattermin',$1,'2026-11-04 22:30Z','2026-11-05 01:00Z') returning id",[a]))).rows[0].id;
+ for(const who of ['schedulePeer','scheduleManager','admin'])assert.equal((await asUser(who,tx=>tx.query('select id from public.calendar_events where id=$1',[eventId]))).rows.length,0);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("insert into public.calendar_events(title,studio_id,private,starts_at,ends_at) values('Teamtermin',$1,false,now(),now()+interval '1 hour')",[a])));
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('update public.calendar_events set private=false where id=$1',[eventId])),/immutable/);
+ const month=(await asUser('scheduleWorker',tx=>tx.query("select public.team_schedule_month('2026-11-01') as r"))).rows[0].r;
+ assert.equal(month.days.find(d=>d.day==='2026-11-04').events,1);assert.equal(month.days.find(d=>d.day==='2026-11-05').events,1);
+ const shared=(await asUser('scheduleManager',tx=>tx.query("insert into public.calendar_events(title,studio_id,private,starts_at,ends_at) values('Studiotermin',$1,false,now(),now()+interval '1 hour') returning id",[a]))).rows[0];
+ assert.equal((await asUser('scheduleWorker',tx=>tx.query('select id from public.calendar_events where id=$1',[shared.id]))).rows.length,1);
+ assert.equal((await asUser('scheduleWorker',tx=>tx.query("update public.calendar_events set title='Not allowed' where id=$1 returning id",[shared.id]))).rows.length,0);
+ assert.equal((await asUser('other',tx=>tx.query('select id from public.calendar_events where id=$1',[shared.id]))).rows.length,0);
+});
+test('due notifications catch up once, stay chronological and preserve read history',async()=>{
+ const due=(await asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Due reminder',$1,$2,current_date-1,true) returning id",[a,scheduleWorker]))).rows[0].id;
+ const inbox=()=>asUser('scheduleWorker',tx=>tx.query('select public.team_notification_inbox() as r')).then(r=>r.rows[0].r);
+ let first=await inbox();const relevant=first.items.filter(n=>n.target_id===due);assert.equal(relevant.length,1);notificationId=relevant[0].id;assert.equal(relevant[0].read_at,null);
+ await inbox();assert.equal((await db.query("select count(*)::int as n from public.team_notifications where target_id=$1 and event_key like 'task-due:%'",[due])).rows[0].n,1);
+ const times=first.items.map(n=>+new Date(n.occurred_at));assert.deepEqual(times,[...times].sort((a,b)=>b-a));
+ await asUser('schedulePeer',tx=>tx.query('select public.mark_team_notifications_read($1)',[[notificationId]]));assert.equal((await db.query('select read_at from public.team_notifications where id=$1',[notificationId])).rows[0].read_at,null);
+ await asUser('scheduleWorker',tx=>tx.query('select public.mark_team_notifications_read($1)',[[notificationId]]));
+ first=await inbox();assert.ok(first.items.find(n=>n.id===notificationId).read_at);assert.equal((await asUser('admin',tx=>tx.query('select * from public.team_notifications where id=$1',[notificationId]))).rows.length,0);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('delete from public.team_notifications where id=$1',[notificationId])),/permission denied/);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('select app_private.sync_due_notifications()')),/permission denied/);
+});
+test('chat messages create central notifications only for authorized recipients and chat reading marks them read',async()=>{
+ const cid=(await db.query("select id from public.team_chat_channels where kind='studio' and studio_ids=array[$1]::uuid[]",[a])).rows[0].id;
+ const mid=(await asUser('scheduleManager',tx=>tx.query("select public.send_team_chat($1,'Schedule notification test',$2) as id",[cid,id(1290)]))).rows[0].id;
+ const n=(await asUser('scheduleWorker',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r.items.find(n=>n.kind==='chat'&&n.message_id===mid);assert.ok(n);assert.equal(n.channel_id,cid);
+ assert.equal((await asUser('other',tx=>tx.query('select * from public.team_notifications where message_id=$1',[mid]))).rows.length,0);
+ await asUser('scheduleWorker',tx=>tx.query('select public.mark_team_chat_read($1,$2)',[cid,mid]));
+ assert.ok((await db.query('select read_at from public.team_notifications where id=$1',[n.id])).rows[0].read_at);
+});
+test('an existing non-recurring task gains a correct recurrence anchor when repetition is enabled',async()=>{
+ const task=(await asUser('scheduleManager',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date) values('Legacy task',$1,$2,'2026-01-31') returning id",[a,scheduleWorker]))).rows[0].id;
+ // Simulate the nullable new column on a task created before migration 010.
+ await db.exec('alter table public.tasks disable trigger task_guard');await db.query('update public.tasks set repeat_anchor=null where id=$1',[task]);await db.exec('alter table public.tasks enable trigger task_guard');
+ await asUser('scheduleManager',tx=>tx.query("update public.tasks set repeat_unit='month' where id=$1",[task]));await asUser('scheduleWorker',tx=>tx.query("update public.tasks set status='done' where id=$1",[task]));assert.equal((await db.query('select due_date::text from public.tasks where previous_task_id=$1',[task])).rows[0].due_date,'2026-02-28');
+});
+test('due reminders are generated when returning later and cannot be rewritten by the client',async()=>{
+ const task=(await asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Catch-up due',$1,$2,current_date,true) returning id",[a,scheduleWorker]))).rows[0].id;
+ await db.query('delete from public.team_notifications where target_id=$1',[task]);
+ const first=(await asUser('scheduleWorker',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r;assert.ok(first.items.some(n=>n.target_id===task));
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("insert into public.team_notifications(user_id,event_key,kind,target_id,title) values($1,'forged','task',$2,'Forged')",[schedulePeer,task])),/permission denied/);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("update public.team_notifications set title='Forged' where target_id=$1",[task])),/permission denied/);
+});
+test('notifications stop exposing task and event content after studio membership is withdrawn',async()=>{
+ const before=(await asUser('scheduleWorker',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r;assert.ok(before.items.some(n=>n.kind==='task'));
+ await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[scheduleWorker,a]);
+ const after=(await asUser('scheduleWorker',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r;assert.ok(!after.items.some(n=>n.kind==='task'||n.kind==='event'));
+ await db.query('insert into public.studio_memberships values($1,$2)',[scheduleWorker,a]);
 });

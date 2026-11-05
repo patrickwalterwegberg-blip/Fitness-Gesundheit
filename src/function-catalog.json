@@ -434,5 +434,69 @@
     "requires": [
       "controlling.view"
     ]
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.private",
+    "label": "Private Aufgaben für mich erstellen und bearbeiten",
+    "page": "tasks",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": [],
+    "since": 10
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.repeat",
+    "label": "Wiederkehrende Aufgaben anlegen",
+    "page": "tasks",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": [],
+    "since": 10
+  },
+  {
+    "group": "Kalender",
+    "key": "calendar.create",
+    "label": "Eigene Termine anlegen und bearbeiten",
+    "page": "calendar",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": [],
+    "since": 10
+  },
+  {
+    "group": "Kalender",
+    "key": "calendar.team",
+    "label": "Termine für das Studio anlegen und bearbeiten",
+    "page": "calendar",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": [
+      "calendar.create"
+    ],
+    "since": 10
+  },
+  {
+    "group": "Gerätewartung",
+    "key": "maintenance.manage",
+    "label": "Gerätewartungen planen und bearbeiten",
+    "page": "calendar",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": [
+      "tasks.create",
+      "tasks.assign",
+      "tasks.repeat"
+    ],
+    "since": 10
   }
 ]
