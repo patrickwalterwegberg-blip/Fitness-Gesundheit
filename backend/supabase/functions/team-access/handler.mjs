@@ -22,13 +22,20 @@ export function createTeamAccessHandler({ createClient, env }) {
       const { data: auth, error: authError } = await caller.auth.getUser();
       if (authError || !auth?.user) return reply('not_authenticated', 401);
       const { data: profile, error: profileError } = await caller.from('profiles').select('id,role,active').eq('id', auth.user.id).maybeSingle();
-      if (profileError || !profile?.active || profile.role !== 'admin') return reply('administrator_required', 403);
+      if (profileError || !profile?.active) return reply('administrator_required', 403);
       if (!request.headers.get('content-type')?.startsWith('application/json')) return reply('invalid_input', 400);
       const raw = await request.text();
       if (raw.length > 4096) return reply('invalid_input', 400);
       let input; try { input = JSON.parse(raw); } catch { return reply('invalid_input', 400); }
+      if (profile.role !== 'admin') {
+        const required = input?.action === 'invite' ? 'users.invite' : input?.action === 'send_login' ? 'users.login' : null;
+        if (!required) return reply('invalid_input', 400);
+        const { data: scope, error: scopeError } = await caller.rpc('team_access_context');
+        if (scopeError || scope?.version < 9 || !scope?.pages?.includes('access') || !scope?.capabilities?.includes(required)) return reply('administrator_required', 403);
+        if (input.action === 'invite' && input.role !== 'employee') return reply('administrator_required', 403);
+      }
       const redirect = new URL(configured.site.href); redirect.searchParams.set('team', '1');
-      // Only construct the privileged client after validating the acting admin.
+      // Only construct the privileged client after verifying the active account and the exact requested function.
       const server = createClient(configured.url, configured.secret, { auth: { persistSession: false, autoRefreshToken: false } });
       if (input?.action === 'invite') {
         const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';

@@ -44,3 +44,7 @@ Es werden keine nur optischen Rollen wie „Inhaber“, „Kursmanager“ oder �
 ## Prüfen
 
 Browserprüfungen verwenden simulierte Serverantworten. PostgreSQL/PGlite-Prüfungen installieren alle acht Migrationen zweimal und prüfen die tatsächlichen SQL-Berechtigungen. Sie ersetzen keinen Test gegen das gehostete Projekt. Für einen Praxistest nach Installation von 008: einen Entwurf und eine Veröffentlichung anlegen, ein Mitarbeiterprofil ergänzen und mit einem zweiten Konto die Studio-/Rollenfreigaben prüfen.
+
+## Ergänzung: individuelle Funktionen
+
+Mit Migration 009 werden Zusatzfunktionen unabhängig von Grundrollen einzeln verwaltet. Die bisherige Aussage, dass Nutzerverwaltung oder Controlling nur über die Adminrolle erreichbar sind, gilt dann nicht mehr: ausgewählte Mitarbeiter können genau diese Funktionen innerhalb ihrer Studios erhalten. Rollen- und Rechtevergabe sowie Adminzugänge bleiben administrativ. [Anleitung](FUNKTIONSRECHTE.md).

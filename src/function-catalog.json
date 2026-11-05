@@ -1,0 +1,438 @@
+[
+  {
+    "group": "Aufgaben",
+    "key": "tasks.team",
+    "label": "Teamaufgaben ansehen",
+    "page": "tasks",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.create",
+    "label": "Aufgaben erstellen",
+    "page": "tasks",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.edit",
+    "label": "Aufgabentext, Frist und Priorität bearbeiten",
+    "page": "tasks",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.assign",
+    "label": "Aufgaben anderen Mitarbeitern zuweisen",
+    "page": "tasks",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": [
+      "tasks.team"
+    ]
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.status",
+    "label": "Status eigener Aufgaben ändern",
+    "page": "tasks",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.team_status",
+    "label": "Status von Teamaufgaben ändern",
+    "page": "tasks",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": [
+      "tasks.team"
+    ]
+  },
+  {
+    "group": "Aufgaben",
+    "key": "tasks.comment",
+    "label": "Aufgaben kommentieren",
+    "page": "tasks",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.read",
+    "label": "Eigene Lektionen lesen und bestätigen",
+    "page": "learning",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.quiz",
+    "label": "Eigene Quizfragen beantworten",
+    "page": "learning",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.courses",
+    "label": "Kurse erstellen",
+    "page": "learning",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.assign",
+    "label": "Kurse zuweisen",
+    "page": "learning",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.practice",
+    "label": "Praxiseinweisungen bestätigen",
+    "page": "learning",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.assess",
+    "label": "Externe Wissensprüfungen dokumentieren",
+    "page": "learning",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.read",
+    "label": "Freigegebene Inhalte und Originaldateien öffnen",
+    "page": "knowledge",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.article",
+    "label": "Wissensartikel anlegen",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.upload",
+    "label": "Dateien hochladen",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.edit",
+    "label": "Eigene Inhalte bearbeiten",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.team",
+    "label": "Inhalte anderer Mitarbeiter bearbeiten",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": [
+      "knowledge.edit"
+    ]
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.publish",
+    "label": "Inhalte veröffentlichen",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.access",
+    "label": "Leserrollen und Standortfreigaben ändern",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.archive",
+    "label": "Inhalte archivieren",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Dateien & Wissen",
+    "key": "knowledge.cleanup",
+    "label": "Unvollständige Uploads anderer Mitarbeiter bereinigen",
+    "page": "files",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Modulbaukasten",
+    "key": "modules.create",
+    "label": "Neue Module erstellen",
+    "page": "builder",
+    "roles": [],
+    "requires": [
+      "modules.edit"
+    ]
+  },
+  {
+    "group": "Modulbaukasten",
+    "key": "modules.edit",
+    "label": "Modulaufbau bearbeiten",
+    "page": "builder",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Modulbaukasten",
+    "key": "modules.publish",
+    "label": "Modulversionen veröffentlichen",
+    "page": "builder",
+    "roles": [],
+    "requires": [
+      "modules.edit"
+    ]
+  },
+  {
+    "group": "Modulbaukasten",
+    "key": "modules.restore",
+    "label": "Frühere Modulversion wiederherstellen",
+    "page": "builder",
+    "roles": [],
+    "requires": [
+      "modules.publish"
+    ]
+  },
+  {
+    "group": "Modulbaukasten",
+    "key": "modules.records",
+    "label": "Freigegebene Moduleinträge speichern",
+    "page": "modules",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Startseite",
+    "key": "home.create",
+    "label": "Startseiteneinträge anlegen",
+    "page": "dashboard",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Startseite",
+    "key": "home.edit",
+    "label": "Startseiteneinträge bearbeiten",
+    "page": "dashboard",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Startseite",
+    "key": "home.publish",
+    "label": "Startseiteneinträge veröffentlichen",
+    "page": "dashboard",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Startseite",
+    "key": "home.archive",
+    "label": "Startseiteneinträge ausblenden",
+    "page": "dashboard",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Chat",
+    "key": "chat.send",
+    "label": "Nachrichten senden",
+    "page": "chat",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Chat",
+    "key": "chat.channels",
+    "label": "Studioübergreifende Chatkanäle verwalten",
+    "page": "chat",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Feedback",
+    "key": "feedback.submit",
+    "label": "Eigenes Feedback abgeben und verfolgen",
+    "page": "feedback",
+    "roles": [
+      "employee",
+      "studio_manager"
+    ],
+    "requires": []
+  },
+  {
+    "group": "Feedback",
+    "key": "feedback.manage",
+    "label": "Feedback des eigenen Studios bearbeiten",
+    "page": "feedback",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Feedback",
+    "key": "feedback.reassign",
+    "label": "Zuständigkeit einer Meldung ändern",
+    "page": "feedback",
+    "roles": [],
+    "requires": [
+      "feedback.manage"
+    ]
+  },
+  {
+    "group": "Feedback",
+    "key": "feedback.routes",
+    "label": "Feedback-Zuständigkeiten festlegen",
+    "page": "feedback",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Nutzerverwaltung",
+    "key": "users.view",
+    "label": "Mitarbeiterprofile ansehen",
+    "page": "access",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Nutzerverwaltung",
+    "key": "users.invite",
+    "label": "Einzelne Mitarbeiter einladen",
+    "page": "access",
+    "roles": [],
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "group": "Nutzerverwaltung",
+    "key": "users.import",
+    "label": "Mitarbeiter per CSV oder Excel importieren",
+    "page": "access",
+    "roles": [],
+    "requires": [
+      "users.invite"
+    ]
+  },
+  {
+    "group": "Nutzerverwaltung",
+    "key": "users.profile",
+    "label": "Berufliche Profilinformationen bearbeiten",
+    "page": "access",
+    "roles": [],
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "group": "Nutzerverwaltung",
+    "key": "users.access",
+    "label": "Zugänge sperren und Studiozuordnungen verwalten",
+    "page": "access",
+    "roles": [],
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "group": "Nutzerverwaltung",
+    "key": "users.login",
+    "label": "Anmeldelinks anfordern",
+    "page": "access",
+    "roles": [],
+    "requires": [
+      "users.view"
+    ]
+  },
+  {
+    "group": "Controlling",
+    "key": "controlling.view",
+    "label": "Controlling für eigene Studios ansehen",
+    "page": "controlling",
+    "roles": [],
+    "requires": []
+  },
+  {
+    "group": "Controlling",
+    "key": "controlling.export",
+    "label": "Controlling als CSV exportieren",
+    "page": "controlling",
+    "roles": [],
+    "requires": [
+      "controlling.view"
+    ]
+  }
+]

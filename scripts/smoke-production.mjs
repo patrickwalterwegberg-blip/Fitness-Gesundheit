@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 
 const html=await readFile('dist/Teamhub.html','utf8');
+const functionCatalog=JSON.parse(await readFile('src/function-catalog.json','utf8'));
 const loginHtml=await readFile('dist/login.html','utf8');
 const backend=process.env.VITE_SUPABASE_URL||'https://ftcurcqduzrxsvkujfql.supabase.co';
 assert.ok(html.includes(backend),'Build with the public production backend configuration first');
@@ -35,7 +36,7 @@ try {
     assert.equal(credentials.password,'Smoke-Test-Passphrase-2026!');
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
-   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:7,pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
+   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:9,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
    else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};

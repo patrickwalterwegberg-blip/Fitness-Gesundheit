@@ -63,6 +63,7 @@ export async function sharedBackend(page, { role = 'admin', failUpload = false, 
       const query = (body.p_query || '').toLowerCase(); const filtered = members.filter(m => (m.full_name + ' ' + m.email).toLowerCase().includes(query) && (!body.p_role || m.role === body.p_role) && (body.p_status === 'all' || !body.p_status || m.active === (body.p_status === 'active')));
       return send({ members: filtered, total: filtered.length, studios });
     }
+    if(url.pathname==='/rest/v1/rpc/admin_function_access')return send({code:'PGRST202'},404);
     if(url.pathname==='/rest/v1/team_member_info')return send(null);
     if(url.pathname==='/rest/v1/rpc/team_home_data')return send({can_manage:role==='admin',items:[]});
     if(url.pathname==='/rest/v1/rpc/admin_home_editor')return send({enabled:false,revision:null});

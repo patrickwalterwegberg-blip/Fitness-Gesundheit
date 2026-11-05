@@ -5,6 +5,7 @@ import ModuleRecords from './ModuleRecords';
 import ControllingCenter from './ControllingCenter';
 import { isAdmin } from './module-model';
 import { berlinDay } from './clock';
+import {usePermissions} from './team-permissions';
 
 function message(error) {
   if (error?.code === '40001') return 'Der Stand wurde zwischenzeitlich geändert. Aktualisiere die Ansicht vor dem nächsten Speichern.';
@@ -16,6 +17,7 @@ function message(error) {
 const empty = { modules: [], records: [], grants: {} };
 
 export default function TeamAdministration({ client, profile, sites, people, memberships, mode, entity, onTaskOpen }) {
+  const permissions=usePermissions();
   const context = useRef(''); const live = useRef(true); context.current = `${profile.id}|${profile.role}|${mode}|${entity?.id || ''}`;
   const [data, setData] = useState(empty); const [control, setControl] = useState(null);
   const [selectedId, setSelectedId] = useState(null); const [showRecords, setShowRecords] = useState(false);
@@ -59,6 +61,7 @@ export default function TeamAdministration({ client, profile, sites, people, mem
   }
   async function grant(id, right, checked) {
     if (!isAdmin(actor)) throw new Error('Nur die Geschäftsführung kann Rechte vergeben.');
+    if(permissions.ready){return update(async()=>{const current=await rpc('admin_function_access',{p_user:id});let grants=checked?[...new Set([...current.grants,'modules.'+right])]:current.grants.filter(key=>key!=='modules.'+right);if(!checked&&right==='edit')grants=grants.filter(key=>!['modules.create','modules.publish','modules.restore'].includes(key));if(!checked&&right==='publish')grants=grants.filter(key=>key!=='modules.restore');await rpc('admin_function_access',{p_user:id,p_grants:grants,p_revision:current.revision});});}
     const next = { ...data.grants[id], [right]: checked }; if (checked && right !== 'edit') next.edit = true; if (!checked && right === 'edit') { next.create = false; next.publish = false; }
     return update(async () => { const r = await client.from('module_permissions').upsert({ user_id: id, can_create: !!next.create, can_edit: !!next.edit, can_publish: !!next.publish }).select('user_id').single(); if (r.error) throw r.error; });
   }

@@ -45,6 +45,7 @@ await db.exec(pilot);
 const communication=await readFile('backend/supabase/007_chat_feedback_access.sql','utf8');
 await db.exec(communication);await db.exec(communication);
 const home=await readFile('backend/supabase/008_home_portal.sql','utf8');await db.exec(home);await db.exec(home);
+const functions=await readFile('backend/supabase/009_function_permissions.sql','utf8');await db.exec(functions);await db.exec(functions);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -91,7 +92,7 @@ test('employee can set own status, completion timestamp is authoritative', async
 });
 test('employee cannot change due date, assignee or description', async () => {
   await assert.rejects(asUser('employee', tx => tx.query("update public.tasks set due_date='2030-01-01' where id=$1", [id(10)])), /only task status/);
-  await assert.rejects(asUser('employee', tx => tx.query('update public.tasks set assignee_id=$1 where id=$2', [ids.peer, id(10)])), /only task status/);
+  await assert.rejects(asUser('employee', tx => tx.query('update public.tasks set assignee_id=$1 where id=$2', [ids.peer, id(10)])), /Task assignment not granted/);
   await assert.rejects(asUser('employee', tx => tx.query("update public.tasks set description='rewritten' where id=$1", [id(10)])), /only task status/);
 });
 test('employee cannot update a colleague task or create a task', async () => {
@@ -468,7 +469,7 @@ test('ordinary employees get exactly the approved seven areas and cannot grant t
  await assert.rejects(asUser('staff',tx=>tx.query('select public.admin_page_access($1,$2)',[staff,['files']])),/Administrator required/);
  await assert.rejects(asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2)',[ids.admin,[]])),/always have full access/);
  assert.equal((await asUser('staff',tx=>tx.query('select * from public.custom_modules'))).rows.length,0);
- await assert.rejects(asUser('staff',tx=>tx.query("select public.prepare_knowledge_version(null,null,'Blocked','','Sonstiges','{}',$1,array['employee'],'article',null,null,null,'Not allowed')",[a])),/File contribution not granted/);
+ await assert.rejects(asUser('staff',tx=>tx.query("select public.prepare_knowledge_version(null,null,'Blocked','','Sonstiges','{}',$1,array['employee'],'article',null,null,null,'Not allowed')",[a])),/File contribution not granted|Content creation not granted/);
 });
 test('page grants are revision checked and revocation also removes API and Storage access',async()=>{
  await asUser('admin',tx=>tx.query('select public.admin_page_access($1,$2,null)',[staff,[...standardPages,'files']]));
@@ -620,4 +621,104 @@ test('business profiles are admin-managed, revision-checked and private to the e
  await assert.rejects(asUser('employee',tx=>tx.query('select public.admin_member_info($1)',[ids.employee])),/Administrator required/);
  await assert.rejects(asUser('admin',tx=>tx.query("select public.admin_member_info($1,'Changed','',null,99)",[ids.employee])),/information changed/);
  await assert.rejects(asUser('employee',tx=>tx.query("update public.team_member_info set job_title='Admin' where user_id=$1",[ids.employee])),/permission denied/);
+});
+
+let capCourse,capAssignment;
+const capUid=id(900);
+async function grantFunctions(keys){const current=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1) as data',[capUid]))).rows[0].data;return (await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,$3) as data',[capUid,keys,current.revision]))).rows[0].data;}
+test('individual function grants keep the employee role and reject self-grants, unknown functions and stale revisions',async()=>{
+ ids.cap=capUid;await db.query('insert into auth.users(id,email) values($1,$2)',[capUid,'cap@example.org']);await db.query("insert into public.profiles(id,full_name,role,active) values($1,'Selected employee','employee',true)",[capUid]);await db.query('insert into public.studio_memberships values($1,$2)',[capUid,a]);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_function_access($1)',[capUid])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('insert into public.team_function_access(user_id,grants,updated_by) values($1,array[\'users.invite\'],$1)',[capUid])),/permission denied/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.admin_function_access($1,array[\'role.admin\'])',[capUid])),/Invalid function/);
+ const result=await grantFunctions(['learning.courses']);assert.deepEqual(result.grants,['learning.courses']);assert.equal(result.role,'employee');
+ assert.equal((await db.query('select role from public.profiles where id=$1',[capUid])).rows[0].role,'employee');
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.admin_function_access($1,array[\'users.invite\'],null)',[capUid])),/permissions changed/);
+});
+test('course creation alone cannot assign courses, confirm practice, read user emails or open controlling',async()=>{
+ capCourse=(await asUser('cap',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Delegated course',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[1,0]']))).rows[0].id;
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,true)',[ids.peer,capCourse,a])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_team_directory()')),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_controlling()')),/Controlling requires/);
+ assert.equal((await asUser('cap',tx=>tx.query('select * from public.studios'))).rows.length,1);
+});
+test('course assignment is independently granted and cannot cross the assigned studio',async()=>{
+ await grantFunctions(['learning.assign']);
+ capAssignment=(await asUser('cap',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,true) as id',[ids.peer,capCourse,a]))).rows[0].id;
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,true)',[ids.other,capCourse,b])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4)', ['Not granted',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[1,0]'])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.confirm_learning_practice($1)',[capAssignment])),/Administrator required/);
+});
+test('practice confirmation does not grant external assessments or course assignment',async()=>{
+ await grantFunctions(['learning.practice']);await db.query('update public.learning_progress set lessons_read=$1,quiz_passed=true where assignment_id=$2',[pilotLessons.length,capAssignment]);
+ await asUser('cap',tx=>tx.query('select public.confirm_learning_practice($1,$2)',[capAssignment,'Personally verified']));
+ assert.equal((await db.query('select confirmed_by from public.learning_progress where assignment_id=$1',[capAssignment])).rows[0].confirmed_by,capUid);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.record_learning_assessment($1,true,\'Not authorized\')',[capAssignment])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false)',[ids.employee,capCourse,a])),/Administrator required/);
+});
+test('read-only directory grants are scoped and do not allow changing profiles, access, roles or permissions',async()=>{
+ await grantFunctions(['users.view']);const dir=(await asUser('cap',tx=>tx.query('select public.admin_team_directory() as data'))).rows[0].data;
+ assert.ok(dir.members.some(m=>m.id===ids.peer));assert.ok(!dir.members.some(m=>m.id===ids.other||m.role==='admin'));assert.deepEqual(dir.studios.map(s=>s.id),[a]);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_team_member_detail($1)',[ids.other])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query("select public.admin_member_info($1,'Changed','',null,null)",[ids.peer])),/Administrator required/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_function_access($1)',[ids.peer])),/Administrator required/);
+ const detail=(await asUser('cap',tx=>tx.query('select public.admin_team_member_detail($1) as data',[ids.peer]))).rows[0].data;assert.equal(detail.member.id,ids.peer);
+});
+test('delegated invitations accept only employees in assigned studios and recheck their creator at provisioning',async()=>{
+ const result=await grantFunctions(['users.invite']);assert.ok(result.grants.includes('users.view'));
+ const inv=(await asUser('cap',tx=>tx.query('select public.admin_prepare_team_invitation($1,$2,\'employee\',$3) as id',['new-delegated@example.org','New colleague',[a]]))).rows[0].id;
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_prepare_team_invitation($1,$2,\'admin\',$3)',['no-admin@example.org','No promotion',[a]])),/Only employee invitations/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_prepare_team_invitation($1,$2,\'employee\',$3)',['no-foreign@example.org','Foreign',[b]])),/Only employee invitations/);
+ await grantFunctions([]);
+ await assert.rejects(db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)',[id(901),'new-delegated@example.org',JSON.stringify({team_invitation_id:inv})]),/Invitation creator/);
+});
+test('task creation, reassignment, metadata editing and colleague status are independent',async()=>{
+ await grantFunctions(['tasks.create']);
+ const own=(await asUser('cap',tx=>tx.query('insert into public.tasks(title,studio_id,assignee_id,due_date) values($1,$2,$3,$4) returning id',['Own delegated task',a,capUid,'2026-11-05']))).rows[0].id;
+ await assert.rejects(asUser('cap',tx=>tx.query('insert into public.tasks(title,studio_id,assignee_id,due_date) values($1,$2,$3,$4)',['Not assignable',a,ids.peer,'2026-11-05'])),/Task assignment not granted/);
+ await assert.rejects(asUser('cap',tx=>tx.query("update public.tasks set title='Not editable' where id=$1",[own])),/only task status/);
+ await grantFunctions(['tasks.team']);
+ await assert.rejects(asUser('cap',tx=>tx.query("update public.tasks set status='done' where id=$1",[id(11)])),/Task status not granted/);
+ await grantFunctions(['tasks.edit']);await asUser('cap',tx=>tx.query("update public.tasks set title='Allowed edit' where id=$1",[own]));
+ await assert.rejects(asUser('cap',tx=>tx.query('update public.tasks set assignee_id=$1 where id=$2',[ids.peer,own])),/Task assignment not granted/);
+ await grantFunctions(['tasks.assign']);await asUser('cap',tx=>tx.query('update public.tasks set assignee_id=$1 where id=$2',[ids.peer,own]));
+ await assert.rejects(asUser('cap',tx=>tx.query('update public.tasks set studio_id=$1,assignee_id=$2 where id=$3',[b,ids.other,own])),/Task assignment not granted/);
+});
+test('publication-only file permission cannot rewrite a colleague draft or change its reader access',async()=>{
+ const draft=await prepareKnowledge('admin',{title:'Independent publication',revision:null});await grantFunctions(['knowledge.publish']);
+ await assert.rejects(prepareKnowledge('cap',{title:'No extra creation granted',revision:null}),/Content creation not granted/);
+ await asUser('cap',tx=>tx.query('select public.publish_knowledge_version($1,$2,1)',[draft.document_id,draft.version_id]));
+ await assert.rejects(prepareKnowledge('cap',{document:draft.document_id,revision:2,title:'Unpermitted edit'}),/editing not granted/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.set_knowledge_access($1,2,$2,$3,false)',[draft.document_id,a,['employee']])),/access change not granted/);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.set_knowledge_access($1,2,$2,$3,true)',[draft.document_id,a,['admin','studio_manager','employee']])),/archiving not granted/);
+});
+test('homepage creation, publication and archiving remain separate including publishing without editing',async()=>{
+ await grantFunctions(['home.create']);const draft=(await asUser('cap',tx=>homeSave(tx,{studio:a,published:false,title:'Separate actions'}))).rows[0].item;
+ await assert.rejects(asUser('cap',tx=>homeSave(tx,{studio:a,published:true})),/publication not granted/);
+ await assert.rejects(asUser('cap',tx=>homeSave(tx,{id:draft.id,revision:1,studio:a,published:false})),/editing not granted/);
+ await grantFunctions(['home.publish']);await asUser('cap',tx=>tx.query('select public.publish_team_home_item($1,1,true)',[draft.id]));
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.archive_team_home_item($1,2)',[draft.id])),/not editable/);
+ await assert.rejects(asUser('cap',tx=>homeSave(tx,{id:draft.id,revision:2,studio:a,published:true})),/editing not granted/);
+ await grantFunctions(['home.archive']);await asUser('cap',tx=>tx.query('select public.archive_team_home_item($1,2)',[draft.id]));
+});
+test('controlling reads only assigned studios and does not grant assignment, invitations or access changes',async()=>{
+ await grantFunctions(['controlling.view']);const data=(await asUser('cap',tx=>tx.query('select public.admin_controlling() as data'))).rows[0].data;
+ assert.deepEqual(data.studios.map(s=>s.id),[a]);assert.ok(data.tasks.every(t=>t.studio_id===a));assert.ok(data.assignments.every(t=>t.studio_id===a));assert.ok(!data.profiles.some(p=>p.id===ids.other));
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false)',[ids.employee,capCourse,a])),/Administrator required/);
+ await grantFunctions([]);await assert.rejects(asUser('cap',tx=>tx.query('select public.admin_controlling()')),/Controlling requires/);
+ const role=(await db.query('select role from public.profiles where id=$1',[capUid])).rows[0].role;assert.equal(role,'employee');
+});
+
+test('file publication does not confer cleanup of another employee unfinished uploads',async()=>{
+ const draft=await prepareKnowledge('admin',{revision:null,title:'Pending delegated cleanup',kind:'file',name:'pending.txt',mime:'text/plain',size:5,text:''});
+ await grantFunctions(['knowledge.publish']);
+ assert.equal((await asUser('cap',tx=>tx.query("select app_private.knowledge_object_access($1,'delete') as allowed",[draft.object_path]))).rows[0].allowed,false);
+ await assert.rejects(asUser('cap',tx=>tx.query('select public.cancel_knowledge_upload($1)',[draft.version_id])),/cancellation not granted/);
+ await grantFunctions(['knowledge.cleanup']);await asUser('cap',tx=>tx.query('select public.cancel_knowledge_upload($1)',[draft.version_id]));
+});
+test('staged delegated invitations also stop after the access area is removed',async()=>{
+ await grantFunctions(['users.invite']);
+ const invitation=(await asUser('cap',tx=>tx.query('select public.admin_prepare_team_invitation($1,$2,\'employee\',$3) as id',['no-area@example.org','Access revoked',[a]]))).rows[0].id;
+ await db.query('update public.team_page_access set pages=\'{}\' where user_id=$1',[capUid]);
+ await assert.rejects(db.query('insert into auth.users(id,email,raw_user_meta_data) values($1,$2,$3)',[id(902),'no-area@example.org',JSON.stringify({team_invitation_id:invitation})]),/Invitation creator/);
 });

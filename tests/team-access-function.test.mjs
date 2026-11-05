@@ -12,7 +12,7 @@ function setup(options = {}) {
   const caller = {
     auth: { getUser: async () => options.noSession ? { error: true } : { data: { user: { id: adminId } } } },
     from: () => ({ select: () => ({ eq: (_column, id) => ({ maybeSingle: async () => ({ data: id === adminId ? { id, role: options.role || 'admin', active: !options.inactive } : options.provisioningFailure ? null : { id, active: true } }) }) }) }),
-    rpc: async (name, args) => { calls.push({ name, args }); return options.rpcFailure ? { error: options.rpcFailure } : { data: name === 'admin_prepare_team_invitation' ? memberId : 'colleague@example.org' }; },
+    rpc: async (name, args) => { calls.push({ name, args }); if(name==='team_access_context')return {data:{version:9,pages:['access'],capabilities:options.capabilities||[]}}; return options.rpcFailure ? { error: options.rpcFailure } : { data: name === 'admin_prepare_team_invitation' ? memberId : 'colleague@example.org' }; },
   };
   const server = { auth: {
     admin: { inviteUserByEmail: async (...args) => { calls.push({ name: 'invite', args }); return options.mailFailure ? { error: true } : { data: { user: { id: memberId, private: 'must-not-be-returned' } } }; } },
@@ -86,4 +86,21 @@ test('function requires explicit hosting configuration and handles preflight', a
   assert.equal(response.status, 204);
   assert.equal(response.headers.get('access-control-allow-origin'), origin);
   assert.equal(calls.length, 0);
+});
+
+
+test('delegated invitation permission authorizes only employee invitations without granting login resend', async()=>{
+ const allowed=setup({role:'employee',capabilities:['users.invite']});
+ assert.equal((await allowed.request(invitation)).status,200);
+ assert.equal((await allowed.request({...invitation,role:'admin'})).status,403);
+ assert.equal((await allowed.request({...invitation,role:'studio_manager'})).status,403);
+ assert.equal((await allowed.request({action:'send_login',userId:memberId})).status,403);
+});
+test('delegated login resend uses server-scoped targets and does not grant invitations',async()=>{
+ const allowed=setup({role:'employee',capabilities:['users.login']});
+ assert.equal((await allowed.request({action:'send_login',userId:memberId})).status,200);
+ assert.equal((await allowed.request(invitation)).status,403);
+ const denied=setup({role:'employee',capabilities:['users.login'],rpcFailure:{code:'42501'}});
+ assert.equal((await denied.request({action:'send_login',userId:memberId})).status,403);
+ assert.equal(denied.calls.some(c=>c.name==='otp'),false);
 });
