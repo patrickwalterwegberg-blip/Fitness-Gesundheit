@@ -46,7 +46,7 @@ export default function TeamLogin({client,onStart,accountEmail=null,onClose,init
       </form>
       {!accountEmail&&<div className="auth-options">{mode==='password'?<><button type="button" disabled={busy} onClick={()=>changeMode('reset')}>Passwort festlegen / vergessen?</button><button type="button" disabled={busy} onClick={()=>changeMode('magic')}>Mit Anmeldelink anmelden</button></>:<button type="button" disabled={busy} onClick={()=>changeMode('password')}><ArrowLeft size={14}/>Zur Passwort-Anmeldung</button>}</div>}
       {accountEmail&&<button className="text-link auth-back" type="button" disabled={busy} onClick={onClose}>Zurück zum Teamhub</button>}
-      <p className="auth-help">{mode==='password'?'Noch kein Teamhub-Passwort? Wähle „Passwort festlegen / vergessen“. ':''}Nur freigeschaltete Mitarbeiter können auf Teamdaten zugreifen. Bei Problemen wende dich an Patrick Walter.</p>
+      <p className="auth-help">{mode==='password'?'Noch kein Teamhub-Passwort? Wähle „Passwort festlegen / vergessen“. ':''}Neue Mitarbeiter benötigen zuerst eine persönliche Einladung in den Teamhub. Eine Link-Anforderung erstellt kein neues Konto. Nur freigeschaltete Mitarbeiter können auf Teamdaten zugreifen. Bei Problemen wende dich an Patrick Walter.</p>
     </div>
   </section>;
 }

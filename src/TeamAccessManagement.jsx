@@ -36,6 +36,8 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
   const [editor, setEditor] = useState(null);
+  const feedbackRef=useRef(null);
+  useEffect(()=>{if(!editor&&(error||notice))feedbackRef.current?.scrollIntoView({block:'center',behavior:'instant'});},[error,notice,editor]);
   const [input, setInput] = useState(''), [query, setQuery] = useState(''), [roleFilter, setRoleFilter] = useState(''), [statusFilter, setStatusFilter] = useState('all'), [studioFilter, setStudioFilter] = useState('');
   const [view,setView]=useState('directory');
   const [selectedMember, setSelectedMember] = useState(null), [importing, setImporting] = useState(false), [legacy, setLegacy] = useState(false);
@@ -86,7 +88,7 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
   if (!allowed) return <section className="panel access-locked"><ShieldCheck size={32}/><h2>Zugänge verwaltet die Geschäftsführung.</h2></section>;
   return <section className="access-management">
     <div className="page-heading"><div><div className="eyebrow">NUTZERMANAGEMENT</div><h2>Dein Team. Alle Profile im Überblick.</h2><p>Mitarbeiter und Verwaltungsrollen übersichtlich organisieren. Ein Profil für Informationen, Lernfortschritt und Rechte.</p></div><div className="button-group">{can('users.import',true)&&<button className="button button-secondary" disabled={busy || loading || !directory.studios.length} onClick={() => setImporting(v => !v)}><FileSpreadsheet size={15}/>Nutzer importieren</button>}{can('users.invite',true)&&<button className="button" disabled={busy || loading || !directory.studios.length} onClick={() => { setEditor({}); setError(''); setNotice(''); }}><Plus size={15}/>Mitarbeiter einladen</button>}</div></div>
-    {error && <div className="team-error" role="alert">{error}</div>}{notice && <div className="team-notice" role="status"><CheckCircle2 size={16}/>{notice}</div>}
+    <div ref={feedbackRef} className="access-feedback">{error && !editor && <div className="team-error" role="alert">{error}</div>}{notice && <div className="team-notice" role="status"><CheckCircle2 size={16}/>{notice}</div>}</div>
     <div className="content-toolbar"><span className="badge"><ShieldCheck size={12}/>Nur Geschäftsführung · Serverdaten</span><button className="button button-secondary" disabled={loading || busy} onClick={() => { setEditor(null); setRefresh(n => n + 1); }}><RefreshCw size={14}/>Zugangsliste aktualisieren</button></div>
     {legacy && <div className="info-note"><ShieldCheck size={15}/><span>Die bisherigen Zugänge sind verfügbar. Für Suche, Filter und Nutzerstatistiken bitte zusätzlich Migration 005 installieren.</span></div>}
     <div className="management-tabs" role="tablist" aria-label="Nutzerverwaltung">{[['','Alle Nutzer'],['employee','Mitarbeiter'],['studio_manager','Studioleitungen'],['admin','Admins']].map(([key,label])=><button role="tab" key={key} aria-selected={view==='directory'&&roleFilter===key} onClick={()=>{setView('directory');setRoleFilter(key);setPage(0);}}><UserRound size={15}/>{label}</button>)}<button role="tab" aria-selected={view==='roles'} onClick={()=>setView('roles')}><ShieldCheck size={15}/>Rollen & Rechte</button></div>
@@ -98,19 +100,22 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
     </>}
     {selectedMember && <TeamUserProfile key={selectedMember.id} client={client} member={selectedMember} administrator={profile.role==='admin'} studios={directory.studios} onClose={() => setSelectedMember(null)} onEdit={member => { setSelectedMember(null); setEditor(member); }} onChanged={() => { setRefresh(n => n + 1); onChanged(); }}/ >}
     {importing && <TeamUserImport studios={directory.studios} knownMembers={directory.members} invoke={invoke} onComplete={() => { setRefresh(n => n + 1); onChanged(); }} onClose={() => setImporting(false)}/ >}
-    {editor && <AccessForm key={editor.id || 'new'} initial={editor} studios={directory.studios} own={editor.id === profile.id} administrator={profile.role==='admin'} busy={busy} onSave={save} onCancel={() => setEditor(null)}/>}
+    {editor && <AccessForm key={editor.id || 'new'} initial={editor} studios={directory.studios} own={editor.id === profile.id} administrator={profile.role==='admin'} busy={busy} serverError={error} onSave={save} onCancel={() => setEditor(null)}/>}
     <div className="info-note"><ShieldCheck size={17}/><span>Eine Einladung erzeugt einen persönlichen Zugang. Studiozuordnung und Rolle werden serverseitig geprüft. „Gesperrt“ beendet den Zugriff auf neue Teamdaten; bereits zuvor heruntergeladene Inhalte bleiben auf dem Gerät. Bereitschaft und Zustellung des E-Mail-Dienstes müssen im echten Projekt geprüft werden.</span></div>
   </section>;
 }
 
-function AccessForm({ initial, studios, own, administrator=true, busy, onSave, onCancel }) {
+function AccessForm({ initial, studios, own, administrator=true, busy, serverError='', onSave, onCancel }) {
+  const dialogRef=useRef(null),nameRef=useRef(null),alertRef=useRef(null);
+  useEffect(()=>{const dialog=dialogRef.current,previous=document.activeElement;dialog.showModal();nameRef.current?.focus({preventScroll:true});return()=>{dialog.close();if(previous?.isConnected)previous.focus({preventScroll:true});};},[]);
   const [fullName, setFullName] = useState(initial.full_name || ''); const [email, setEmail] = useState(initial.email || '');
   const [role, setRole] = useState(initial.role || 'employee'); const [active, setActive] = useState(initial.active ?? true);
   const [selected, setSelected] = useState(initial.studio_ids || (studios[0] ? [studios[0].id] : []));
   const [error, setError] = useState('');
-  return <section className="panel access-editor"><div className="section-heading"><h2>{initial.id ? 'Mitarbeiterzugang bearbeiten' : 'Neuen Mitarbeiter einladen'}</h2><button className="icon-button" aria-label="Zugangsformular schließen" disabled={busy} onClick={onCancel}><X size={18}/></button></div><form onSubmit={e => { e.preventDefault(); setError(''); if (active && role !== 'admin' && !selected.length) { setError('Wähle mindestens ein Studio für einen aktiven Mitarbeiter.'); return; } void onSave({ fullName, email, role, active, studioIds: selected }); }}>
-    {error && <div className="team-error" role="alert">{error}</div>}
-    <div className="form-grid"><label className="field"><span>Name des Mitarbeiters</span><input value={fullName} maxLength={100} required disabled={busy} onChange={e => setFullName(e.target.value)}/></label><label className="field"><span>Firmen-E-Mail für den Zugang</span><input type="email" value={email} maxLength={254} required disabled={busy || !!initial.id} autoComplete="off" onChange={e => setEmail(e.target.value)}/></label></div>
+  useEffect(()=>{if(serverError||error){dialogRef.current?.scrollTo({top:0});alertRef.current?.focus({preventScroll:true});}},[serverError,error]);
+  return <dialog ref={dialogRef} className="panel access-editor access-editor-dialog" aria-labelledby="access-editor-title" onCancel={e=>{e.preventDefault();if(!busy)onCancel();}}><div className="section-heading"><h2 id="access-editor-title">{initial.id ? 'Mitarbeiterzugang bearbeiten' : 'Neuen Mitarbeiter einladen'}</h2><button className="icon-button" aria-label="Zugangsformular schließen" disabled={busy} onClick={onCancel}><X size={18}/></button></div><form onSubmit={e => { e.preventDefault(); setError(''); if (active && role !== 'admin' && !selected.length) { setError('Wähle mindestens ein Studio für einen aktiven Mitarbeiter.'); return; } void onSave({ fullName, email, role, active, studioIds: selected }); }}>
+    {(serverError||error) && <div ref={alertRef} tabIndex={-1} className="team-error" role="alert">{error||serverError}</div>}
+    <div className="form-grid"><label className="field"><span>Name des Mitarbeiters</span><input ref={nameRef} value={fullName} maxLength={100} required disabled={busy} onChange={e => setFullName(e.target.value)}/></label><label className="field"><span>Firmen-E-Mail für den Zugang</span><input type="email" value={email} maxLength={254} required disabled={busy || !!initial.id} autoComplete="off" onChange={e => setEmail(e.target.value)}/></label></div>
     <RolePicker role={role} onChange={setRole} disabled={busy||own||!administrator}/>
     <label className="field"><span>Rolle des Zugangs</span><select aria-label="Rolle des Zugangs" value={role} disabled={busy || own || !administrator} onChange={e => setRole(e.target.value)}>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
     <fieldset className="access-studios" disabled={busy}><legend>Zugeordnete Studios</legend>{studios.map(s => <label key={s.id}><input type="checkbox" checked={selected.includes(s.id)} onChange={e => setSelected(current => e.target.checked ? [...current, s.id] : current.filter(id => id !== s.id))}/>{s.name}</label>)}</fieldset>
@@ -118,5 +123,5 @@ function AccessForm({ initial, studios, own, administrator=true, busy, onSave, o
     {initial.id && <label className="check-field"><input type="checkbox" checked={active} disabled={busy || own} onChange={e => setActive(e.target.checked)}/>Zugang freigeschaltet</label>}
     <p className="admin-help">{own ? 'Dein eigener Adminzugang bleibt aktiv. ' : ''}{initial.id ? 'Beim Speichern werden Rolle, Freigabe und Studiozuordnungen gemeinsam geändert. Die E-Mail-Adresse bleibt unverändert.' : `Beim Einladen wird eine E-Mail mit einem persönlichen Anmeldelink an ${email || 'die angegebene Firmenadresse'} angefordert. Ein Postfachpasswort wird nicht benötigt.`}</p>
     <div className="button-group"><button className="button" type="submit" disabled={busy}>{busy ? <LoaderCircle size={15}/> : initial.id ? <Save size={15}/> : <Mail size={15}/>} {busy ? 'Wird verarbeitet …' : initial.id ? 'Zugang speichern' : 'Einladung anfordern'}</button><button className="button button-secondary" type="button" disabled={busy} onClick={onCancel}>Abbrechen</button></div>
-  </form></section>;
+  </form></dialog>;
 }

@@ -4,3 +4,12 @@
 @media(max-width:600px){.access-management>.page-heading{align-items:flex-start}.access-management>.page-heading h2{font-size:23px}.access-editor form{padding:0 17px 22px}.access-studios{gap:14px}.access-studios label{font-size:10px}.access-management .content-toolbar{gap:13px;flex-wrap:wrap}}
 
 @media(max-width:760px){.team-area-tabs{display:flex;flex-wrap:wrap;gap:6px;overflow:visible;width:100%}.team-area-tabs>button{font-size:10px;padding:10px 12px}}
+
+/* Keep invitations visible instead of placing their form below a long directory. */
+.access-editor-dialog{position:fixed;inset:0;margin:auto;width:min(760px,calc(100vw - 28px));max-height:calc(100dvh - 32px);padding:0;overflow-y:auto;border:1px solid #d4bc87;border-radius:12px;background:#fffdf8;color:#594628;box-shadow:0 25px 90px #18130a66}
+.access-editor-dialog::backdrop{background:#17130b99}
+.access-editor-dialog>.section-heading{position:sticky;top:0;z-index:2;background:#fffdf8;border-bottom:1px solid #e8dcc4;margin-bottom:22px;gap:15px}
+.access-editor-dialog>.section-heading h2{font-size:20px;line-height:1.5}
+.access-editor-dialog .team-error{outline:none;scroll-margin-top:100px}
+.access-feedback{scroll-margin-top:100px}
+@media(max-width:600px){.access-editor-dialog{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}.access-editor-dialog>.section-heading{padding:17px}.access-editor-dialog>.section-heading h2{font-size:18px}.access-editor-dialog input,.access-editor-dialog select,.access-editor-dialog textarea{font-size:16px}}
