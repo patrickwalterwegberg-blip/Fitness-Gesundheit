@@ -63,6 +63,10 @@ export async function sharedBackend(page, { role = 'admin', failUpload = false, 
       const query = (body.p_query || '').toLowerCase(); const filtered = members.filter(m => (m.full_name + ' ' + m.email).toLowerCase().includes(query) && (!body.p_role || m.role === body.p_role) && (body.p_status === 'all' || !body.p_status || m.active === (body.p_status === 'active')));
       return send({ members: filtered, total: filtered.length, studios });
     }
+    if(url.pathname==='/rest/v1/team_member_info')return send(null);
+    if(url.pathname==='/rest/v1/rpc/team_home_data')return send({can_manage:role==='admin',items:[]});
+    if(url.pathname==='/rest/v1/rpc/admin_home_editor')return send({enabled:false,revision:null});
+    if(url.pathname==='/rest/v1/rpc/admin_member_info')return send({job_title:'',phone:'',started_on:null,revision:null});
     if (url.pathname === '/rest/v1/rpc/admin_team_member_detail') return existingProfile ? send({ member: members.find(m => m.id === body.p_user), tasks: { total: 5, done: 3, open: 2, overdue: 1 }, courses: [{ id: id(77), title: 'Einarbeitung Empfang', lessons_read: 2, lesson_count: 4, quiz_passed: false, practice_required: true, practice_confirmed: false, due_date: '2026-11-20' }], design_rights: rights }) : send({ code: 'PGRST202' }, 404);
     if (url.pathname === '/rest/v1/module_permissions' && method === 'POST') { Object.assign(rights, { create: body.can_create, edit: body.can_edit, publish: body.can_publish }); return send({ user_id: body.user_id }); }
     if (url.pathname === '/functions/v1/team-access') { const created = { id: id(next++), full_name: body.fullName, email: body.email, role: body.role, active: true, studio_ids: body.studioIds, access_updated_at: '2026-11-04T10:00:00Z', last_sign_in_at: null }; members.push(created); return send({ code: 'invitation_requested', userId: created.id }); }

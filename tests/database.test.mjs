@@ -44,6 +44,7 @@ await db.exec(pilot);
 await db.exec(pilot);
 const communication=await readFile('backend/supabase/007_chat_feedback_access.sql','utf8');
 await db.exec(communication);await db.exec(communication);
+const home=await readFile('backend/supabase/008_home_portal.sql','utf8');await db.exec(home);await db.exec(home);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -559,4 +560,64 @@ test('feedback routing skips handlers whose page was revoked and falls back to g
  await asUser('admin',tx=>tx.query("select public.admin_feedback_route(null,'technik',$1)",[ids.admin]));
  await asUser('staff',tx=>tx.query("select public.submit_team_feedback($1,$2,'technik','Another report','Management fallback',false)",[id(723),a]));
  assert.equal((await db.query('select assignee_id from public.team_feedback where id=$1',[id(723)])).rows[0].assignee_id,ids.admin);
+});
+
+let homeGlobal,homeLocal,homeOther,homeDraft;
+const homeSave=(tx,values={})=>tx.query('select public.save_team_home_item($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) as item',[values.id||null,values.revision??null,values.kind||'news',values.title||'Team news',values.body||'Shared homepage content',values.href||'',values.phone||'',values.studio??null,values.roles||['admin','studio_manager','employee'],values.published??true,values.position??0]);
+test('homepage shows published content only to its studio and reader roles, including direct RLS',async()=>{
+ homeGlobal=(await asUser('admin',tx=>homeSave(tx,{title:'Global news'}))).rows[0].item;
+ homeLocal=(await asUser('admin',tx=>homeSave(tx,{title:'Local employee link',kind:'link',studio:a,roles:['employee'],href:'https://example.org/handbook'}))).rows[0].item;
+ homeOther=(await asUser('admin',tx=>homeSave(tx,{title:'Other studio',studio:b}))).rows[0].item;
+ homeDraft=(await asUser('admin',tx=>homeSave(tx,{title:'Unpublished announcement',published:false}))).rows[0].item;
+ const data=(await asUser('staff',tx=>tx.query('select public.team_home_data() as data'))).rows[0].data;
+ assert.deepEqual(data.items.map(i=>i.id).sort(),[homeGlobal.id,homeLocal.id].sort());assert.equal(data.can_manage,false);
+ assert.equal((await asUser('manager',tx=>tx.query('select * from public.team_home_items where id=$1',[homeLocal.id]))).rows.length,0);
+ assert.equal((await asUser('other',tx=>tx.query('select * from public.team_home_items where id=$1',[homeLocal.id]))).rows.length,0);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_home_items where id=$1',[homeDraft.id]))).rows.length,0);
+ assert.ok((await asUser('admin',tx=>tx.query('select public.team_home_data(true) as data'))).rows[0].data.items.some(i=>i.id===homeDraft.id));
+});
+test('homepage grants cannot be self-assigned and content cannot be changed through direct writes',async()=>{
+ await assert.rejects(asUser('staff',tx=>homeSave(tx,{studio:a})),/editing not granted/);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.admin_home_editor($1,true)',[staff])),/Administrator required/);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.team_home_data(true)')),/editing not granted/);
+ await assert.rejects(asUser('admin',tx=>tx.query("update public.team_home_items set title='Direct overwrite' where id=$1",[homeGlobal.id])),/permission denied/);
+ await assert.rejects(asUser('staff',tx=>tx.query('insert into public.team_home_editors(user_id,enabled,updated_by) values($1,true,$1)',[staff])),/permission denied/);
+});
+test('selected homepage editor can publish only inside assigned studios and stale updates fail',async()=>{
+ await asUser('admin',tx=>tx.query('select public.admin_home_editor($1,true)',[ids.peer]));
+ const created=(await asUser('peer',tx=>homeSave(tx,{studio:a,title:'Studio contact',kind:'contact',href:'mailto:kontakt@example.org',phone:'+49 123 456'}))).rows[0].item;
+ assert.equal(created.created_by,ids.peer);
+ await assert.rejects(asUser('peer',tx=>homeSave(tx,{studio:b})),/editing not granted/);
+ await assert.rejects(asUser('peer',tx=>homeSave(tx)),/editing not granted/);
+ await assert.rejects(asUser('peer',tx=>homeSave(tx,{id:homeGlobal.id,revision:1,studio:a})),/not editable/);
+ const changed=(await asUser('peer',tx=>homeSave(tx,{id:created.id,revision:1,studio:a,title:'Updated contact'}))).rows[0].item;assert.equal(changed.revision,2);
+ await assert.rejects(asUser('peer',tx=>homeSave(tx,{id:created.id,revision:1,studio:a})),/item changed/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.admin_home_editor($1,false,99)',[ids.peer])),/access changed/);
+ await asUser('admin',tx=>tx.query('select public.admin_home_editor($1,false,1)',[ids.peer]));
+ await assert.rejects(asUser('peer',tx=>homeSave(tx,{id:created.id,revision:2,studio:a})),/editing not granted/);
+});
+test('homepage rejects executable URLs and invalid audiences and uses reversible archiving',async()=>{
+ await assert.rejects(asUser('admin',tx=>homeSave(tx,{href:'javascript:alert(1)'})),/check constraint/);
+ await assert.rejects(asUser('admin',tx=>homeSave(tx,{roles:[]})),/check constraint/);
+ await assert.rejects(asUser('admin',tx=>homeSave(tx,{roles:['employee',null]})),/check constraint/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.archive_team_home_item($1,99)',[homeGlobal.id])),/item changed/);
+ await asUser('admin',tx=>tx.query('select public.archive_team_home_item($1,1)',[homeGlobal.id]));
+ assert.equal((await db.query('select archived from public.team_home_items where id=$1',[homeGlobal.id])).rows[0].archived,true);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_home_items where id=$1',[homeGlobal.id]))).rows.length,0);
+ await assert.rejects(asUser('admin',tx=>tx.query('delete from public.team_home_items where id=$1',[homeGlobal.id])),/permission denied/);
+});
+test('revoking homepage area or disabling account closes homepage RPC and table reads',async()=>{
+ await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,array['tasks'],$2) on conflict(user_id) do update set pages=excluded.pages",[staff,ids.admin]);
+ await assert.rejects(asUser('staff',tx=>tx.query('select public.team_home_data()')),/Homepage not granted/);
+ assert.equal((await asUser('staff',tx=>tx.query('select * from public.team_home_items'))).rows.length,0);
+ await assert.rejects(asUser('inactive',tx=>tx.query('select public.team_home_data()')),/Homepage not granted/);
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select public.team_home_data()');}),/permission denied/);
+});
+test('business profiles are admin-managed, revision-checked and private to the employee and admin',async()=>{
+ const result=(await asUser('admin',tx=>tx.query("select public.admin_member_info($1,'Trainer','+49 12345','2026-01-01',null) as data",[ids.employee]))).rows[0].data;assert.equal(result.revision,1);
+ assert.equal((await asUser('employee',tx=>tx.query('select job_title from public.team_member_info where user_id=$1',[ids.employee]))).rows[0].job_title,'Trainer');
+ assert.equal((await asUser('peer',tx=>tx.query('select * from public.team_member_info where user_id=$1',[ids.employee]))).rows.length,0);
+ await assert.rejects(asUser('employee',tx=>tx.query('select public.admin_member_info($1)',[ids.employee])),/Administrator required/);
+ await assert.rejects(asUser('admin',tx=>tx.query("select public.admin_member_info($1,'Changed','',null,99)",[ids.employee])),/information changed/);
+ await assert.rejects(asUser('employee',tx=>tx.query("update public.team_member_info set job_title='Admin' where user_id=$1",[ids.employee])),/permission denied/);
 });

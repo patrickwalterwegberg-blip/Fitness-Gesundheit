@@ -18,9 +18,12 @@ test('user profile shows actual task and academy data and separates editor right
   const backend = await sharedBackend(page); await users(page);
   await page.getByRole('button', { name: 'Nutzerprofil Mitarbeiter Beispiel öffnen', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Nutzerprofil Mitarbeiter Beispiel', exact: true });
+  await dialog.getByRole('tab',{name:'Aufgaben',exact:true}).click();
   await expect(dialog.locator('.user-stat-grid>div').first()).toContainText('5');
+  await dialog.getByRole('tab',{name:'Lernfortschritt',exact:true}).click();
   await expect(dialog).toContainText('Einarbeitung Empfang');
   await expect(dialog).toContainText('2/4 Lektionen gelesen');
+  await dialog.getByRole('tab',{name:'Berechtigungen',exact:true}).click();
   await dialog.getByLabel('Neue Module erstellen', { exact: true }).check();
   await expect(dialog.getByLabel('Module bearbeiten', { exact: true })).toBeChecked();
   await dialog.getByRole('button', { name: 'Modulrechte speichern', exact: true }).click();
@@ -78,6 +81,7 @@ test('user profiles and import fit phone screens', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await sharedBackend(page); await users(page);
   await page.getByRole('button', { name: 'Nutzerprofil Mitarbeiter Beispiel öffnen', exact: true }).click();
+  await page.getByRole('dialog').getByRole('tab',{name:'Aufgaben',exact:true}).click();
   await expect(page.getByRole('dialog').locator('.user-stat-grid')).toBeVisible();
   expect(await page.getByRole('dialog').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/user-profile-mobile.png', fullPage: true });

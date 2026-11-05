@@ -6,6 +6,8 @@ Die [eigene Loginseite](https://patrickwalterwegberg-blip.github.io/Fitness-Gesu
 
 Der angemeldete Teamzugang verwendet die Gestaltung der Demo: feste Seitenleiste, Schwarz-Gold-Farben, Willkommensbereich und persönliche Übersichtskarten mit Serverdaten. Auf dem Handy öffnet sich die Navigation über das Menü; Abmelden und Chat-Hinweise bleiben im festen Kopfbereich erreichbar. Die Navigation zeigt ausschließlich freigegebene Bereiche. Diese Layoutänderung benötigt keine neue SQL-Migration.
 
+Startseite und Mitarbeiterverwaltung sind als Intranet organisiert: persönliche Schnellzugriffe, gemeinsame Links, Neuigkeiten und Ansprechpartner; Nutzerfilter, Rollen-Karten und Profile mit Informationen, Aufgaben, Lernfortschritt und Rechten. Der eigene Profilzugriff ist für jeden angemeldeten Mitarbeiter verfügbar. Für gemeinsame Startseiteninhalte, berufliche Profilangaben und delegierte Startseitenpflege einmalig Migration 008 installieren. [Anleitung und tatsächliche Rechte](docs/STARTSEITE_UND_PROFILE.md).
+
 ## Entwickeln
 
 Voraussetzung: Node.js 22.12+ (validiert mit Node.js 24.22.1) und npm.
@@ -40,7 +42,7 @@ npm run test:access
 
 Playwright verwendet standardmäßig `/usr/bin/chromium`. Bei Bedarf mit `CHROMIUM_PATH` einen anderen Chromium-Pfad angeben. Die Tests starten Vite oder verwenden einen bereits laufenden Server auf Port 5173.
 
-Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle sieben Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
+Browserprüfungen decken Modulnavigation, lokale Speicherung, Aufgaben mit Folgeterminen, Bearbeitung, Status und Rückmeldungen, Text-Upload mit Freigabe und Assistentenquellen, anonymes Feedback, Lager/Bestellungen, CRM, Lernfortschritt und mobile Bedienung ab. Zusätzliche Prüfungen behandeln Baukastenrechte, unveränderte Alteinträge nach Feldänderungen, Wiederherstellung von Modulversionen, Zusatzfelder, Originaldateien und getrennte Lernnachweise. Der Teamzugang einschließlich Online-Baukasten und Controlling wird mit simulierten Supabase-HTTP-Antworten geprüft; es werden dabei keine echten E-Mails versendet. PostgreSQL/PGlite-Prüfungen führen alle acht Migrationen und deren echte SQL-Zugriffsregeln mit verschiedenen Benutzerrollen aus. Das beweist noch keine Bereitschaft eines gehosteten Supabase-Projekts.
 
 Datum, Begrüßung und Kalender verwenden Europe/Berlin und aktualisieren sich beim Tageswechsel. Die Browserprüfungen fixieren ihre eigene Uhr, um wiederholbare Ergebnisse zu erhalten. Einzelne ursprüngliche Demoereignisse enthalten weiterhin feste Beispieldaten.
 

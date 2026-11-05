@@ -69,7 +69,7 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
   const activeUserId = useRef(null);
   activeUserId.current = session?.user.id || null;
   const scope=useTeamScope(client,passwordState==='none'?profile:null);
-  const allowedAreas=Object.keys(teamPages).filter(id=>scope.pages.includes(id)&&(id!=='builder'||scope.canDesign||profile?.role==='admin'));
+  const allowedAreas=Object.keys(teamPages).filter(id=>scope.pages.includes(id)&&(!['access','controlling'].includes(id)||profile?.role==='admin')&&(id!=='builder'||scope.canDesign||profile?.role==='admin'));
   const chatEnabled=!!profile&&passwordState==='none'&&!scope.loading&&allowedAreas.includes('chat');
   const inbox=useTeamChatInbox(client,profile,chatEnabled);
   useEffect(()=>{if(profile&&!scope.loading&&!allowedAreas.includes(area)){setArea(allowedAreas[0]||'blocked');setEditor(null);setSelected(null);}},[profile?.id,scope.loading,allowedAreas.join('|'),area]);
@@ -222,7 +222,7 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
     if (ok) form.reset();
   }
 
-  return <TeamShell profile={session&&!authLoading&&passwordState==='none'?profile:null} session={session} area={area} allowedAreas={allowedAreas} onArea={id=>{setArea(id);setExtensionEntity(null);setEditor(null);setSelected(null);}} onDemo={onDemo} onPassword={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}} onLogout={()=>signOut()} loggingOut={loggingOut} chatEnabled={chatEnabled} unread={inbox.unread} sites={sites}>
+  return <TeamShell client={client} profile={session&&!authLoading&&passwordState==='none'?profile:null} session={session} area={area} allowedAreas={allowedAreas} onArea={id=>{setArea(id);setExtensionEntity(null);setEditor(null);setSelected(null);}} onDemo={onDemo} onPassword={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}} onLogout={()=>signOut()} loggingOut={loggingOut} chatEnabled={chatEnabled} unread={inbox.unread} sites={sites}>
     <main className="team-main">
       <div className="page-heading"><div><div className="eyebrow">DEIN TEAM · DEINE STUDIOS</div><h1>{profile ? `Hallo, ${profile.full_name.split(' ')[0]}.` : 'Dein Zugang zum Team.'}</h1><p>{profile ? `${roles[profile.role]} · ${session.user.email}` : 'Melde dich mit deiner persönlichen Firmen-E-Mail-Adresse an.'}</p></div>{session && <div className="team-account-buttons">{profile&&passwordState==='none'&&<button className="button button-secondary" onClick={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}}><KeyRound size={15}/>Passwort festlegen / ändern</button>}{profile?.role==='admin'&&<button className="button button-secondary" onClick={onDemo}><ArrowLeft size={15}/>Zur Demo</button>}</div>}</div>
       {error && <div className="team-error" role="alert">{error}</div>}{notice && <div className="team-notice" role="status"><CheckCircle2 size={16}/>{notice}</div>}

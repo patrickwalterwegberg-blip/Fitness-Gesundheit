@@ -36,6 +36,8 @@ try {
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
    else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:7,pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
+   else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
+   else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
    else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile];
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
@@ -49,6 +51,9 @@ try {
  await page.goto('https://teamhub-preview.example.org/');
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByText('Aktuell sind dir keine offenen Aufgaben zugewiesen.').waitFor();
+ await page.getByRole('button',{name:'Mein Mitarbeiterprofil öffnen'}).click();
+ await page.getByRole('dialog',{name:'Mein Mitarbeiterprofil'}).getByText('Produktionstest',{exact:true}).waitFor();
+ await page.getByRole('button',{name:'Mein Profil schließen'}).click();
  await page.getByRole('button',{name:'Lernhub',exact:true}).click();
  await page.getByText('Noch keine Kurse angelegt. Erstelle einen Kurs oder nutze im Kursformular die Testvorlage.').waitFor();
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
