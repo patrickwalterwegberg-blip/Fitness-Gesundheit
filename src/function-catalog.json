@@ -509,5 +509,41 @@
       "learning.courses"
     ],
     "since": 11
+  },
+  {
+    "group": "Onboarding",
+    "key": "onboarding.templates",
+    "label": "Onboardingvorlagen erstellen und freigeben",
+    "page": "learning",
+    "roles": [],
+    "requires": [
+      "learning.courses"
+    ],
+    "since": 12
+  },
+  {
+    "group": "Onboarding",
+    "key": "onboarding.assign",
+    "label": "Einarbeitungspläne Mitarbeitern zuweisen",
+    "page": "learning",
+    "roles": [],
+    "requires": [
+      "onboarding.review",
+      "learning.assign",
+      "tasks.create",
+      "tasks.assign"
+    ],
+    "since": 12
+  },
+  {
+    "group": "Onboarding",
+    "key": "onboarding.review",
+    "label": "Onboarding im eigenen Studio begleiten und bestätigen",
+    "page": "learning",
+    "roles": [
+      "studio_manager"
+    ],
+    "requires": [],
+    "since": 12
   }
 ]

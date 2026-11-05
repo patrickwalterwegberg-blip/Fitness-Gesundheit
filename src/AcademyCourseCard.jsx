@@ -1,0 +1,11 @@
+import React from 'react';
+import {Activity,ArrowUpRight,BookOpen,CheckCircle2,HandHeart,Monitor,ShieldCheck,Users} from 'lucide-react';
+import {courseCategory,courseCompletion,onboardingCategories} from './onboarding-model';
+import {pilotDate} from './team-pilot-data';
+import './team-onboarding.css';
+const icons={welcome:Activity,service:HandHeart,safety:ShieldCheck,tools:Monitor,team:Users};
+export function AcademyCover({title,category='welcome',label}){const Icon=icons[category]||Activity;return <div className={'academy-cover cover-'+category} aria-hidden="true"><span className="academy-cover-brand"><Activity size={19}/>FITNESS & GESUNDHEIT</span><Icon className="academy-cover-art"/><span className="academy-cover-kicker">{label||onboardingCategories[category]}</span><strong>{title.replace(/^\[TEST\]\s*/,'')}</strong><div className="academy-cover-line"/></div>;}
+export default function AcademyCourseCard({course,assignment,progress,selected,disabled,onOpen}){
+ const completion=courseCompletion(course,assignment,progress),detail=assignment?`${progress?.lessons_read||0}/${course.lesson_count} gelesen · ${pilotDate(assignment.due_date)}`:'Noch kein eigener Lernauftrag';
+ return <button className={'panel academy-course-card'+(selected?' active':'')} disabled={disabled} aria-label={`${course.title} ${detail}${!course.active?' · Inaktiv':''}${assignment?` ${progress?.quiz_passed?'Quiz bestanden':'Quiz offen'}`:''}`} onClick={onOpen}><AcademyCover title={course.title} category={courseCategory(course.title)}/><div className="academy-course-info"><div className="academy-course-title"><strong>{course.title}</strong>{completion.done?<CheckCircle2 size={18}/>:<ArrowUpRight size={17}/>}</div><small>{detail}{!course.active?' · Inaktiv':''}</small>{assignment?<><div className="academy-course-progress"><span>{completion.percent} % Fortschritt</span><span>{completion.done?'Abgeschlossen':progress?.quiz_passed?'Praxis / Schritte offen':'Wissenscheck offen'}</span></div><progress max="100" value={completion.percent} aria-label={'Kursfortschritt '+course.title}/></>:<div className="academy-preview-label"><BookOpen size={13}/>{course.lesson_count} Lektion(en) · Vorschau</div>}</div></button>;
+}

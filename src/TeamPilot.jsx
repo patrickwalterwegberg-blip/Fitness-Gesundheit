@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, CheckCircle2, ClipboardL
 import { useStudioClock } from './clock';
 import { pilotDate, pilotError, pilotMigrationUrl, pilotRpc, pilotSetupUrl } from './team-pilot-data';
 import './team-pilot.css';
+import {OnboardingSummary} from './TeamOnboarding';
 import TeamHome from './TeamHome';
 
 export function PilotSetup({ admin }) {
@@ -30,6 +31,7 @@ export default function TeamDashboard({client,profile,sites,onArea,onTask,allowe
     {error&&<><div className="team-error" role="alert">{error}</div><PilotSetup admin={profile.role==='admin'}/></>}
     {loading?<p role="status">Deine Übersicht wird geladen …</p>:data&&<>
       <section className="welcome-banner team-welcome home-welcome"><div className="welcome-copy"><span className="badge hero-badge"><span className="tiny-dot"/>DEIN FITNESS & GESUNDHEIT TEAMHUB</span><h2>Willkommen in deinem Teamhub.<br/><span>Schön, dass du da bist, {profile.full_name.split(' ')[0]}.</span></h2><p>Deine Aufgaben, neues Wissen und deine nächsten Lernschritte – alles an einem Ort.</p>{can('tasks')?<button onClick={()=>onArea('tasks')}><ClipboardList size={16}/>Meine Aufgaben ansehen<ArrowRight size={16}/></button>:can('learning')?<button onClick={()=>onArea('learning')}><BookOpen size={16}/>Weiterlernen<ArrowRight size={16}/></button>:null}</div><div className="team-welcome-art" aria-hidden="true"><Activity/></div></section>
+      {can('learning')&&<OnboardingSummary client={client} refreshKey={refresh} onOpen={()=>onArea('learning',{view:'onboarding'})}/>}
       <TeamHome client={client} profile={profile} sites={sites} allowedPages={allowedPages} onArea={onArea} refreshKey={refresh}/>
       {can('tasks')&&<div className="pilot-stats">{[['Offene Aufgaben',data.counts.open,ClipboardList],['Überfällig',data.counts.overdue,CircleAlert],['Heute fällig',data.counts.today,Clock3],['Erledigte Aufgaben',data.counts.done,CheckCircle2]].map(([label,value,Icon])=><button className="panel" key={label} onClick={()=>onArea('tasks')}><span>{label}</span><strong>{value}</strong><Icon size={19}/></button>)}</div>}
       <div className="pilot-columns">{can('tasks')&&<section className="panel pilot-section"><div className="section-heading"><h3><ClipboardList size={18}/>Das steht als Nächstes an</h3><button className="text-link" onClick={()=>onArea('tasks')}>Alle Aufgaben</button></div>{data.tasks.length?data.tasks.map(t=><button className={'pilot-row '+(t.due_date<data.today?'pilot-overdue':'')} key={t.id} onClick={()=>onTask({...t,studio:{name:sites.find(s=>s.id===t.studio_id)?.name}})}><div><strong>{t.title}</strong><small>{sites.find(s=>s.id===t.studio_id)?.name} · {pilotDate(t.due_date)} · {t.status==='in_progress'?'In Bearbeitung':'Offen'}</small></div><ArrowRight size={16}/></button>):<p className="pilot-empty">Aktuell sind dir keine offenen Aufgaben zugewiesen.</p>}</section>}

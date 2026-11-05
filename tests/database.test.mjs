@@ -48,6 +48,7 @@ const home=await readFile('backend/supabase/008_home_portal.sql','utf8');await d
 const functions=await readFile('backend/supabase/009_function_permissions.sql','utf8');await db.exec(functions);await db.exec(functions);
 const schedule=await readFile('backend/supabase/010_calendar_tasks_notifications.sql','utf8');await db.exec(schedule);await db.exec(schedule);
 const video=await readFile('backend/supabase/011_course_videos.sql','utf8');await db.exec(video);await db.exec(video);
+const onboarding=await readFile('backend/supabase/012_employee_onboarding.sql','utf8');await db.exec(onboarding);await db.exec(onboarding);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -733,7 +734,7 @@ test('schedule setup adds individual functions without changing roles',async()=>
   ids[key]=uid;await db.query('insert into auth.users(id,email) values($1,$2)',[uid,key+'@example.org']);await db.query('insert into public.profiles(id,full_name,role) values($1,$2,$3)',[uid,key,role]);await db.query('insert into public.studio_memberships values($1,$2)',[uid,a]);
  }
  const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as result'))).rows[0].result;
- assert.equal(ctx.version,11);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
+ assert.equal(ctx.version,12);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
 });
 test('employee private tasks stay invisible to peers, leadership, directory statistics and controlling',async()=>{
  privateTask=(await asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Private confidential task',$1,$2,current_date,true) returning id",[a,scheduleWorker]))).rows[0].id;
@@ -870,7 +871,7 @@ test('video upload metadata rejects unsupported files, oversize uploads and chan
 test('delegated video permission retains the employee role and confines upload ownership and studios',async()=>{
  const current=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1)',[scheduleWorker]))).rows[0].admin_function_access;
  await asUser('admin',tx=>tx.query("select public.admin_function_access($1,array['learning.videos'],$2)",[scheduleWorker,current.revision]));
- const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r;assert.equal(ctx.version,11);assert.ok(ctx.capabilities.includes('learning.videos'));assert.ok(ctx.capabilities.includes('learning.courses'));assert.ok(!ctx.capabilities.includes('learning.assign'));
+ const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r;assert.equal(ctx.version,12);assert.ok(ctx.capabilities.includes('learning.videos'));assert.ok(ctx.capabilities.includes('learning.courses'));assert.ok(!ctx.capabilities.includes('learning.assign'));
  assert.equal((await db.query('select role from public.profiles where id=$1',[scheduleWorker])).rows[0].role,'employee');
  await assert.rejects(prepareVideo('scheduleWorker',{nonce:videoNonce(3)}),/not granted/);
  await assert.rejects(prepareVideo('scheduleWorker',{nonce:videoNonce(3),site:b}),/not granted/);
@@ -941,4 +942,96 @@ test('a video-only lesson cannot lose its sole content and invalid examination s
  await assert.rejects(asUser('scheduleWorker',tx=>tx.query('select public.attach_learning_video($1,0,null,1)',[cid])),/cannot be empty/);
  for(const threshold of [0,101])await assert.rejects(asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4,null,$5)',['Invalid threshold',JSON.stringify(pilotLessons),JSON.stringify(qs),'[0]',threshold])),/threshold/);
  await assert.rejects(asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4)',['Duplicate keys',JSON.stringify(pilotLessons),JSON.stringify([{type:'multiple',prompt:'Question',options:['A','B']}]),'[[0,0]]'])),/Invalid multiple answer/);
+});
+
+let onboardingCourse,onboardingTemplate,onboardingEnrollment;
+const obUser=id(2200),obManager=id(2201),obPeer=id(2202),obOther=id(2203);
+const obStep=(kind,title,extra={})=>({kind,title,description:'Hinweis zur Einarbeitung',category:'welcome',days:0,course_id:null,requires_review:false,practice:false,...extra});
+const saveOB=(who,steps,{template=null,revision=null,published=false,site=null,title='Onboarding im Studio'}={})=>asUser(who,tx=>tx.query('select public.save_onboarding_template($1,$2,$3,$4,$5,$6,$7) as id',[template,title,'Dein Start im Team',site,JSON.stringify(steps),published,revision])).then(r=>r.rows[0].id);
+const enrollOB=(who,{template=onboardingTemplate,user=obUser,site=a,mentor=obManager,nonce=id(2210),start='2026-11-04'}={})=>asUser(who,tx=>tx.query('select public.enroll_onboarding($1,$2,$3,$4,$5,$6) as id',[template,user,site,start,mentor,nonce])).then(r=>r.rows[0].id);
+const myOB=who=>asUser(who,tx=>tx.query('select public.my_onboarding() as r')).then(r=>r.rows[0].r);
+test('onboarding defaults give employees their own plan and managers scoped review without assignment powers',async()=>{
+ for(const [key,uid,role,site] of [['obUser',obUser,'employee',a],['obManager',obManager,'studio_manager',a],['obPeer',obPeer,'employee',a],['obOther',obOther,'employee',b]]){ids[key]=uid;await db.query('insert into auth.users(id,email) values($1,$2)',[uid,key+'@example.org']);await db.query('insert into public.profiles(id,full_name,role) values($1,$2,$3)',[uid,key,role]);await db.query('insert into public.studio_memberships values($1,$2)',[uid,site]);}
+ assert.deepEqual((await myOB('obUser')).plans,[]);
+ const capabilities=(await asUser('obManager',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r.capabilities;assert.ok(capabilities.includes('onboarding.review'));assert.ok(!capabilities.includes('onboarding.assign'));assert.ok(!capabilities.includes('learning.assign'));
+ await assert.rejects(asUser('obUser',tx=>tx.query('select public.team_onboarding()')),/review not granted/);
+ onboardingCourse=(await asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Onboarding Basiskurs',JSON.stringify([{title:'Im Studio',body:'Persönliche Einweisung zählt separat.'}]),JSON.stringify([{prompt:'Was ist separat?',options:['Praxis','Nichts']}]),'[0]']))).rows[0].id;
+});
+test('onboarding drafts stay hidden and no assignments are created until explicit enrollment',async()=>{
+ const steps=[obStep('check','Begrüßung',{requires_review:true}),obStep('task','Erste Tätigkeit',{category:'tools',days:3}),obStep('course','Grundlagen lernen',{course_id:onboardingCourse,practice:true,days:7})];
+ onboardingTemplate=await saveOB('admin',steps);assert.equal((await asUser('obUser',tx=>tx.query('select * from public.onboarding_templates'))).rows.length,0);
+ await assert.rejects(enrollOB('admin'),/Published onboarding/);
+ assert.equal((await db.query('select id from public.tasks where assignee_id=$1',[obUser])).rows.length,0);
+ await saveOB('admin',steps,{template:onboardingTemplate,revision:1,published:true});
+ await assert.rejects(saveOB('admin',steps,{template:onboardingTemplate,revision:1,published:true}),/changed/);
+ await assert.rejects(saveOB('admin',[]),/one to thirty/);
+});
+test('onboarding enrollment atomically creates course and task links and retries never duplicate them',async()=>{
+ onboardingEnrollment=await enrollOB('admin');assert.equal(await enrollOB('admin'),onboardingEnrollment);
+ await assert.rejects(enrollOB('admin',{nonce:id(2211)}),/already has this onboarding/);
+ await assert.rejects(enrollOB('admin',{start:'2026-11-05'}),/retry changed/);
+ assert.equal((await db.query('select id from public.tasks where assignee_id=$1',[obUser])).rows.length,1);assert.equal((await db.query('select id from public.learning_assignments where learner_id=$1',[obUser])).rows.length,1);
+ const task=(await db.query('select due_date::text,private from public.tasks where assignee_id=$1',[obUser])).rows[0];assert.equal(task.due_date,'2026-11-07');assert.equal(task.private,false);
+ const notification=(await asUser('obUser',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r.items.find(n=>n.kind==='onboarding');assert.equal(notification.target_id,onboardingEnrollment);
+});
+test('onboarding privacy confines employee and leadership views to the assigned studios',async()=>{
+ const mine=(await myOB('obUser')).plans[0];assert.equal(mine.mentor_name,'obManager');assert.equal(mine.total,3);assert.equal(mine.done,0);
+ for(const who of ['obPeer','obOther']){assert.equal((await myOB(who)).plans.length,0);assert.equal((await asUser(who,tx=>tx.query('select id from public.onboarding_steps where enrollment_id=$1',[onboardingEnrollment]))).rows.length,0);}
+ const team=(await asUser('obManager',tx=>tx.query('select public.team_onboarding() as r'))).rows[0].r;assert.equal(team.total,1);assert.equal(team.plans[0].learner_id,obUser);
+ assert.equal((await asUser('obManager',tx=>tx.query('select public.team_onboarding($1) as r',[b]))).rows[0].r.total,0);
+ await assert.rejects(asUser('obUser',tx=>tx.query('select app_private.onboarding_detail(e) from public.onboarding_enrollments e')),/permission denied/);
+});
+test('onboarding timestamps and source completions cannot be forged through direct writes',async()=>{
+ const steps=(await myOB('obUser')).plans[0].steps;
+ await assert.rejects(asUser('obUser',tx=>tx.query('update public.onboarding_steps set completed_at=now() where enrollment_id=$1',[onboardingEnrollment])),/permission denied/);
+ await assert.rejects(asUser('obUser',tx=>tx.query("insert into public.onboarding_events(enrollment_id,actor_id,event) values($1,$2,'forged')",[onboardingEnrollment,obManager])),/permission denied/);
+ await assert.rejects(asUser('obUser',tx=>tx.query('select public.complete_onboarding_step($1,true)',[steps.find(s=>s.kind==='course').id])),/Only checklist/);
+ await assert.rejects(asUser('obUser',tx=>tx.query('select public.complete_onboarding_step($1,true,true)',[steps.find(s=>s.kind==='check').id])),/Another reviewer/);
+ await assert.rejects(asUser('obManager',tx=>tx.query('select public.complete_onboarding_step($1,true)',[steps.find(s=>s.kind==='check').id])),/Own onboarding/);
+});
+test('employee checklist completion waits for a separate authorized review and records authoritative audit events',async()=>{
+ const step=(await myOB('obUser')).plans[0].steps.find(s=>s.kind==='check');
+ await asUser('obUser',tx=>tx.query('select public.complete_onboarding_step($1,true)',[step.id]));let p=(await myOB('obUser')).plans[0];assert.equal(p.done,0);assert.ok(p.steps[0].completed_at);assert.equal(p.steps[0].reviewed_at,null);
+ await asUser('obManager',tx=>tx.query('select public.complete_onboarding_step($1,true,true,$2)',[step.id,'Vor Ort gezeigt']));p=(await myOB('obUser')).plans[0];assert.equal(p.done,1);assert.equal(p.steps[0].reviewed_by,obManager);assert.equal(p.steps[0].review_note,'Vor Ort gezeigt');
+ await assert.rejects(asUser('obUser',tx=>tx.query('select public.complete_onboarding_step($1,false)',[step.id])),/remain confirmed/);
+ const events=(await asUser('obUser',tx=>tx.query('select actor_id,event from public.onboarding_events where step_id=$1 order by id',[step.id]))).rows;assert.deepEqual(events.map(e=>e.event),['completed','reviewed']);assert.deepEqual(events.map(e=>e.actor_id),[obUser,obManager]);
+});
+test('onboarding task and course completion follow their actual sources including the separate practical requirement',async()=>{
+ const plan=(await myOB('obUser')).plans[0],task=plan.steps.find(s=>s.kind==='task'),course=plan.steps.find(s=>s.kind==='course');
+ await asUser('obUser',tx=>tx.query("update public.tasks set status='done' where id=$1",[task.task_id]));assert.equal((await myOB('obUser')).plans[0].done,2);
+ await asUser('obUser',tx=>tx.query('select public.acknowledge_learning_lesson($1,0)',[course.learning_assignment_id]));await asUser('obUser',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[course.learning_assignment_id,'[0]']));assert.equal((await myOB('obUser')).plans[0].done,2);
+ await assert.rejects(asUser('obManager',tx=>tx.query('select public.confirm_learning_practice($1)',[course.learning_assignment_id])),/Administrator required/);
+ await asUser('admin',tx=>tx.query('select public.confirm_learning_practice($1)',[course.learning_assignment_id]));assert.equal((await myOB('obUser')).plans[0].done,3);
+ assert.equal((await db.query('select completed_at from public.onboarding_steps where id=$1',[course.id])).rows[0].completed_at,null);
+});
+test('assigned onboarding templates are immutable and a copy does not rewrite existing plans',async()=>{
+ const original=(await db.query('select * from public.onboarding_templates where id=$1',[onboardingTemplate])).rows[0];
+ await assert.rejects(saveOB('admin',original.steps,{template:original.id,revision:original.revision,published:true,title:'Changed'}),/immutable/);
+ const copy=await saveOB('admin',original.steps,{title:'Neue Onboardingversion',published:false});assert.notEqual(copy,onboardingTemplate);assert.equal((await myOB('obUser')).plans[0].title,'Onboarding im Studio');
+});
+test('individual onboarding grants keep employee roles and include only their explicit dependencies',async()=>{
+ let access=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1) as r',[obPeer]))).rows[0].r;
+ await asUser('admin',tx=>tx.query("select public.admin_function_access($1,array['onboarding.templates'],$2)",[obPeer,access.revision]));
+ await saveOB('obPeer',[obStep('check','Eigener Entwurf')],{site:a});await assert.rejects(saveOB('obPeer',[obStep('check','Fremdes Studio')],{site:b}),/not granted/);await assert.rejects(enrollOB('obPeer',{user:obPeer,nonce:id(2212)}),/not granted/);
+ access=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1) as r',[obPeer]))).rows[0].r;
+ await asUser('admin',tx=>tx.query("select public.admin_function_access($1,array['onboarding.assign'],$2)",[obPeer,access.revision]));
+ const ctx=(await asUser('obPeer',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r;assert.ok(ctx.capabilities.includes('learning.assign'));assert.ok(ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('users.access'));assert.equal((await db.query('select role from public.profiles where id=$1',[obPeer])).rows[0].role,'employee');
+ const mentors=(await asUser('obPeer',tx=>tx.query('select public.onboarding_mentors($1) as r',[a]))).rows[0].r;assert.ok(mentors.some(m=>m.id===obPeer));
+ const library=(await asUser('obPeer',tx=>tx.query('select public.onboarding_template_library() as r'))).rows[0].r;assert.ok(library.templates.some(t=>t.id===onboardingTemplate));
+ await assert.rejects(enrollOB('obPeer',{user:obOther,site:b,nonce:id(2213)}),/not granted/);
+});
+test('conflicting existing learning requirements roll back the entire onboarding enrollment including earlier tasks',async()=>{
+ await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false)',[obPeer,onboardingCourse,a]));
+ const template=await saveOB('admin',[obStep('task','Must roll back'),obStep('course','Praxis erforderlich',{course_id:onboardingCourse,practice:true})],{published:true});const before=(await db.query('select count(*)::int n from public.tasks where assignee_id=$1',[obPeer])).rows[0].n;
+ await assert.rejects(enrollOB('admin',{template,user:obPeer,nonce:id(2214)}),/different studio or practice/);
+ assert.equal((await db.query('select count(*)::int n from public.tasks where assignee_id=$1',[obPeer])).rows[0].n,before);assert.equal((await db.query('select id from public.onboarding_enrollments where id=$1',[id(2214)])).rows.length,0);assert.equal((await db.query('select id from public.team_notifications where target_id=$1',[id(2214)])).rows.length,0);
+});
+test('onboarding does not appoint a mentor whose learning access was withdrawn',async()=>{
+ await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,array['tasks'],$2)",[obManager,ids.admin]);
+ const mentors=(await asUser('admin',tx=>tx.query('select public.onboarding_mentors($1) as r',[a]))).rows[0].r;assert.ok(!mentors.some(m=>m.id===obManager));await assert.rejects(enrollOB('admin',{user:obPeer,nonce:id(2215)}),/active employee/);
+ await db.query('delete from public.team_page_access where user_id=$1',[obManager]);
+});
+test('withdrawing a studio or learning access hides onboarding and its notification without deleting history',async()=>{
+ await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[obUser,a]);assert.equal((await myOB('obUser')).plans.length,0);assert.equal((await asUser('obUser',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r.items.some(n=>n.kind==='onboarding'),false);
+ await db.query('insert into public.studio_memberships values($1,$2)',[obUser,a]);assert.equal((await myOB('obUser')).plans.length,1);
 });
