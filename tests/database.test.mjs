@@ -47,6 +47,7 @@ await db.exec(communication);await db.exec(communication);
 const home=await readFile('backend/supabase/008_home_portal.sql','utf8');await db.exec(home);await db.exec(home);
 const functions=await readFile('backend/supabase/009_function_permissions.sql','utf8');await db.exec(functions);await db.exec(functions);
 const schedule=await readFile('backend/supabase/010_calendar_tasks_notifications.sql','utf8');await db.exec(schedule);await db.exec(schedule);
+const video=await readFile('backend/supabase/011_course_videos.sql','utf8');await db.exec(video);await db.exec(video);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -425,7 +426,7 @@ test('individual lesson acknowledgments are bounded, idempotent and server stamp
 test('online quiz is graded server side, throttled, and preserves an earned pass',async()=>{
  await assert.rejects(asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[pilotAssignment,'[true,0]'])),/Invalid quiz answer/);
  const failed=(await asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2) as result',[pilotAssignment,'[0,0]']))).rows[0].result;
- assert.deepEqual(failed,{correct:1,total:2,passed:false});
+ assert.deepEqual(failed,{correct:1,total:2,passed:false,pass_percent:80,percent:50});
  await assert.rejects(asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[pilotAssignment,'[1,0]'])),/Wait ten seconds/);
  await db.query("update public.learning_attempts set at=clock_timestamp()-interval '11 seconds' where assignment_id=$1",[pilotAssignment]);
  assert.equal((await asUser('employee',tx=>tx.query('select public.submit_learning_quiz($1,$2) as result',[pilotAssignment,'[1,0]']))).rows[0].result.passed,true);
@@ -732,7 +733,7 @@ test('schedule setup adds individual functions without changing roles',async()=>
   ids[key]=uid;await db.query('insert into auth.users(id,email) values($1,$2)',[uid,key+'@example.org']);await db.query('insert into public.profiles(id,full_name,role) values($1,$2,$3)',[uid,key,role]);await db.query('insert into public.studio_memberships values($1,$2)',[uid,a]);
  }
  const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as result'))).rows[0].result;
- assert.equal(ctx.version,10);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
+ assert.equal(ctx.version,11);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
 });
 test('employee private tasks stay invisible to peers, leadership, directory statistics and controlling',async()=>{
  privateTask=(await asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Private confidential task',$1,$2,current_date,true) returning id",[a,scheduleWorker]))).rows[0].id;
@@ -839,4 +840,105 @@ test('notifications stop exposing task and event content after studio membership
  await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[scheduleWorker,a]);
  const after=(await asUser('scheduleWorker',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r;assert.ok(!after.items.some(n=>n.kind==='task'||n.kind==='event'));
  await db.query('insert into public.studio_memberships values($1,$2)',[scheduleWorker,a]);
+});
+
+// Course video storage and examination scenarios.
+let globalVideo,siteVideo,videoCourse,videoAssignment,mixedCourse,mixedAssignment;
+const videoNonce=n=>id(1500+n);
+async function prepareVideo(who,{nonce=videoNonce(1),site=null,title='Testvideo',name='clip.mp4',mime='video/mp4',size=6}={}){return (await asUser(who,tx=>tx.query('select public.prepare_learning_video($1,$2,$3,$4,$5,$6) as v',[title,site,name,mime,size,nonce]))).rows[0].v;}
+async function putVideo(who,v){return asUser(who,tx=>tx.query("insert into storage.objects(bucket_id,name,metadata) values('course-videos',$1,$2) returning id",[v.object_path,JSON.stringify({size:v.file_size,mimetype:v.mime_type})]));}
+async function readyVideo(who,options){const v=await prepareVideo(who,options);await putVideo(who,v);await asUser(who,tx=>tx.query('select public.finish_learning_video($1)',[v.id]));return {...v,state:'ready'};}
+test('video storage stays private and ordinary employees cannot reserve or write uploads',async()=>{
+ assert.equal((await db.query("select public from storage.buckets where id='course-videos'")).rows[0].public,false);
+ await assert.rejects(prepareVideo('scheduleWorker',{site:a}),/not granted/);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("insert into storage.objects(bucket_id,name) values('course-videos','forged.mp4')")),/row-level security/);
+ globalVideo=await prepareVideo('admin');
+ assert.equal((await asUser('scheduleWorker',tx=>tx.query('select * from public.learning_videos where id=$1',[globalVideo.id]))).rows.length,0);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query("insert into public.learning_videos(title,created_by,file_name,mime_type,file_size,object_path) values('Fake',$1,'f.mp4','video/mp4',1,'fake')",[scheduleWorker])),/permission denied/);
+});
+test('video upload metadata rejects unsupported files, oversize uploads and changed retry payloads',async()=>{
+ for(const options of [{nonce:videoNonce(2),size:52428801},{nonce:videoNonce(2),name:'file.html',mime:'video/mp4'},{nonce:videoNonce(2),name:'clip.mov',mime:'video/mp4'}])await assert.rejects(prepareVideo('admin',options));
+ const retry=await prepareVideo('admin');assert.equal(retry.id,globalVideo.id);
+ await assert.rejects(prepareVideo('admin',{title:'Changed'}),/retry changed/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.finish_learning_video($1)',[globalVideo.id])),/not confirmed/);
+ await asUser('admin',tx=>tx.query("insert into storage.objects(bucket_id,name,metadata) values('course-videos',$1,$2)",[globalVideo.object_path,JSON.stringify({size:7,mimetype:'video/mp4'})]));
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.finish_learning_video($1)',[globalVideo.id])),/not confirmed/);
+ await db.query("update storage.objects set metadata=$2 where bucket_id='course-videos' and name=$1",[globalVideo.object_path,JSON.stringify({size:6,mimetype:'video/mp4'})]);
+ await asUser('admin',tx=>tx.query('select public.finish_learning_video($1)',[globalVideo.id]));await asUser('admin',tx=>tx.query('select public.finish_learning_video($1)',[globalVideo.id]));
+ assert.equal((await db.query('select state from public.learning_videos where id=$1',[globalVideo.id])).rows[0].state,'ready');
+});
+test('delegated video permission retains the employee role and confines upload ownership and studios',async()=>{
+ const current=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1)',[scheduleWorker]))).rows[0].admin_function_access;
+ await asUser('admin',tx=>tx.query("select public.admin_function_access($1,array['learning.videos'],$2)",[scheduleWorker,current.revision]));
+ const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r;assert.equal(ctx.version,11);assert.ok(ctx.capabilities.includes('learning.videos'));assert.ok(ctx.capabilities.includes('learning.courses'));assert.ok(!ctx.capabilities.includes('learning.assign'));
+ assert.equal((await db.query('select role from public.profiles where id=$1',[scheduleWorker])).rows[0].role,'employee');
+ await assert.rejects(prepareVideo('scheduleWorker',{nonce:videoNonce(3)}),/not granted/);
+ await assert.rejects(prepareVideo('scheduleWorker',{nonce:videoNonce(3),site:b}),/not granted/);
+ siteVideo=await readyVideo('scheduleWorker',{nonce:videoNonce(3),site:a,name:'geraet.webm',mime:'video/webm'});
+ await assert.rejects(asUser('schedulePeer',tx=>tx.query('select public.finish_learning_video($1)',[siteVideo.id])),/not granted/);
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('select public.prepare_delete_learning_video($1)',[globalVideo.id])),/not granted/);
+});
+test('course creation preserves the video reference but never exposes the answer key',async()=>{
+ const lessons=[{title:'Videolektion',body:'',video_id:globalVideo.id}],questions=[{prompt:'Richtig?',options:['Ja','Nein']}];
+ videoCourse=(await asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Videokurs',JSON.stringify(lessons),JSON.stringify(questions),'[0]']))).rows[0].id;
+ assert.equal((await db.query('select video_id from public.learning_course_videos where course_id=$1',[videoCourse])).rows[0].video_id,globalVideo.id);
+ const m=(await asUser('admin',tx=>tx.query('select * from public.learning_material where course_id=$1',[videoCourse]))).rows[0];assert.equal(m.lessons[0].video_id,globalVideo.id);assert.ok(!JSON.stringify(m).includes('answers'));
+ assert.equal((await asUser('schedulePeer',tx=>tx.query("select name from storage.objects where bucket_id='course-videos' and name=$1",[globalVideo.object_path]))).rows.length,0);
+ videoAssignment=(await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false) as id',[schedulePeer,videoCourse,a]))).rows[0].id;
+ assert.equal((await asUser('schedulePeer',tx=>tx.query("select name from storage.objects where bucket_id='course-videos' and name=$1",[globalVideo.object_path]))).rows.length,1);
+ assert.equal((await asUser('other',tx=>tx.query("select name from storage.objects where bucket_id='course-videos' and name=$1",[globalVideo.object_path]))).rows.length,0);
+});
+test('used videos and assigned course videos cannot be replaced, deleted or overwritten',async()=>{
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.prepare_delete_learning_video($1)',[globalVideo.id])),/in use are preserved/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.attach_learning_video($1,0,null,1)',[videoCourse])),/Assigned courses are immutable/);
+ assert.equal((await asUser('admin',tx=>tx.query("update storage.objects set metadata='{}' where bucket_id='course-videos' and name=$1 returning id",[globalVideo.object_path]))).rows.length,0);
+ assert.equal((await asUser('admin',tx=>tx.query("delete from storage.objects where bucket_id='course-videos' and name=$1 returning id",[globalVideo.object_path]))).rows.length,0);
+ await assert.rejects(asUser('admin',tx=>tx.query("update public.learning_course_videos set video_id=$2 where course_id=$1",[videoCourse,siteVideo.id])),/permission denied/);
+});
+test('unassigned lesson video attachment is revisioned and studio-specific media cannot be assigned elsewhere',async()=>{
+ const cid=(await asUser('scheduleWorker',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Studio video',JSON.stringify([{title:'Start',body:'Text'}]),JSON.stringify([{prompt:'Frage',options:['A','B']}]),'[0]']))).rows[0].id;
+ await asUser('scheduleWorker',tx=>tx.query('select public.attach_learning_video($1,0,$2,1)',[cid,siteVideo.id]));
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('select public.attach_learning_video($1,0,null,1)',[cid])),/changed/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false)',[ids.other,cid,b])),/another studio/);
+ await asUser('scheduleWorker',tx=>tx.query('select public.attach_learning_video($1,0,null,2)',[cid]));
+ assert.equal((await db.query('select * from public.learning_course_videos where course_id=$1',[cid])).rows.length,0);
+});
+test('unused video deletion requires a locked deleting state and confirmed object removal',async()=>{
+ const v=await readyVideo('admin',{nonce:videoNonce(4)});
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.finish_delete_learning_video($1)',[v.id])),/Remove video object/);
+ await asUser('admin',tx=>tx.query('select public.prepare_delete_learning_video($1)',[v.id]));
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.finish_delete_learning_video($1)',[v.id])),/Remove video object/);
+ await asUser('admin',tx=>tx.query("delete from storage.objects where bucket_id='course-videos' and name=$1",[v.object_path]));
+ await asUser('admin',tx=>tx.query('select public.finish_delete_learning_video($1)',[v.id]));assert.equal((await db.query('select * from public.learning_videos where id=$1',[v.id])).rows.length,0);
+});
+test('removing the learning area removes both video metadata and storage access',async()=>{
+ await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,array['tasks'],$2)",[schedulePeer,ids.admin]);
+ assert.equal((await asUser('schedulePeer',tx=>tx.query('select * from public.learning_videos where id=$1',[globalVideo.id]))).rows.length,0);
+ assert.equal((await asUser('schedulePeer',tx=>tx.query("select name from storage.objects where bucket_id='course-videos' and name=$1",[globalVideo.object_path]))).rows.length,0);
+ await db.query('delete from public.team_page_access where user_id=$1',[schedulePeer]);
+});
+test('mixed examinations keep solutions private and validate configurable passing thresholds',async()=>{
+ const qs=[{type:'single',prompt:'Eine richtige Antwort',options:['Ja','Nein']},{type:'multiple',prompt:'Alle richtigen wählen',options:['A','B','C']},{type:'text',prompt:'Fülle die Lücke: Ansprechpartner ist ___',options:[]}];
+ mixedCourse=(await asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4,null,60) as id',['Gemischte Prüfung',JSON.stringify([{title:'Lernen',body:'Patrick Walter hilft.'}]),JSON.stringify(qs),JSON.stringify([0,[2,0],'Patrick Walter'])]))).rows[0].id;
+ mixedAssignment=(await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false) as id',[schedulePeer,mixedCourse,a]))).rows[0].id;
+ const material=(await asUser('schedulePeer',tx=>tx.query('select * from public.learning_material where course_id=$1',[mixedCourse]))).rows[0];assert.equal(material.pass_percent,60);assert.ok(!JSON.stringify(material.questions).includes('Patrick Walter'));
+ await assert.rejects(asUser('schedulePeer',tx=>tx.query('select answers from app_private.learning_answer_keys where course_id=$1',[mixedCourse])),/permission denied/);
+ await assert.rejects(asUser('schedulePeer',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[mixedAssignment,'[0,[0,2],"patrick walter"]'])),/Read every lesson/);
+ await asUser('schedulePeer',tx=>tx.query('select public.acknowledge_learning_lesson($1,0)',[mixedAssignment]));
+ const result=(await asUser('schedulePeer',tx=>tx.query('select public.submit_learning_quiz($1,$2) as r',[mixedAssignment,'[1,[0,2],"  PATRICK    WALTER "]']))).rows[0].r;assert.equal(result.correct,2);assert.equal(result.total,3);assert.equal(result.passed,true);assert.equal(result.pass_percent,60);
+ assert.equal((await db.query('select pass_percent from public.learning_attempts where assignment_id=$1',[mixedAssignment])).rows[0].pass_percent,60);
+});
+test('multiple-choice requires an exact set and rejects duplicate or malformed selections',async()=>{
+ await db.query("update public.learning_attempts set at=now()-interval '20 seconds' where assignment_id=$1",[mixedAssignment]);
+ for(const answers of ['[0,[0,0],"Patrick Walter"]','[0,[],"Patrick Walter"]','[0,[0,9],"Patrick Walter"]','[0,[0,2],""]'])await assert.rejects(asUser('schedulePeer',tx=>tx.query('select public.submit_learning_quiz($1,$2)',[mixedAssignment,answers])),/Invalid quiz answer/);
+ const r=(await asUser('schedulePeer',tx=>tx.query('select public.submit_learning_quiz($1,$2) as r',[mixedAssignment,'[1,[0],"Patrick Walter"]']))).rows[0].r;assert.equal(r.correct,1);assert.equal(r.passed,false);
+ // A later failed attempt does not erase an earlier passing result.
+ assert.equal((await db.query('select quiz_passed from public.learning_progress where assignment_id=$1',[mixedAssignment])).rows[0].quiz_passed,true);
+});
+test('a video-only lesson cannot lose its sole content and invalid examination settings are rejected',async()=>{
+ const qs=[{prompt:'Eine Frage',options:['A','B']}],lessons=[{title:'Nur Video',body:'',video_id:siteVideo.id}];
+ const cid=(await asUser('scheduleWorker',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Video-only',JSON.stringify(lessons),JSON.stringify(qs),'[0]']))).rows[0].id;
+ await assert.rejects(asUser('scheduleWorker',tx=>tx.query('select public.attach_learning_video($1,0,null,1)',[cid])),/cannot be empty/);
+ for(const threshold of [0,101])await assert.rejects(asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4,null,$5)',['Invalid threshold',JSON.stringify(pilotLessons),JSON.stringify(qs),'[0]',threshold])),/threshold/);
+ await assert.rejects(asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4)',['Duplicate keys',JSON.stringify(pilotLessons),JSON.stringify([{type:'multiple',prompt:'Question',options:['A','B']}]),'[[0,0]]'])),/Invalid multiple answer/);
 });

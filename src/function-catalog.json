@@ -498,5 +498,16 @@
       "tasks.repeat"
     ],
     "since": 10
+  },
+  {
+    "group": "Lernhub",
+    "key": "learning.videos",
+    "label": "Kursvideos aufnehmen, hochladen und zuordnen",
+    "page": "learning",
+    "roles": [],
+    "requires": [
+      "learning.courses"
+    ],
+    "since": 11
   }
 ]

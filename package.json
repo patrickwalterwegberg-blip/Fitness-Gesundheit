@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
     "test:production": "node scripts/smoke-production.mjs",
-    "test:db": "node --test --test-isolation=none tests/database.test.mjs tests/schedule-model.test.mjs",
+    "test:db": "node --test --test-isolation=none tests/database.test.mjs tests/schedule-model.test.mjs tests/course-video-model.test.mjs",
     "test:access": "node --test --test-isolation=none tests/team-access-function.test.mjs"
   },
   "dependencies": {
@@ -19,7 +19,8 @@
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "read-excel-file": "^8.0.3"
+    "read-excel-file": "^8.0.3",
+    "tus-js-client": "^4.3.1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.15",

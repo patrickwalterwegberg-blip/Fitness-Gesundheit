@@ -236,7 +236,7 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
     if (ok) form.reset();
   }
 
-  return <PermissionContext.Provider value={{ready:functionsReady,can:functionCan}}><TeamShell client={client} profile={session&&!authLoading&&passwordState==='none'?profile:null} session={session} area={area} allowedAreas={allowedAreas} onArea={id=>{setArea(id);setExtensionEntity(null);setEditor(null);setSelected(null);}} onDemo={onDemo} onPassword={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}} onLogout={()=>signOut()} loggingOut={loggingOut} chatEnabled={chatEnabled} unread={inbox.unread} sites={sites} onNotificationTarget={async n=>{
+  return <PermissionContext.Provider value={{ready:functionsReady,version:scope.version||0,can:functionCan}}><TeamShell client={client} profile={session&&!authLoading&&passwordState==='none'?profile:null} session={session} area={area} allowedAreas={allowedAreas} onArea={id=>{setArea(id);setExtensionEntity(null);setEditor(null);setSelected(null);}} onDemo={onDemo} onPassword={()=>{setPasswordRequest(v=>!v);setError('');setNotice('');}} onLogout={()=>signOut()} loggingOut={loggingOut} chatEnabled={chatEnabled} unread={inbox.unread} sites={sites} onNotificationTarget={async n=>{
       if(n.kind==='task'){const r=await client.from('tasks').select(columns).eq('id',n.target_id).single();if(r.error)throw r.error;setArea('tasks');setSelected(r.data);setEditor(null);}
       else if(n.kind==='event'){setNotificationTarget(n);setArea('calendar');}
       else if(n.kind==='chat'){setNotificationTarget(n);setArea('chat');}

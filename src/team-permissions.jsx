@@ -3,7 +3,7 @@ import catalog from './function-catalog.json';
 export {catalog as functionCatalog};
 export const functionGroups=[...new Set(catalog.map(c=>c.group))];
 export const functionMigrationUrl='https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/blob/main/backend/supabase/009_function_permissions.sql';
-export const PermissionContext=createContext({ready:false,can:(_key,legacy=false)=>legacy});
+export const PermissionContext=createContext({ready:false,version:0,can:(_key,legacy=false)=>legacy});
 export const usePermissions=()=>useContext(PermissionContext);
 export function permissionDefaults(role){return catalog.filter(c=>role==='admin'||c.roles.includes(role)).map(c=>c.key);}
 export function expandPermissions(values){const next=new Set(values);for(let i=0;i<catalog.length;i++){const before=next.size;for(const item of catalog)if(next.has(item.key))for(const required of item.requires)next.add(required);if(next.size===before)break;}return [...next];}

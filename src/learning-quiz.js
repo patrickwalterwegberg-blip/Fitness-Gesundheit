@@ -1,0 +1,5 @@
+export const questionTypes={single:'Eine richtige Antwort',multiple:'Mehrere richtige Antworten',text:'Lückentext / kurze Antwort'};
+export const questionType=question=>question.type||'single';
+export function answerComplete(question,value){return questionType(question)==='multiple'?Array.isArray(value)&&value.length>0:questionType(question)==='text'?typeof value==='string'&&value.trim().length>0:value!==undefined&&value!==null&&String(value)!=='';}
+export function learnerAnswers(questions,answers){return questions.map((q,i)=>questionType(q)==='multiple'?[...(answers[i]||[])].map(Number).sort((a,b)=>a-b):questionType(q)==='text'?String(answers[i]||'').trim():Number(answers[i]));}
+export function courseQuizPayload(questions,advanced){return {questions:questions.map(q=>({prompt:q.prompt,options:questionType(q)==='text'?[]:q.options,...(advanced?{type:questionType(q)}:{})})),answers:questions.map(q=>questionType(q)==='multiple'?[...(q.correctChoices||[])].map(Number).sort((a,b)=>a-b):questionType(q)==='text'?q.correctText.trim():Number(q.answer))};}

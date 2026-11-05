@@ -36,13 +36,14 @@ try {
     assert.equal(credentials.password,'Smoke-Test-Passphrase-2026!');
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
-   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:10,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
+   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:11,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
    else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[],total:0,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
    else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
    else if(url.pathname==='/rest/v1/rpc/team_notification_inbox')body={items:[],unread:0,total:0};
    else if(url.pathname==='/rest/v1/rpc/team_schedule_month')body={days:[]};
    else if(url.pathname==='/rest/v1/calendar_events')body=[];
+   else if(url.pathname==='/rest/v1/rpc/learning_video_library')body={items:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
    else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile];
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
@@ -79,6 +80,14 @@ try {
  await inviteDialog.getByRole('button',{name:'Zugangsformular schließen'}).click();
  await page.getByRole('button',{name:'Lernhub',exact:true}).click();
  await page.getByText('Noch keine Kurse angelegt. Erstelle einen Kurs oder nutze im Kursformular die Testvorlage.').waitFor();
+ await page.getByRole('button',{name:'Videostudio',exact:true}).click();
+ const videoStudio=page.getByRole('dialog',{name:'Videostudio',exact:true});
+ await videoStudio.getByText('Noch keine passenden Videos. Nimm ein Video auf oder lade eine Datei hoch.').waitFor();
+ await videoStudio.getByRole('button',{name:'Video aufnehmen / hochladen',exact:true}).click();
+ await videoStudio.getByLabel('Videodatei wählen',{exact:true}).setInputFiles({name:'smoke.mp4',mimeType:'video/mp4',buffer:Buffer.from('local-video-preview')});
+ await videoStudio.getByLabel('Vorschau deiner Videodatei',{exact:true}).waitFor();
+ assert.ok(!calls.includes('/rest/v1/rpc/prepare_learning_video'),'Choosing a local video must not upload it');
+ await videoStudio.getByRole('button',{name:'Fenster schließen',exact:true}).click();
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
  await page.goto('https://teamhub-preview.example.org/Fitness-Gesundheit/login.html');
  await page.getByRole('heading',{name:'Willkommen im Team.'}).waitFor();
@@ -89,5 +98,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, academy, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, academy and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
