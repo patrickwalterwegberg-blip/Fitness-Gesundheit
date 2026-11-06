@@ -2,9 +2,9 @@ import {test,expect} from '@playwright/test';
 import {sharedBackend,sharedIds} from './shared-backend';
 const standard=['dashboard','tasks','calendar','learning','knowledge','chat','feedback'];
 const did='00000000-0000-4000-8000-000000000501',vid='00000000-0000-4000-8000-000000000502';
-async function backend(page,{pages=standard}={}){
+async function backend(page,{pages=standard,ai=false}={}){
  const base=await sharedBackend(page,{role:'employee',pages});
- const state={pages:[...pages],capabilities:null,fail:false,candidates:true,queries:[],taskQueries:[]};
+ const state={ai,aiFail:null,aiCalls:[],pages:[...pages],capabilities:null,fail:false,candidates:true,queries:[],taskQueries:[]};
  base.documents.push({id:did,title:'Telefonleitfaden',summary:'Freigegebene Telefonregeln',category:'Empfang',tags:[],studio_id:sharedIds.studio,reader_roles:['employee'],created_by:sharedIds.user,published_version_id:vid,archived:false,revision:1,updated_at:'2026-11-04T10:00:00Z'});
  base.versions.push({id:vid,document_id:did,version:1,title:'Telefonleitfaden',summary:'Telefonregeln',tags:[],category:'Empfang',created_by:sharedIds.user,kind:'article',state:'ready',text_content:'Am Telefon begrüßen wir Anrufer freundlich: Fitness & Gesundheit, guten Tag. <script>nicht ausführen</script>',published_at:'2026-11-04T10:00:00Z',created_at:'2026-11-04T09:00:00Z'});
  await page.route('https://teamhub-test.supabase.co/rest/v1/**',async route=>{
@@ -14,6 +14,11 @@ async function backend(page,{pages=standard}={}){
   if(name==='search_knowledge'){const body=req.postDataJSON();state.queries.push(body);if(state.fail)return send({message:'Suche nicht erreichbar'},503);return send({items:state.candidates?base.documents:[],total:state.candidates?base.documents.length:0});}
   if(name==='tasks'&&url.searchParams.has('assignee_id')&&url.searchParams.has('due_date')){state.taskQueries.push(Object.fromEntries(url.searchParams));return send([{id:did,title:'Gerät prüfen',due_date:'2026-11-04',status:'open',studio:{name:'Dörpen'}}],200,{'content-range':'0-0/1','access-control-expose-headers':'content-range'});}
   return route.fallback();
+ });
+ await page.route('https://teamhub-test.supabase.co/functions/v1/team-assistant',async route=>{
+  const body=route.request().postDataJSON();if(body.action==='status')return route.fulfill({json:{code:'assistant_status',mode:state.ai&&(!state.capabilities||state.capabilities.includes('assistant.ask'))?'ai':'search',reason:state.capabilities&&!state.capabilities.includes('assistant.ask')?'ai_not_granted':state.ai?null:'model_missing'}});
+  state.aiCalls.push(body);if(state.aiFail)return route.fulfill({status:state.aiFail==='rate_limited'?429:502,json:{code:state.aiFail,retryAfter:60,message:'private-provider-details'}});
+  return route.fulfill({json:{code:'assistant_answer',text:'Begrüße Anrufer freundlich mit Fitness & Gesundheit. <script>window.botInjected=true</script>',generated:true,sources:[{id:did,versionId:vid,title:'Telefonleitfaden',category:'Empfang',quote:base.versions[0].text_content,isText:true}]}});
  });return {...base,state};
 }
 async function start(page){await page.goto('/tests/workspace.html');await page.getByRole('button',{name:'KI-Assistent öffnen',exact:true}).click();await expect(page.getByRole('heading',{name:'Dein KI-Assistent',exact:true})).toBeVisible();}
@@ -47,4 +52,34 @@ test('all open tasks include future dates while overdue questions use a strict e
  await page.clock.install({time:new Date('2026-11-06T10:00:00Z')});await backend(page);const queries=[];
  await page.route('https://teamhub-test.supabase.co/rest/v1/tasks**',async route=>{const params=new URL(route.request().url()).searchParams;if(params.get('status')!=='neq.done')return route.fallback();queries.push(Object.fromEntries(params));const all=[{id:'past-task',title:'Überfällige Aufgabe',due_date:'2026-11-04',status:'open',studio:{name:'Dörpen'}},{id:'future-task',title:'Zukünftige Aufgabe',due_date:'2026-12-01',status:'open',studio:{name:'Dörpen'}}],rows=params.has('due_date')?all.slice(0,1):all;return route.fulfill({status:200,headers:{'content-type':'application/json','content-range':`0-${rows.length-1}/${rows.length}`,'access-control-expose-headers':'content-range'},body:JSON.stringify(rows)});});
  await start(page);await ask(page,'Zeig meine offenen Aufgaben');await expect(page.locator('.assistant-task')).toHaveCount(2);expect(queries.at(-1).due_date).toBeUndefined();expect(queries.at(-1).assignee_id).toBe('eq.'+sharedIds.user);await ask(page,'Welche meiner Aufgaben sind überfällig?');const answer=page.locator('.live-assistant-messages article').last();await expect(answer.locator('.assistant-task')).toHaveCount(1);await expect(answer).not.toContainText('Zukünftige Aufgabe');expect(queries.at(-1).due_date).toBe('lt.2026-11-06');
+});
+
+test('independent AI mode displays plain-text answers with sources and sends no browser-selected source or account IDs',async({page})=>{
+ const {state}=await backend(page,{ai:true});await start(page);await expect(page.getByLabel('KI-Antwort',{exact:true})).toBeChecked();await ask(page,'Wie begrüßen wir Anrufer?');await expect(page.getByText('KI-Antwort · Quellen prüfen',{exact:true})).toBeVisible();await expect(page.locator('.assistant-source')).toContainText('Telefonleitfaden');expect(state.aiCalls).toEqual([{action:'answer',question:'Wie begrüßen wir Anrufer?',context:[]}]);expect(state.queries).toHaveLength(0);await expect(page.locator('.live-assistant-answer script')).toHaveCount(0);expect(await page.evaluate(()=>window.botInjected)).toBeUndefined();
+});
+test('AI failure preserves the question, hides provider details and performs no automatic retry',async({page})=>{
+ const {state}=await backend(page,{ai:true});state.aiFail='model_unavailable';await start(page);await ask(page,'Telefon');await expect(page.getByRole('alert')).toContainText('gerade nicht erreichbar');await expect(page.getByLabel('Deine Frage an den Assistenten')).toHaveValue('Telefon');await expect(page.locator('.assistant-generated')).toHaveCount(0);await expect(page.locator('.team-assistant')).not.toContainText('private-provider-details');expect(state.aiCalls).toHaveLength(1);
+});
+test('switching to original sources leaves knowledge search usable without a model request',async({page})=>{
+ const {state}=await backend(page,{ai:true});await start(page);await page.getByLabel('Originalquellen suchen',{exact:true}).check();await ask(page,'Telefon');await expect(page.locator('.assistant-source')).toBeVisible();expect(state.aiCalls).toHaveLength(0);expect(state.queries).toHaveLength(1);
+});
+test('rate-limited AI mode can be bypassed only by the separate original-source search, not by another model request',async({page})=>{
+ const {state}=await backend(page,{ai:true});state.aiFail='rate_limited';await start(page);await ask(page,'Telefon');await expect(page.getByRole('alert')).toContainText('Anfragelimit');await expect(page.getByRole('button',{name:'Frage stellen',exact:true})).toBeDisabled();await page.getByLabel('Originalquellen suchen',{exact:true}).check();await page.getByRole('button',{name:'Frage stellen',exact:true}).click();await expect(page.locator('.assistant-source')).toBeVisible();expect(state.aiCalls).toHaveLength(1);
+});
+test('follow-up questions use bounded question context without sending old answers or source text back to the service',async({page})=>{
+ const {state}=await backend(page,{ai:true});await start(page);await ask(page,'Wie begrüßen wir Anrufer?');await expect(page.locator('.assistant-generated')).toHaveCount(1);await ask(page,'Bitte genauer erklären');await expect(page.locator('.assistant-generated')).toHaveCount(2);expect(state.aiCalls[1]).toEqual({action:'answer',question:'Bitte genauer erklären',context:['Wie begrüßen wir Anrufer?']});await page.getByRole('button',{name:'Verlauf leeren',exact:true}).click();await ask(page,'Telefon');await expect(page.locator('.assistant-generated')).toHaveCount(1);expect(state.aiCalls[2].context).toEqual([]);
+});
+test('own-task questions keep their existing permission filters and never call a generative model',async({page})=>{
+ const {state}=await backend(page,{ai:true});await start(page);await ask(page,'Welche meiner Aufgaben sind heute fällig?');await expect(page.locator('.assistant-task')).toContainText('Gerät prüfen');expect(state.aiCalls).toHaveLength(0);expect(state.taskQueries[0].assignee_id).toBe('eq.'+sharedIds.user);
+});
+test('AI mode and sources fit a phone in the existing design',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await backend(page,{ai:true});await page.goto('/tests/workspace.html');await page.getByRole('button',{name:'Menü öffnen'}).click();await page.getByRole('button',{name:'KI-Assistent',exact:true}).click();await ask(page,'Telefon');await expect(page.locator('.assistant-generated')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'test-results/independent-bot-mobile.png',fullPage:true});
+});
+test('withdrawing knowledge while an AI answer is pending removes the view and discards its eventual answer',async({page})=>{
+ await page.clock.install({time:new Date('2026-11-06T10:00:00Z')});const {state}=await backend(page,{ai:true});let release;const waiting=new Promise(r=>{release=r;});let started=false;
+ await page.route('https://teamhub-test.supabase.co/functions/v1/team-assistant',async route=>{if(route.request().postDataJSON().action!=='answer')return route.fallback();started=true;await waiting;try{await route.fulfill({json:{code:'assistant_answer',text:'DISCARDED-PRIVATE-ANSWER',generated:false,sources:[]}});}catch{}});
+ await start(page);await ask(page,'Telefon');await expect.poll(()=>started).toBe(true);state.pages=['tasks'];await page.clock.fastForward(31000);await expect(page.getByRole('heading',{name:'Dein KI-Assistent',exact:true})).toHaveCount(0);release();await expect(page.locator('body')).not.toContainText('DISCARDED-PRIVATE-ANSWER');
+});
+test('withdrawing only the AI grant keeps source search available and clears the generated conversation',async({page})=>{
+ await page.clock.install({time:new Date('2026-11-06T10:00:00Z')});const {state}=await backend(page,{ai:true});state.capabilities=['knowledge.read','assistant.ask'];await start(page);await ask(page,'Telefon');await expect(page.locator('.assistant-generated')).toBeVisible();state.capabilities=['knowledge.read'];await page.clock.fastForward(31000);await expect(page.getByText(/KI-Antworten sind für deinen Zugang nicht freigegeben/)).toBeVisible();await expect(page.locator('.assistant-generated')).toHaveCount(0);await expect(page.getByLabel('KI-Antwort',{exact:true})).toHaveCount(0);await ask(page,'Telefon');await expect(page.locator('.assistant-source')).toBeVisible();expect(state.aiCalls).toHaveLength(1);
 });

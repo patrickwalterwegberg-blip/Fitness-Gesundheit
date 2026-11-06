@@ -545,5 +545,16 @@
     ],
     "requires": [],
     "since": 12
+  },
+  {
+    "group": "KI-Assistent",
+    "key": "assistant.ask",
+    "label": "KI-Antworten zu freigegebenen Inhalten nutzen",
+    "page": "knowledge",
+    "roles": [],
+    "requires": [
+      "knowledge.read"
+    ],
+    "since": 13
   }
 ]

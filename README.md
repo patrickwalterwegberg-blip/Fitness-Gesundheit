@@ -20,15 +20,15 @@ Responsive Plattform im Schwarz-Gold-Design für Sögel, Bersenbrück, Dörpen, 
 | Chat und Feedback | Team-/Studiochats, ungelesene Nachrichten, Feedback mit Zuständigkeiten, Antwort und Rückmeldecode | [Chat und Feedback](docs/CHAT_FEEDBACK_RECHTE.md) |
 | Eigene Module und Controlling | Versionierte Formulare, Aufgaben-Zusatzfelder, Freigaben, Aufgaben-/Lernnachweise und CSV-Auswertung | [Module und Controlling](docs/MODULE_UND_CONTROLLING.md) |
 | Persönliche Anordnung | Drag & Drop, Touch und Pfeile für Menü und Startseite; pro Konto und Browser gespeichert | [Anordnung](docs/ANORDNUNG.md) |
-| Assistent | Quellenbasierte Wissenssuche sowie eigene offene, bis heute fällige und überfällige Aufgaben | [Assistent](docs/KI_ASSISTENT.md) |
+| Assistent | Eigenständiger KI-Dienst mit Quellen, individueller Freischaltung und Anfragelimits vorbereitet; Originalquellensuche und eigene Aufgaben sofort nutzbar | [Assistent](docs/KI_ASSISTENT.md) |
 
 ## Voraussetzungen und Grenzen
 
-Für den vollständigen gemeinsamen Umfang sind die vorhandenen Supabase-Erweiterungen **001–012**, privater Storage und der eingerichtete Einladungsdienst erforderlich. Migrationen liegen unter `backend/supabase/`; die jeweiligen Anleitungen erklären die Aktivierung. Die neueren Oberflächen weisen auf fehlende Erweiterungen hin. Der Veröffentlichungsworkflow installiert keine Datenbankmigrationen und richtet keinen Mailversand ein.
+Für den bisherigen gemeinsamen Umfang sind die vorhandenen Supabase-Erweiterungen **001–012**, privater Storage und der eingerichtete Einladungsdienst erforderlich. Migrationen liegen unter `backend/supabase/`; die jeweiligen Anleitungen erklären die Aktivierung. Die neueren Oberflächen weisen auf fehlende Erweiterungen hin. Der Veröffentlichungsworkflow installiert keine Datenbankmigrationen und richtet keinen Mailversand ein.
 
 Die lokale Prüfung bestätigt keine aktuelle Installation im gehosteten Projekt. Frühere Rückmeldungen bestätigen Anmeldung und Mailzustellung an das eigene Konto. Eine vollständige aktuelle Abnahme mit einem weiteren Mitarbeiterkonto, echtem Postfach und echten Mobilgeräten muss separat dokumentiert werden.
 
-- **KI:** Kein generatives Modell, KI-Wizard, OCR oder Videotranskript angebunden. Die Wissenssuche zeigt veröffentlichte Originalauszüge und Quellen. PDF-/Office-/Bild-/Videoinhalte werden nicht automatisch ausgelesen.
+- **KI:** Echte Modellantworten benötigen zusätzlich Erweiterung 013 und einen aktivierten privaten Modellzugang; die Bereitstellung allein verbindet kein Modell. KI-Wizard, OCR und Videotranskript sind weiterhin offen. Die Wissenssuche zeigt veröffentlichte Originalauszüge und Quellen. PDF-/Office-/Bild-/Videoinhalte werden nicht automatisch ausgelesen.
 - **Video und Lernen:** Kein Videoschnitt, keine Bildschirmaufnahme und keine Video-/Audio-/Dateiabgaben von Lernenden. Der Kurseditor bietet Text und Video. Wissenschecks sind serverseitig ausgewertete Fragen; es gibt keine zeitlich begrenzte Prüfung oder KI-Korrektur freier Langtexte. Die Lesebestätigung ist eine Selbstauskunft.
 - **Benachrichtigungen:** Hinweise im Hub mit serverseitigem Lesestand. Kein Betriebssystem-Push oder Erinnerungsversand per E-Mail. Bei geschlossenem Hub setzt die regelmäßige Erzeugung einen aktivierten `pg_cron`-Job voraus; sonst werden Fälligkeiten beim Öffnen nachgetragen.
 - **Mobile Nutzung:** Responsive Webseite; keine eigene native iOS-/Android-App. Persönliche Drag-and-Drop-Anordnungen synchronisieren sich nicht zwischen Geräten.

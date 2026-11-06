@@ -31,7 +31,7 @@ Prüfdatum: 06.11.2026 (Europe/Berlin). Ausgangsstand: `70c5076`. Dieses Audit g
 | Feedback und Sterne direkt an einer Lektion | Offen | Allgemeines Teamfeedback mit Zuständigkeit und Rückmeldecode ist umgesetzt; keine Lektionenbewertung |
 | Soziale Community mit Beiträgen und Reaktionen | Offen | Gemeinsamer Chat ist umgesetzt; er ersetzt keinen Social-Feed |
 | Individuelle Kunden- und Coaching-Dashboards | Offen | Die vorhandene gemeinsame Startseite ist ein Mitarbeiter-Intranet |
-| KI-Assistent / LearningSuite Intelligence | Teilweise | Veröffentlichtes Wissen mit Originalquellen und eigene Aufgaben; kein generatives Modell und kein 24/7-KI-Concierge |
+| KI-Assistent / LearningSuite Intelligence | Bot-Anbindung vorbereitet; Aktivierung offen | Eigenständiger Dienst, Quellen, individuelle Freischaltung und Anfragelimits vorhanden. Modellbetrieb benötigt 013 und private Modell-Secrets. Originalquellensuche und eigene Aufgaben bleiben nutzbar. |
 | KI-Wizard zur automatischen Inhaltserstellung | Offen | Keine Modellanbindung, keine Video-Transkription, kein automatisches Erstellen von Zusammenfassungen oder Fragen |
 | Wissens- und Dateiverwaltung | Umgesetzt und automatisiert geprüft | `shared-knowledge`, `user-management`, `database`; private Originale, Versionen, Freigabe, Textsuche; keine OCR oder automatische PDF-/Office-/Videoauswertung |
 | Schutz vor unerlaubtem Zugriff / Guardian-Referenz | Teilweise | Private Speicher, Rollen-/Studiofreigaben und kurzlebige Video-Adressen vorhanden; kein DRM- oder Wasserzeichenschutz |
@@ -86,3 +86,11 @@ Die gezielte Prüfung umfasst 42 bestandene Browserfälle für Anmeldung, Wieder
 Unter **Mitarbeiterzugänge → E-Mail-Zugang prüfen** werden Konto, Profilfreigabe und Studiozuordnung erneut aus der eingeschränkten Serverliste geladen. Das Lesen versendet keine Mail; ein Anmeldelink wird erst ausdrücklich angefordert. Der Einladungsdienst liefert bei Versandablehnungen sichere Kategorien und eine Vorgangsnummer, ohne rohe Providerdetails zurückzugeben. Die bisherige öffentliche Anmeldung bleibt unabhängig davon neutral. Keine neue SQL-Migration erforderlich. [Betrieb und Grenzen](EMAIL_VERSAND.md).
 
 Prüfstand dieser Erweiterung: **197 Browserfälle, 131 Datenbank-/Modelltests und 13 Diensttests bestanden**, zusätzlich ein bestandener Produktionstest mit vollständig simuliertem Backend. Die konkrete private SMTP-Konfiguration und tatsächliche Mailzustellung sind damit nicht bestätigt. Die neue Oberfläche und der Einladungsdienst werden über getrennte bestehende Workflows veröffentlicht.
+
+
+## Ergänzung: eigenständiger KI-Bot vorbereitet
+
+Der neue Dienst `team-assistant` verbindet Fragen direkt mit einem konfigurierbaren OpenAI-kompatiblen Modell, ohne Make. Rechte, aktuelle veröffentlichte Originaltexte, begrenzter Fragenkontext, Quellenverweise, individuelle Freischaltung `assistant.ask` und Datenbank-Anfragelimits sind implementiert. Die bisherige Originalquellensuche und eigene Aufgaben bleiben unabhängig davon nutzbar. Für den echten Modellbetrieb müssen **013_team_assistant.sql** und private Modell-Secrets aktiviert werden; der Code-Deploy erledigt diese Aktivierung nicht. Ein produktiver Modellaufruf ist noch nicht bestätigt. [Einrichtung, Betrieb und Grenzen](KI_ASSISTENT.md). KI-Wizard, Transkription und automatische Schreibaktionen bleiben offen.
+
+
+Prüfstand der Bot-Erweiterung: **207 Browserfälle, 135 Datenbank-/Modelltests, 9 Bot-Diensttests und 13 Einladungsdiensttests bestanden**, zusätzlich ein bestandener Test des kompilierten Produktionsbuilds mit beiden Antwortmodi. Backend und Modell sind bei Browser-/Produktionstests vollständig simuliert. Die Bereitstellung ersetzt nicht die ausstehende Installation von 013 und die Abnahme mit einem echten Modellzugang.

@@ -32,6 +32,8 @@ jobs:
         run: npm run test:db
       - name: Einladungsdienst prüfen
         run: npm run test:access
+      - name: KI-Dienst prüfen
+        run: npm run test:assistant
       - name: Eigenständige Webseite erstellen
         run: npm run build
         env:

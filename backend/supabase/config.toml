@@ -4,3 +4,7 @@ project_id = "fitness-gesundheit"
 # then verifies the active administrator profile and checked database RPCs.
 [functions.team-access]
 verify_jwt = false
+
+# The assistant validates the session with Auth and reads solely with that JWT.
+[functions.team-assistant]
+verify_jwt = false

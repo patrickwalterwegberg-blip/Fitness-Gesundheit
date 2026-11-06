@@ -49,6 +49,7 @@ const functions=await readFile('backend/supabase/009_function_permissions.sql','
 const schedule=await readFile('backend/supabase/010_calendar_tasks_notifications.sql','utf8');await db.exec(schedule);await db.exec(schedule);
 const video=await readFile('backend/supabase/011_course_videos.sql','utf8');await db.exec(video);await db.exec(video);
 const onboarding=await readFile('backend/supabase/012_employee_onboarding.sql','utf8');await db.exec(onboarding);await db.exec(onboarding);
+const assistant=await readFile('backend/supabase/013_team_assistant.sql','utf8');await db.exec(assistant);await db.exec(assistant);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -734,7 +735,7 @@ test('schedule setup adds individual functions without changing roles',async()=>
   ids[key]=uid;await db.query('insert into auth.users(id,email) values($1,$2)',[uid,key+'@example.org']);await db.query('insert into public.profiles(id,full_name,role) values($1,$2,$3)',[uid,key,role]);await db.query('insert into public.studio_memberships values($1,$2)',[uid,a]);
  }
  const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as result'))).rows[0].result;
- assert.equal(ctx.version,12);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
+ assert.equal(ctx.version,13);assert.ok(ctx.capabilities.includes('tasks.private'));assert.ok(ctx.capabilities.includes('calendar.create'));assert.ok(!ctx.capabilities.includes('tasks.assign'));assert.ok(!ctx.capabilities.includes('maintenance.manage'));
 });
 test('employee private tasks stay invisible to peers, leadership, directory statistics and controlling',async()=>{
  privateTask=(await asUser('scheduleWorker',tx=>tx.query("insert into public.tasks(title,studio_id,assignee_id,due_date,private) values('Private confidential task',$1,$2,current_date,true) returning id",[a,scheduleWorker]))).rows[0].id;
@@ -871,7 +872,7 @@ test('video upload metadata rejects unsupported files, oversize uploads and chan
 test('delegated video permission retains the employee role and confines upload ownership and studios',async()=>{
  const current=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1)',[scheduleWorker]))).rows[0].admin_function_access;
  await asUser('admin',tx=>tx.query("select public.admin_function_access($1,array['learning.videos'],$2)",[scheduleWorker,current.revision]));
- const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r;assert.equal(ctx.version,12);assert.ok(ctx.capabilities.includes('learning.videos'));assert.ok(ctx.capabilities.includes('learning.courses'));assert.ok(!ctx.capabilities.includes('learning.assign'));
+ const ctx=(await asUser('scheduleWorker',tx=>tx.query('select public.team_access_context() as r'))).rows[0].r;assert.equal(ctx.version,13);assert.ok(ctx.capabilities.includes('learning.videos'));assert.ok(ctx.capabilities.includes('learning.courses'));assert.ok(!ctx.capabilities.includes('learning.assign'));
  assert.equal((await db.query('select role from public.profiles where id=$1',[scheduleWorker])).rows[0].role,'employee');
  await assert.rejects(prepareVideo('scheduleWorker',{nonce:videoNonce(3)}),/not granted/);
  await assert.rejects(prepareVideo('scheduleWorker',{nonce:videoNonce(3),site:b}),/not granted/);
@@ -1034,4 +1035,38 @@ test('onboarding does not appoint a mentor whose learning access was withdrawn',
 test('withdrawing a studio or learning access hides onboarding and its notification without deleting history',async()=>{
  await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[obUser,a]);assert.equal((await myOB('obUser')).plans.length,0);assert.equal((await asUser('obUser',tx=>tx.query('select public.team_notification_inbox() as r'))).rows[0].r.items.some(n=>n.kind==='onboarding'),false);
  await db.query('insert into public.studio_memberships values($1,$2)',[obUser,a]);assert.equal((await myOB('obUser')).plans.length,1);
+});
+
+async function assistantUser(n,active=true){const user=id(n);await db.query('insert into auth.users(id,email) values($1,$2)',[user,`assistant-${n}@example.org`]);await db.query("insert into public.profiles(id,full_name,role,active) values($1,'Bot test','employee',$2)",[user,active]);await db.query('insert into public.studio_memberships values($1,$2)',[user,a]);await db.query("insert into public.team_function_access(user_id,grants,updated_by) values($1,array['assistant.ask'],$2)",[user,ids.admin]);return user;}
+async function assistantAs(user,sql){return db.transaction(async tx=>{await tx.exec('set local role authenticated');await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[user]);return (await tx.query(sql)).rows[0]?.result;});}
+test('assistant status and budget reject inactive, anonymous and withdrawn knowledge access; private ledger is inaccessible',async()=>{
+ const inactive=await assistantUser(9101,false),denied=await assistantUser(9102);await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,array['tasks'],$2)",[denied,ids.admin]);
+ for(const user of [inactive,denied])for(const fn of ['team_assistant_status','reserve_team_assistant_request'])await assert.rejects(assistantAs(user,`select public.${fn}() as result`),e=>e.code==='42501');
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');await tx.query('select public.team_assistant_status()');}),e=>e.code==='42501');
+ await assert.rejects(assistantAs(denied,'select count(*) from app_private.team_assistant_requests'),e=>e.code==='42501');
+});
+test('assistant status consumes no quota; a second immediate request is limited while another employee has a separate allowance',async()=>{
+ const first=await assistantUser(9111),second=await assistantUser(9112);const before=(await db.query('select count(*)::integer as n from app_private.team_assistant_requests')).rows[0].n;
+ assert.equal((await assistantAs(first,'select public.team_assistant_status() as result')).version,1);assert.equal((await db.query('select count(*)::integer as n from app_private.team_assistant_requests')).rows[0].n,before);
+ assert.equal((await assistantAs(first,'select public.reserve_team_assistant_request() as result')).allowed,true);
+ const limited=await assistantAs(first,'select public.reserve_team_assistant_request() as result');assert.equal(limited.allowed,false);assert.ok(limited.retry_after>=1&&limited.retry_after<=10);
+ assert.equal((await assistantAs(second,'select public.reserve_team_assistant_request() as result')).allowed,true);
+});
+test('assistant daily allowance and shared daily cap prevent further reservations and reset after the Berlin day boundary',async()=>{
+ const own=await assistantUser(9121),other=await assistantUser(9122);
+ await db.query("insert into app_private.team_assistant_requests(user_id,created_at) select $1,clock_timestamp()-interval '11 seconds' from generate_series(1,50)",[own]);
+ assert.equal((await assistantAs(own,'select public.reserve_team_assistant_request() as result')).allowed,false);
+ await db.query("insert into app_private.team_assistant_requests(user_id,created_at) select $1,clock_timestamp()-interval '11 seconds' from generate_series(1,500)",[own]);
+ assert.equal((await assistantAs(other,'select public.reserve_team_assistant_request() as result')).allowed,false);
+ await db.query("update app_private.team_assistant_requests set created_at=(date_trunc('day',clock_timestamp() at time zone 'Europe/Berlin') at time zone 'Europe/Berlin')-interval '1 hour'");
+ assert.equal((await assistantAs(other,'select public.reserve_team_assistant_request() as result')).allowed,true);
+});
+test('AI is a separately granted function; withdrawing it preserves knowledge access and the employee role',async()=>{
+ const user=await assistantUser(9131);await db.query('delete from public.team_function_access where user_id=$1',[user]);
+ assert.equal((await assistantAs(user,'select public.team_assistant_status() as result')).can_ask,false);await assert.rejects(assistantAs(user,'select public.reserve_team_assistant_request() as result'),e=>e.code==='42501');
+ let grant=await asUser('admin',async tx=>(await tx.query("select public.admin_function_access($1,array['assistant.ask'],null) as result",[user])).rows[0].result);
+ assert.equal(grant.version,13);assert.ok(grant.grants.includes('assistant.ask'));assert.ok(grant.grants.includes('knowledge.read'));assert.equal((await db.query('select role from public.profiles where id=$1',[user])).rows[0].role,'employee');
+ assert.equal((await assistantAs(user,'select public.team_assistant_status() as result')).can_ask,true);
+ grant=await asUser('admin',async tx=>(await tx.query('select public.admin_function_access($1,array[]::text[],$2) as result',[user,grant.revision])).rows[0].result);
+ assert.equal((await assistantAs(user,'select public.team_assistant_status() as result')).can_ask,false);await assert.rejects(assistantAs(user,'select public.reserve_team_assistant_request() as result'),e=>e.code==='42501');
 });

@@ -18,7 +18,7 @@ const token=`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.test-signature`;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 try {
  const context=await browser.newContext();
- const errors=[],unexpected=[],calls=[];let learningNotification=false,learningRead=false;
+ const errors=[],unexpected=[],calls=[];let learningNotification=false,learningRead=false,aiEnabled=false;
  const smokeCourse='00000000-0000-4000-8000-000000000081',smokeAssignment='00000000-0000-4000-8000-000000000082';
  await context.addInitScript(({storageKey,user,token})=>{if(!sessionStorage.getItem('production-smoke-seeded')){localStorage.setItem(storageKey,JSON.stringify({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user}));sessionStorage.setItem('production-smoke-seeded','1');}},{storageKey,user,token});
  await context.route('**/*',async route=>{
@@ -30,7 +30,11 @@ try {
    if(url.pathname==='/auth/v1/logout')return route.fulfill({status:204,headers});
    if(url.pathname==='/auth/v1/otp')return route.fulfill({status:400,headers,body:JSON.stringify({code:'signup_disabled',msg:'Signups not allowed for otp'})});
    let body;
-   if(url.pathname==='/auth/v1/user')body=user;
+   if(url.pathname==='/functions/v1/team-assistant'){
+    const input=route.request().postDataJSON();if(input.action==='status')body={code:'assistant_status',mode:aiEnabled?'ai':'search',reason:aiEnabled?null:'model_missing'};
+    else {assert.ok(aiEnabled);assert.deepEqual(Object.keys(input).sort(),['action','context','question']);body={code:'assistant_answer',text:'Begrüße Anrufer freundlich mit Fitness & Gesundheit.',generated:true,sources:[{id:'00000000-0000-4000-8000-000000000099',versionId:'00000000-0000-4000-8000-000000000098',title:'Telefonleitfaden',category:'Empfang',quote:'Freundlich begrüßen.',isText:true}]};}
+   }
+   else if(url.pathname==='/auth/v1/user')body=user;
    else if(url.pathname==='/auth/v1/token'){
     const credentials=route.request().postDataJSON();
     assert.equal(url.searchParams.get('grant_type'),'password');
@@ -93,6 +97,13 @@ try {
  await appointment.waitFor();
  assert.ok(await appointment.getByLabel('Termintitel').evaluate(el=>el===document.activeElement),'Appointment must focus the title field');
  await appointment.getByRole('button',{name:'Fenster schließen'}).click();
+ aiEnabled=true;
+ await page.getByRole('button',{name:'KI-Assistent öffnen',exact:true}).click();
+ await page.getByLabel('KI-Antwort',{exact:true}).waitFor();
+ await page.getByLabel('Deine Frage an den Assistenten').fill('Wie begrüßen wir Anrufer?');
+ await page.getByRole('button',{name:'Frage stellen',exact:true}).click();
+ await page.getByText('KI-Antwort · Quellen prüfen',{exact:true}).waitFor();
+ await page.getByRole('heading',{name:'Telefonleitfaden',exact:true}).waitFor();
  await page.getByRole('button',{name:'Benachrichtigungen: 0 ungelesen'}).click();
  await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByText('Du hast noch keine Benachrichtigungen.').waitFor();
  await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByRole('button',{name:'Fenster schließen'}).click();
@@ -157,5 +168,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, read-only email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, read-only email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
