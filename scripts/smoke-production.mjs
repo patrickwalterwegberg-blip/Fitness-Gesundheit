@@ -61,6 +61,14 @@ try {
  await page.goto('https://teamhub-preview.example.org/');
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByText('Aktuell sind dir keine offenen Aufgaben zugewiesen.').waitFor();
+ await page.getByRole('button',{name:'Anordnung ändern',exact:true}).click();
+ const layoutDialog=page.getByRole('dialog',{name:'Startseite anordnen',exact:true});
+ await layoutDialog.getByRole('button',{name:'Mein Kalender nach oben',exact:true}).click();
+ await layoutDialog.getByRole('button',{name:'Anordnung speichern',exact:true}).click();
+ assert.equal(await page.locator('.home-function-grid strong').first().textContent(),'Mein Kalender');
+ await page.reload();
+ await page.locator('.home-function-grid strong').first().waitFor();
+ assert.equal(await page.locator('.home-function-grid strong').first().textContent(),'Mein Kalender');
  await page.getByRole('button',{name:'Mein Mitarbeiterprofil öffnen'}).click();
  await page.getByRole('dialog',{name:'Mein Mitarbeiterprofil'}).getByText('Produktionstest',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Mein Profil schließen'}).click();
@@ -117,5 +125,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
