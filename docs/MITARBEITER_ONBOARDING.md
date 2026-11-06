@@ -78,3 +78,7 @@ Die Bestätigung einer **Kurs-Praxiseinweisung** bleibt eine gesonderte Funktion
 6. Prüfen, dass Kurs, Kalender, Aufgaben und Onboarding denselben Stand zeigen und erst nach allen nötigen Nachweisen 100 Prozent erreicht werden.
 
 Die lokalen Browserprüfungen verwenden simulierte Serverantworten; Datenbankprüfungen kontrollieren die tatsächlichen SQL-Regeln. Die Installation und erste Zuweisung im produktiven Projekt müssen danach praktisch geprüft werden.
+
+## Einzelne Einladung mit Einarbeitungsplan verbinden
+
+Im Einladungsformular kann die Leitung jetzt ausdrücklich eine veröffentlichte Vorlage mit Studio, Startdatum und Mentor auswählen. Die Vorschau zeigt Schritte und Fristen; erst die bestätigte Aktion fordert die Mail und anschließend den Plan an. [Ablauf, Rechte und Behandlung von Teilfehlern](EINLADUNG_MIT_ONBOARDING.md).

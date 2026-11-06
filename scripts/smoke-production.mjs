@@ -46,6 +46,7 @@ try {
    else if(url.pathname==='/rest/v1/rpc/learning_video_library')body={items:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/my_onboarding')body={plans:[]};
    else if(url.pathname==='/rest/v1/rpc/team_onboarding')body={plans:[],total:0};
+   else if(url.pathname==='/rest/v1/rpc/onboarding_mentors')body=[];
    else if(url.pathname==='/rest/v1/rpc/onboarding_template_library')body={templates:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/search_knowledge')body={items:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
@@ -95,6 +96,9 @@ try {
  assert.ok(await inviteDialog.getByLabel('Name des Mitarbeiters',{exact:true}).evaluate(el=>el===document.activeElement),'Invitation must focus the name field');
  const inviteHeading=await inviteDialog.getByRole('heading',{name:'Neuen Mitarbeiter einladen'}).boundingBox();
  assert.ok(inviteHeading&&inviteHeading.y>=0&&inviteHeading.y<page.viewportSize().height,'Invitation heading must be in viewport');
+ await inviteDialog.getByRole('checkbox',{name:'Onboarding direkt mit dieser Einladung zuweisen',exact:true}).check();
+ await inviteDialog.getByText(/keine veröffentlichte Vorlage/).waitFor();
+ assert.ok(!calls.includes('/functions/v1/team-access'),'Previewing onboarding must not send an invitation');
  await inviteDialog.getByRole('button',{name:'Zugangsformular schließen'}).click();
  await page.getByRole('button',{name:'Lernhub',exact:true}).click();
  await page.getByText('Noch keine Kurse angelegt. Erstelle einen Kurs oder nutze im Kursformular die Testvorlage.').waitFor();
@@ -125,5 +129,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation with onboarding choices and calendar dialogs, notification inbox, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
