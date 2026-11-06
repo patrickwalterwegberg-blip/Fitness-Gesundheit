@@ -8,12 +8,12 @@ import {usePermissions} from './team-permissions';
 const date = s => new Date(s).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' });
 const docColumns = 'id,title,summary,category,tags,studio_id,reader_roles,created_by,published_version_id,archived,revision,updated_at';
 const pageSize = 20;
-export default function TeamKnowledge({ client, profile, sites, memberships, people, mode, onKnowledge, canUpload = true }) {
+export default function TeamKnowledge({ client, profile, sites, memberships, people, mode, onKnowledge, canUpload = true, initialDocument = null }) {
   const {can}=usePermissions();
   const [query, setQuery] = useState(''); const [input, setInput] = useState(''); const [site, setSite] = useState(''); const [category, setCategory] = useState('');
   const [state, setState] = useState(mode === 'knowledge' ? 'published' : 'all'); const [page, setPage] = useState(0); const [refresh, setRefresh] = useState(0);
   const [result, setResult] = useState({ items: [], total: 0 }); const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState(null); const [document, setDocument] = useState(null); const [versions, setVersions] = useState([]); const [published, setPublished] = useState(null);
+  const [selectedId, setSelectedId] = useState(initialDocument); const [document, setDocument] = useState(null); const [versions, setVersions] = useState([]); const [published, setPublished] = useState(null);
   const [versionPage, setVersionPage] = useState(0); const [selectedVersion, setSelectedVersion] = useState(null); const [detailLoading, setDetailLoading] = useState(false);
   const [editor, setEditor] = useState(null); const [access, setAccess] = useState(false); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
   const mounted = useRef(true); const operation = useRef(false); const detailRef = useRef(null);

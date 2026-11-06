@@ -47,6 +47,7 @@ try {
    else if(url.pathname==='/rest/v1/rpc/my_onboarding')body={plans:[]};
    else if(url.pathname==='/rest/v1/rpc/team_onboarding')body={plans:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/onboarding_template_library')body={templates:[],total:0};
+   else if(url.pathname==='/rest/v1/rpc/search_knowledge')body={items:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
    else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile];
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
@@ -63,6 +64,12 @@ try {
  await page.getByRole('button',{name:'Mein Mitarbeiterprofil öffnen'}).click();
  await page.getByRole('dialog',{name:'Mein Mitarbeiterprofil'}).getByText('Produktionstest',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Mein Profil schließen'}).click();
+ await page.getByRole('button',{name:'KI-Assistent öffnen',exact:true}).click();
+ await page.getByRole('heading',{name:'Dein KI-Assistent',exact:true}).waitFor();
+ await page.getByText(/Ein generatives KI-Modell ist noch nicht verbunden/).waitFor();
+ await page.getByLabel('Deine Frage an den Assistenten').fill('Telefon');
+ await page.getByRole('button',{name:'Frage stellen',exact:true}).click();
+ await page.getByText(/keine passende freigegebene Textstelle/).waitFor();
  await page.getByRole('button',{name:'Kalender',exact:true}).click();
  await page.getByRole('heading',{name:'Kalender & Aufgaben',exact:true}).waitFor();
  await page.getByRole('button',{name:'Termin anlegen',exact:true}).click();
@@ -110,5 +117,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation and calendar dialogs, notification inbox, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}

@@ -1,0 +1,42 @@
+import {test,expect} from '@playwright/test';
+import {sharedBackend,sharedIds} from './shared-backend';
+const standard=['dashboard','tasks','calendar','learning','knowledge','chat','feedback'];
+const did='00000000-0000-4000-8000-000000000501',vid='00000000-0000-4000-8000-000000000502';
+async function backend(page,{pages=standard}={}){
+ const base=await sharedBackend(page,{role:'employee',pages});
+ const state={pages:[...pages],capabilities:null,fail:false,candidates:true,queries:[],taskQueries:[]};
+ base.documents.push({id:did,title:'Telefonleitfaden',summary:'Freigegebene Telefonregeln',category:'Empfang',tags:[],studio_id:sharedIds.studio,reader_roles:['employee'],created_by:sharedIds.user,published_version_id:vid,archived:false,revision:1,updated_at:'2026-11-04T10:00:00Z'});
+ base.versions.push({id:vid,document_id:did,version:1,title:'Telefonleitfaden',summary:'Telefonregeln',tags:[],category:'Empfang',created_by:sharedIds.user,kind:'article',state:'ready',text_content:'Am Telefon begrüßen wir Anrufer freundlich: Fitness & Gesundheit, guten Tag. <script>nicht ausführen</script>',published_at:'2026-11-04T10:00:00Z',created_at:'2026-11-04T09:00:00Z'});
+ await page.route('https://teamhub-test.supabase.co/rest/v1/**',async route=>{
+  const req=route.request(),url=new URL(req.url()),name=url.pathname.split('/').at(-1);
+  const send=(data,status=200,extra={})=>route.fulfill({status,headers:{'access-control-allow-origin':'*','content-type':'application/json',...extra},body:JSON.stringify(data)});
+  if(name==='team_access_context')return send({version:state.capabilities?9:7,capabilities:state.capabilities,pages:state.pages,can_design:false});
+  if(name==='search_knowledge'){const body=req.postDataJSON();state.queries.push(body);if(state.fail)return send({message:'Suche nicht erreichbar'},503);return send({items:state.candidates?base.documents:[],total:state.candidates?base.documents.length:0});}
+  if(name==='tasks'&&url.searchParams.has('assignee_id')&&url.searchParams.has('due_date')){state.taskQueries.push(Object.fromEntries(url.searchParams));return send([{id:did,title:'Gerät prüfen',due_date:'2026-11-04',status:'open',studio:{name:'Dörpen'}}],200,{'content-range':'0-0/1','access-control-expose-headers':'content-range'});}
+  return route.fallback();
+ });return {...base,state};
+}
+async function start(page){await page.goto('/tests/workspace.html');await page.getByRole('button',{name:'KI-Assistent öffnen',exact:true}).click();await expect(page.getByRole('heading',{name:'Dein KI-Assistent',exact:true})).toBeVisible();}
+async function ask(page,text){await page.getByLabel('Deine Frage an den Assistenten').fill(text);await page.getByRole('button',{name:'Frage stellen',exact:true}).click();}
+test('real team assistant finds published sources and opens the original without executing content',async({page})=>{
+ const {state}=await backend(page);await start(page);await expect(page.getByText(/Ein generatives KI-Modell ist noch nicht verbunden/)).toBeVisible();await ask(page,'Wie begrüße ich Anrufer am Telefon?');await expect(page.locator('.assistant-source blockquote')).toContainText('Fitness & Gesundheit, guten Tag.');await expect(page.locator('.assistant-source script')).toHaveCount(0);expect(state.queries[0].p_state).toBe('published');expect(state.queries[0].p_query).toContain('"telefon"');await page.getByRole('button',{name:'Quelle öffnen',exact:true}).click();await expect(page.getByRole('heading',{name:'Telefonleitfaden',exact:true,level:2})).toBeVisible();await expect(page.getByText(/Am Telefon begrüßen wir Anrufer freundlich/)).toBeVisible();
+});
+test('drafts and archived sources never become answers even if a stale search lists them',async({page})=>{
+ const b=await backend(page);b.documents[0].published_version_id=null;await start(page);await ask(page,'Telefon');await expect(page.getByText(/keine passende freigegebene Textstelle/)).toBeVisible();await expect(page.locator('.assistant-source')).toHaveCount(0);b.documents[0].published_version_id=vid;b.documents[0].archived=true;await ask(page,'Telefon');await expect(page.locator('.assistant-source')).toHaveCount(0);b.documents[0].archived=false;b.versions[0].published_at=null;await ask(page,'Telefon');await expect(page.locator('.assistant-source')).toHaveCount(0);
+});
+test('own due tasks use server filters and a failed search preserves the question for retry',async({page})=>{
+ const {state}=await backend(page);await start(page);await page.getByRole('button',{name:'Welche meiner Aufgaben sind heute fällig?',exact:true}).click();await expect(page.locator('.assistant-task')).toContainText('Gerät prüfen');expect(state.taskQueries[0].assignee_id).toBe('eq.'+sharedIds.user);expect(state.taskQueries[0].status).toBe('neq.done');expect(state.taskQueries[0].due_date).toMatch(/^lte\.\d{4}-\d{2}-\d{2}$/);state.fail=true;await ask(page,'Wie begrüße ich am Telefon?');await expect(page.getByRole('alert')).toBeVisible();await expect(page.getByLabel('Deine Frage an den Assistenten')).toHaveValue('Wie begrüße ich am Telefon?');await expect(page.getByText(/Die Suche konnte nicht bestätigt werden/)).toBeVisible();state.fail=false;state.candidates=false;await page.getByRole('button',{name:'Frage stellen',exact:true}).click();await expect(page.getByText(/keine passende freigegebene Textstelle/)).toBeVisible();
+});
+test('revoking knowledge closes the assistant and removes both launchers',async({page})=>{
+ await page.clock.install({time:new Date('2026-11-04T12:00:00Z')});const {state}=await backend(page);await start(page);await ask(page,'Telefon');await expect(page.locator('.assistant-source')).toHaveCount(1);state.pages=['tasks','chat','feedback'];await page.clock.fastForward(31000);await expect(page.getByRole('heading',{name:'Dein KI-Assistent',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'KI-Assistent',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'KI-Assistent öffnen',exact:true})).toHaveCount(0);state.pages=[...standard];await page.clock.fastForward(31000);await page.getByRole('button',{name:'KI-Assistent öffnen',exact:true}).click();await expect(page.locator('.assistant-source')).toHaveCount(0);await expect(page.getByRole('heading',{name:'Wie kann ich dich unterstützen?',exact:true})).toBeVisible();
+});
+test('mobile navigation opens the assistant, keeps sources within width and leaves logout reachable',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await backend(page);await page.goto('/tests/workspace.html');await page.getByRole('button',{name:'Menü öffnen'}).click();await page.getByRole('button',{name:'KI-Assistent',exact:true}).click();await expect(page.getByRole('heading',{name:'Dein KI-Assistent',exact:true})).toBeVisible();await ask(page,'Telefon');await expect(page.locator('.assistant-source')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'test-results/assistant-mobile.png',fullPage:true});await page.getByRole('banner').getByRole('button',{name:'Abmelden',exact:true}).click();await expect(page.getByRole('button',{name:'Anmelden',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'KI-Assistent öffnen',exact:true})).toHaveCount(0);
+});
+test('without knowledge access no assistant is offered',async({page})=>{
+ await backend(page,{pages:['tasks','calendar']});await page.goto('/tests/workspace.html');await expect(page.getByRole('button',{name:'Aufgaben',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'KI-Assistent',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'KI-Assistent öffnen',exact:true})).toHaveCount(0);
+});
+
+test('an individually withdrawn knowledge permission also removes the assistant',async({page})=>{
+ await page.clock.install({time:new Date('2026-11-04T12:00:00Z')});const {state}=await backend(page);state.capabilities=['knowledge.read','tasks.private'];await start(page);state.capabilities=['tasks.private'];await page.clock.fastForward(31000);await expect(page.getByRole('heading',{name:'Dein KI-Assistent',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'KI-Assistent öffnen',exact:true})).toHaveCount(0);
+});
