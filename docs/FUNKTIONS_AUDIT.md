@@ -13,6 +13,7 @@ Prüfdatum: 06.11.2026 (Europe/Berlin). Ausgangsstand: `70c5076`. Dieses Audit g
 | Mitarbeiterprofile mit wichtigen Informationen und Lernfortschritt | Umgesetzt und automatisiert geprüft | `user-management`, `home-roles`; keine erfundenen Stammdaten |
 | Grundrollen plus einzelne zusätzliche Funktionsrechte | Umgesetzt und automatisiert geprüft | `function-permissions`, `database`; Studio-/Bereichsrechte gelten zusätzlich |
 | Einladung, Passwort und Wiederherstellung | Umgesetzt und automatisiert geprüft | `invitation-ui`, `password-login`, `team-access-function`; tatsächlicher Empfang beim Mitarbeiter noch abzunehmen |
+| E-Mail-Zugang ohne Versand prüfen | Umgesetzt und automatisiert geprüft | `team-mail`; aktueller Kontodatensatz, Profilfreigabe und Studiozuordnung; Mailanbieter und tatsächliche Zustellung bleiben separat zu prüfen. [Anleitung](EMAIL_VERSAND.md) |
 | Einladung mit Onboarding verbinden | Umgesetzt und automatisiert geprüft | `invitation-onboarding`; Vorlage/Studio/Mentor/Fristen prüfen; Mail und Plan getrennt bestätigen |
 | Eigene private Aufgaben und Termine | Umgesetzt und automatisiert geprüft | `schedule`, `database`; fremde private Aufgaben bleiben auch für Leitung verborgen |
 | Leitung weist Aufgaben einzelnen Mitarbeitern zu | Umgesetzt und automatisiert geprüft | `schedule`, `function-permissions`, `database` |
@@ -78,3 +79,10 @@ Die lokale SQL-Prüfung bildet Storage-Tabellen nach. Sie prüft Berechtigungen 
 Ein anschließender Codecheck bestätigte, dass ausdrücklich abgewiesene Auth-Anfragen (`signup_disabled` / `user_not_found`) zuvor wie angenommene Anfragen dargestellt wurden. Die Oberfläche meldet eine solche Ablehnung jetzt neutral als nicht bestätigten Linkversand. Für tatsächlich angenommene Anfragen wird ausdrücklich zwischen Annahme, Versand und Zustellung unterschieden; der Countdown bestätigt keine Zustellung. Empfängerbeschränkung, deaktivierter E-Mail-Anbieter, Dienst-/SMTP-Fehler und Rate-Limit erhalten passende Fehlermeldungen. Es bleibt bei bestehenden Zugängen; öffentliche Selbstregistrierung wird nicht aktiviert.
 
 Die gezielte Prüfung umfasst 42 bestandene Browserfälle für Anmeldung, Wiederherstellung, Zugänge und Einladungsformulare. Eine direkte öffentliche Auth-Konfigurationsabfrage wurde in der Entwicklungsumgebung vom Netzwerkproxy mit HTTP 403 blockiert. Es liegen keine administrativen Supabase-Zugangsdaten für eine private Versandprotokollprüfung vor. Die konkrete Ursache einer ausbleibenden echten Mail und die tatsächliche Zustellung sind damit weiterhin nicht bestätigt. [Prüfschritte für den Betreiber](PASSWORT_ANMELDUNG.md#wenn-kein-link-ankommt).
+
+
+## Ergänzung: geschützte E-Mail-Zugangsprüfung
+
+Unter **Mitarbeiterzugänge → E-Mail-Zugang prüfen** werden Konto, Profilfreigabe und Studiozuordnung erneut aus der eingeschränkten Serverliste geladen. Das Lesen versendet keine Mail; ein Anmeldelink wird erst ausdrücklich angefordert. Der Einladungsdienst liefert bei Versandablehnungen sichere Kategorien und eine Vorgangsnummer, ohne rohe Providerdetails zurückzugeben. Die bisherige öffentliche Anmeldung bleibt unabhängig davon neutral. Keine neue SQL-Migration erforderlich. [Betrieb und Grenzen](EMAIL_VERSAND.md).
+
+Prüfstand dieser Erweiterung: **197 Browserfälle, 131 Datenbank-/Modelltests und 13 Diensttests bestanden**, zusätzlich ein bestandener Produktionstest mit vollständig simuliertem Backend. Die konkrete private SMTP-Konfiguration und tatsächliche Mailzustellung sind damit nicht bestätigt. Die neue Oberfläche und der Einladungsdienst werden über getrennte bestehende Workflows veröffentlicht.

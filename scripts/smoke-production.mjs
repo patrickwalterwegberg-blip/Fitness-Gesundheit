@@ -40,7 +40,7 @@ try {
    }
    else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:12,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
-   else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[],total:0,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
+   else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[{...profile,email:user.email,studio_ids:[],invited_at:null,last_sign_in_at:null}],total:1,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
    else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
    else if(url.pathname==='/rest/v1/rpc/team_notification_inbox')body=learningNotification?{items:[{id:1,kind:'learning',target_id:smokeAssignment,title:'Neuer Lernauftrag',body:'Sicherheit im Studio',occurred_at:'2026-11-06T10:00:00Z',read_at:learningRead?'2026-11-06T11:00:00Z':null}],unread:learningRead?0:1,total:1}:{items:[],unread:0,total:0};
    else if(url.pathname==='/rest/v1/rpc/mark_team_notifications_read'){learningRead=true;body=null;}
@@ -97,6 +97,12 @@ try {
  await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByText('Du hast noch keine Benachrichtigungen.').waitFor();
  await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByRole('button',{name:'Fenster schließen'}).click();
  await page.getByRole('button',{name:'Mitarbeiterzugänge',exact:true}).click();
+ await page.getByRole('button',{name:'E-Mail-Zugang für Testkonto Produktion prüfen',exact:true}).click();
+ const mailCheck=page.getByRole('dialog',{name:'E-Mail-Zugang prüfen',exact:true});
+ await mailCheck.getByText('Konto im Anmeldedienst vorhanden',{exact:true}).waitFor();
+ await mailCheck.getByText('Versand und Zustellung noch nicht geprüft',{exact:true}).waitFor();
+ assert.ok(!calls.includes('/functions/v1/team-access'),'Checking an account must not request an email');
+ await mailCheck.getByRole('button',{name:'Fenster schließen',exact:true}).click();
  await page.getByRole('button',{name:'Mitarbeiter einladen',exact:true}).click();
  const inviteDialog=page.getByRole('dialog',{name:'Neuen Mitarbeiter einladen',exact:true});
  await inviteDialog.waitFor();
@@ -151,5 +157,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, read-only email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}

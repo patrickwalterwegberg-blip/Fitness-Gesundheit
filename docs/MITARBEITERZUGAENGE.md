@@ -2,6 +2,8 @@
 
 Die aktuelle Loginseite bietet E-Mail und persönliches Passwort. [Passwort erstmals festlegen und anmelden](PASSWORT_ANMELDUNG.md). Bestehende Anmeldelinks bleiben als Alternative erhalten. Dafür sind keine neuen Migrationen erforderlich.
 
+Unter **Mitarbeiterzugänge → E-Mail-Zugang prüfen** kann die Geschäftsführung den aktuellen Kontostatus und die Studiofreigabe prüfen, ohne eine Mail anzufordern. Anschließend lässt sich ausdrücklich ein Anmeldelink anfordern. Fehlgeschlagene Einladungen und Link-Anfragen erhalten mit dem aktualisierten Einladungsdienst eine sichere Fehlerkategorie und eine Vorgangsnummer. [E-Mail-Zugang und Versand prüfen](EMAIL_VERSAND.md).
+
 Für den neu ergänzten gemeinsamen Datei-/Wissenshub und das erweiterte Nutzermanagement anschließend die [Migrationen 004 und 005](DATEIEN_WISSEN_NUTZER.md) installieren. Dafür ist keine erneute Token-Erstellung oder Veröffentlichung des Einladungsdienstes nötig.
 
 E-Mail-Anmeldung, Rollen, Studiozuordnung und Einladungsverwaltung sind im Code vorbereitet. Für diesen Teamhub wurde inzwischen ein Supabase-Projekt angelegt; die drei SQL-Migrationen und das erste aktive Adminprofil wurden laut Einrichtungsrückmeldungen erfolgreich installiert. Der Pages-Workflow enthält dessen öffentliche Projektkonfiguration. Rücksprungadressen, Mailzustellung und der eigene Admin-Login wurden inzwischen bestätigt, der Einladungsdienst wurde erfolgreich bereitgestellt. Ein separates Mitarbeiterkonto ist noch zu testen. Für die aktuelle gemeinsame Oberfläche sind zusätzlich die Erweiterungen 004–006 nötig; [Einrichtung und Testbetrieb](PILOT_TESTBETRIEB.md). Die lokale Demo erzeugt keine Konten und versendet keine Einladungen.

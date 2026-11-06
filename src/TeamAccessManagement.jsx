@@ -4,6 +4,8 @@ import { roleLabels } from './module-model';
 import './team-access.css';
 import TeamUserProfile from './TeamUserProfile';
 import TeamUserImport from './TeamUserImport';
+import TeamMailCheck from './TeamMailCheck';
+import {explainAccessError as explain,invokeTeamAccess} from './team-access-client';
 import {RoleCards,RolePicker} from './TeamRoles';
 import {usePermissions} from './team-permissions';
 import InvitationOnboarding from './InvitationOnboarding';
@@ -12,25 +14,6 @@ import {onboardingError,onboardingMigrationUrl} from './onboarding-model';
 import {checkInvitationOnboarding,invitationOnboardingPlan,invitedEnrollmentArgs,isInvitationUserId} from './invitation-onboarding';
 
 const pageSize = 50;
-const messages = {
-  setup_missing: 'Der Einladungsdienst ist noch nicht vollständig eingerichtet. Bitte die Einrichtungshilfe für Mitarbeiterzugänge verwenden.',
-  account_exists: 'Für diese E-Mail-Adresse besteht bereits ein Konto. Aktualisiere die Liste und verwende dort „Anmeldelink anfordern“. Fehlt das Profil, muss die Geschäftsführung es im Backend zuordnen.',
-  administrator_required: 'Diese Funktion ist für deinen Zugang oder diesen Mitarbeiter nicht freigegeben.',
-  not_authenticated: 'Deine Sitzung konnte nicht bestätigt werden. Bitte melde dich erneut an.',
-  invalid_input: 'Bitte Namen, E-Mail-Adresse, Rolle und Standortzuordnung prüfen.',
-  invitation_not_confirmed: 'Die Einladung konnte beim E-Mail-Dienst nicht bestätigt werden. Aktualisiere die Zugangsliste und prüfe das Konto, bevor du erneut einlädst.',
-  provisioning_not_confirmed: 'Die Freigabe des eingeladenen Kontos konnte nicht bestätigt werden. Bitte das Mitarbeiterprofil im Backend prüfen.',
-  login_target_unavailable: 'Der Zugang ist nicht aktiv, hat keine Studiozuordnung oder wurde gerade erst angeschrieben. Bitte prüfen und mindestens 60 Sekunden bis zur nächsten Anfrage warten.',
-  email_not_confirmed: 'Der Anmeldelink konnte beim E-Mail-Dienst nicht bestätigt werden. Bitte SMTP-Einstellungen und Versandlimits prüfen.',
-};
-function explain(error) {
-  if (messages[error?.code]) return messages[error.code];
-  if (error?.code === '40001') return 'Der Zugang wurde inzwischen geändert. Bitte aktualisieren und die Änderungen erneut prüfen.';
-  if (error?.code === '42501') return messages.administrator_required;
-  if (['42P01', 'PGRST202', 'PGRST205'].includes(error?.code)) return 'Die Datenbankerweiterung für Mitarbeiterzugänge fehlt. Bitte Migration 003 installieren.';
-  if (error?.code === '23514') return 'Bitte die Eingaben prüfen. Aktive Mitarbeiter benötigen einen Standort; der eigene Adminzugang muss aktiv bleiben.';
-  return 'Die Aktion konnte nicht bestätigt werden. Bitte Verbindung und Einrichtung des Einladungsdienstes prüfen.';
-}
 const stamp = value => value ? new Date(value).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'short' }) : 'Noch nicht angemeldet';
 
 export default function TeamAccessManagement({ client, profile, onChanged }) {
@@ -40,7 +23,7 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
   const [page, setPage] = useState(0); const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
   const [error, setError] = useState(''); const [notice, setNotice] = useState('');
-  const [editor, setEditor] = useState(null);
+  const [editor, setEditor] = useState(null),[mailCheck,setMailCheck]=useState(null);
   const feedbackRef=useRef(null);
   useEffect(()=>{if(!editor&&(error||notice))feedbackRef.current?.scrollIntoView({block:'center',behavior:'instant'});},[error,notice,editor]);
   const [input, setInput] = useState(''), [query, setQuery] = useState(''), [roleFilter, setRoleFilter] = useState(''), [statusFilter, setStatusFilter] = useState('all'), [studioFilter, setStudioFilter] = useState('');
@@ -78,12 +61,8 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
     } catch (e) { if (mounted.current) setError(explain(e)); return false; }
     finally { operation.current = false; if (mounted.current) setBusy(false); }
   }
-  async function invoke(body) {
-    const { data, error: failure } = await client.functions.invoke('team-access', { body });
-    if (failure) { let details; try { details = await failure.context?.json(); } catch {} throw details || failure; }
-    if (data?.code !== (body.action==='invite'?'invitation_requested':'login_link_requested')) throw data || {};
-    return data;
-  }
+  const invoke=body=>invokeTeamAccess(client,body);
+
   async function saveInvitation(input) {
     if(operation.current)return false;operation.current=true;setBusy(true);setError('');setNotice('');let next=pendingInvitation,stage=next?'onboarding':'preflight';
     const controller=invitationRequest.current=new AbortController();
@@ -124,9 +103,10 @@ export default function TeamAccessManagement({ client, profile, onChanged }) {
     {view==='roles'?<><RoleCards selected={roleFilter} onSelect={key=>{setView('directory');setRoleFilter(key);setPage(0);}}/><section className="panel role-guide"><h3><ShieldCheck size={18}/>Grundrolle + Bereiche + Bearbeiterrechte</h3><p>Die Grundrolle legt den Verantwortungsbereich fest. Im Mitarbeiterprofil bestimmst du zusätzliche Bereichsfreigaben sowie Rechte zum Erstellen, Bearbeiten und Veröffentlichen von Modulen. Die Startseite hat eine eigene Bearbeiterfreigabe. Zusätzliche Rechte erweitern keine Studiozuordnung.</p></section></>:<>
     <form className="user-directory-search" onSubmit={e => { e.preventDefault(); setQuery(input.trim()); setPage(0); }}><Search size={17}/><input aria-label="Nutzer nach Name oder E-Mail suchen" placeholder="Name oder E-Mail suchen …" value={input} maxLength={200} disabled={busy || legacy} onChange={e => setInput(e.target.value)}/><button className="button button-secondary" disabled={busy || legacy} type="submit">Nutzer suchen</button></form>
     <div className="user-directory-filters"><label className="field"><span>Rolle filtern</span><select aria-label="Rolle filtern" value={roleFilter} disabled={busy || legacy} onChange={e => { setRoleFilter(e.target.value); setPage(0); }}><option value="">Alle Rollen</option>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label className="field"><span>Zugangsstatus filtern</span><select aria-label="Zugangsstatus filtern" value={statusFilter} disabled={busy || legacy} onChange={e => { setStatusFilter(e.target.value); setPage(0); }}><option value="all">Alle Zugänge</option><option value="active">Freigeschaltet</option><option value="inactive">Gesperrt</option></select></label><label className="field"><span>Studio filtern</span><select aria-label="Studio filtern" value={studioFilter} disabled={busy || legacy} onChange={e => { setStudioFilter(e.target.value); setPage(0); }}><option value="">Alle Studios</option>{directory.studios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label></div>
-    {loading ? <div className="team-loading"><LoaderCircle size={23}/>Zugänge werden geladen …</div> : <section className="panel access-directory"><div className="table-wrap"><table><thead><tr><th>Mitarbeiter</th><th>Rolle & Studios</th><th>Zugang</th><th>Letzte Anmeldung</th><th>Verwalten</th></tr></thead><tbody>{directory.members.map(p => <tr key={p.id}><td><button className="user-profile-open" aria-label={`Nutzerprofil ${p.full_name} öffnen`} onClick={() => setSelectedMember(p)}><span className="directory-avatar" aria-hidden="true">{p.full_name.split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('')}</span><strong>{p.full_name}</strong></button><small>{p.email}</small>{p.module_editor && <span className="badge">Modulbearbeiter</span>}</td><td>{roleLabels[p.role]}<small>{p.role === 'admin' ? 'Alle Studios' : p.studio_ids.map(id => directory.studios.find(s => s.id === id)?.name || 'Unbekannter Standort').join(', ') || 'Kein Studio zugeordnet'}</small></td><td><span className="badge">{p.active ? 'Freigeschaltet' : 'Gesperrt'}</span></td><td>{stamp(p.last_sign_in_at)}</td><td><div className="access-row-actions">{can('users.access',true)&&<button className="button button-secondary" aria-label={`Zugang für ${p.full_name} bearbeiten`} disabled={busy} onClick={() => { setEditor(p); setError(''); setNotice(''); }}><Settings2 size={13}/>Bearbeiten</button>}{can('users.login',true)&&<button className="text-link" disabled={busy || !p.active} onClick={() => run(() => invoke({ action: 'send_login', userId: p.id }), 'Anmeldelink beim E-Mail-Dienst angefordert. Die Zustellung ist damit noch nicht bestätigt.')} aria-label={`Anmeldelink für ${p.full_name} anfordern`}><Mail size={13}/>Anmeldelink anfordern</button>}</div></td></tr>)}</tbody></table></div>{!directory.members.length && <div className="empty"><h3>Keine Mitarbeiterzugänge auf dieser Seite.</h3></div>}</section>}
+    {loading ? <div className="team-loading"><LoaderCircle size={23}/>Zugänge werden geladen …</div> : <section className="panel access-directory"><div className="table-wrap"><table><thead><tr><th>Mitarbeiter</th><th>Rolle & Studios</th><th>Zugang</th><th>Letzte Anmeldung</th><th>Verwalten</th></tr></thead><tbody>{directory.members.map(p => <tr key={p.id}><td><button className="user-profile-open" aria-label={`Nutzerprofil ${p.full_name} öffnen`} onClick={() => setSelectedMember(p)}><span className="directory-avatar" aria-hidden="true">{p.full_name.split(' ').filter(Boolean).slice(0,2).map(s=>s[0]).join('')}</span><strong>{p.full_name}</strong></button><small>{p.email}</small>{p.module_editor && <span className="badge">Modulbearbeiter</span>}</td><td>{roleLabels[p.role]}<small>{p.role === 'admin' ? 'Alle Studios' : p.studio_ids.map(id => directory.studios.find(s => s.id === id)?.name || 'Unbekannter Standort').join(', ') || 'Kein Studio zugeordnet'}</small></td><td><span className="badge">{p.active ? 'Freigeschaltet' : 'Gesperrt'}</span></td><td>{stamp(p.last_sign_in_at)}</td><td><div className="access-row-actions">{can('users.access',true)&&<button className="button button-secondary" aria-label={`Zugang für ${p.full_name} bearbeiten`} disabled={busy} onClick={() => { setEditor(p); setError(''); setNotice(''); }}><Settings2 size={13}/>Bearbeiten</button>}{can('users.login',true)&&<button className="text-link" disabled={busy||legacy} onClick={e=>{e.currentTarget.focus();setMailCheck(p);}} aria-label={`E-Mail-Zugang für ${p.full_name} prüfen`}>E-Mail-Zugang prüfen</button>}{can('users.login',true)&&<button className="text-link" disabled={busy || !p.active} onClick={() => run(() => invoke({ action: 'send_login', userId: p.id }), 'Anmeldelink beim E-Mail-Dienst angefordert. Die Zustellung ist damit noch nicht bestätigt.')} aria-label={`Anmeldelink für ${p.full_name} anfordern`}><Mail size={13}/>Anmeldelink anfordern</button>}</div></td></tr>)}</tbody></table></div>{!directory.members.length && <div className="empty"><h3>Keine Mitarbeiterzugänge auf dieser Seite.</h3></div>}</section>}
     <div className="team-pagination"><span>{directory.total} Zugänge · Seite {page + 1} von {Math.max(1, Math.ceil(directory.total / pageSize))}</span><div className="button-group"><button className="button button-secondary" disabled={loading || busy || page === 0} onClick={() => { setEditor(null); setPage(p => p - 1); }}>Zurück</button><button className="button button-secondary" disabled={loading || busy || (page + 1) * pageSize >= directory.total} onClick={() => { setEditor(null); setPage(p => p + 1); }}>Weitere Zugänge</button></div></div>
     </>}
+    {mailCheck&&<TeamMailCheck key={mailCheck.id} client={client} member={mailCheck} onClose={()=>setMailCheck(null)} onSent={()=>setRefresh(n=>n+1)}/>}
     {selectedMember && <TeamUserProfile key={selectedMember.id} client={client} member={selectedMember} administrator={profile.role==='admin'} studios={directory.studios} onClose={() => setSelectedMember(null)} onEdit={member => { setSelectedMember(null); setEditor(member); }} onChanged={() => { setRefresh(n => n + 1); onChanged(); }}/ >}
     {importing && <TeamUserImport studios={directory.studios} knownMembers={directory.members} invoke={invoke} onComplete={() => { setRefresh(n => n + 1); onChanged(); }} onClose={() => setImporting(false)}/ >}
     {editor && <AccessForm key={editor.id || 'new'} initial={editor} studios={directory.studios} own={editor.id === profile.id} administrator={profile.role==='admin'} client={client} canOnboard={permissionVersion>=12&&can('onboarding.assign')} onboardingAvailable={permissionVersion>=12} pending={!editor.id?pendingInvitation:null} busy={busy} serverError={error} onSave={save} onCancel={() => {setEditor(null);if(pendingInvitation)setRefresh(n=>n+1);}}/>}

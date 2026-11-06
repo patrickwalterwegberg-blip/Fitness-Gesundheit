@@ -9,7 +9,7 @@ Responsive Plattform im Schwarz-Gold-Design für Sögel, Bersenbrück, Dörpen, 
 | Bereich | Vorhandener Umfang | Anleitung |
 |---|---|---|
 | Startseite | Persönliche Schnellzugriffe, freigegebene Links, Neuigkeiten, Ansprechpartner; Inhalte nach Studio und Rolle | [Startseite und Profile](docs/STARTSEITE_UND_PROFILE.md) |
-| Mitarbeiter | Profile, drei Grundrollen, Studios, einzelne Zusatzrechte, Einladung, Import, Passwort und Wiederherstellung | [Zugänge](docs/MITARBEITERZUGAENGE.md), [Einzelrechte](docs/FUNKTIONSRECHTE.md), [Passwort](docs/PASSWORT_ANMELDUNG.md) |
+| Mitarbeiter | Profile, drei Grundrollen, Studios, einzelne Zusatzrechte, Einladung, Import, Passwort, Wiederherstellung und geschützte E-Mail-Zugangsprüfung | [Zugänge](docs/MITARBEITERZUGAENGE.md), [Einzelrechte](docs/FUNKTIONSRECHTE.md), [E-Mail-Prüfung](docs/EMAIL_VERSAND.md) |
 | Aufgaben und Kalender | Eigene private Aufgaben und Termine, Teamzuweisung, Wiederholungen, Gerätewartung mit verknüpften Kalenderaufgaben | [Kalender und Benachrichtigungen](docs/KALENDER_AUFGABEN_BENACHRICHTIGUNGEN.md) |
 | Benachrichtigungen | Chronologischer Verlauf, Lesestand, Fälligkeiten, Aufgaben, Termine, Chat, Feedback, Lernaufträge und Onboarding | [Kalender und Benachrichtigungen](docs/KALENDER_AUFGABEN_BENACHRICHTIGUNGEN.md) |
 | Wissen und Dateien | Private Originale, Versionen, Entwurf/Freigabe, Standort-/Rollenrechte und Textsuche; bis 50 MB je Datei | [Dateien und Wissen](docs/DATEIEN_WISSEN_NUTZER.md) |

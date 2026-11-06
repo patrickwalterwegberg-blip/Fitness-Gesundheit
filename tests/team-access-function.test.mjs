@@ -7,7 +7,7 @@ const memberId = '00000000-0000-4000-8000-000000000002';
 const studioId = '00000000-0000-4000-8000-000000000003';
 const origin = 'https://example.org';
 function setup(options = {}) {
-  const calls = [];
+  const calls = [],logs=[];
   const env = new Map(Object.entries({ TEAMHUB_SITE_URL: origin + '/Fitness-Gesundheit/', SUPABASE_URL: 'https://test.supabase.co', SUPABASE_ANON_KEY: 'public-test-key', SUPABASE_SERVICE_ROLE_KEY: 'private-test-key', ...(options.env || {}) }));
   const caller = {
     auth: { getUser: async () => options.noSession ? { error: true } : { data: { user: { id: adminId } } } },
@@ -15,12 +15,12 @@ function setup(options = {}) {
     rpc: async (name, args) => { calls.push({ name, args }); if(name==='team_access_context')return {data:{version:9,pages:['access'],capabilities:options.capabilities||[]}}; return options.rpcFailure ? { error: options.rpcFailure } : { data: name === 'admin_prepare_team_invitation' ? memberId : 'colleague@example.org' }; },
   };
   const server = { auth: {
-    admin: { inviteUserByEmail: async (...args) => { calls.push({ name: 'invite', args }); return options.mailFailure ? { error: true } : { data: { user: { id: memberId, private: 'must-not-be-returned' } } }; } },
+    admin: { inviteUserByEmail: async (...args) => { calls.push({ name: 'invite', args }); return options.mailFailure ? { error: options.mailFailure } : { data: { user: { id: memberId, private: 'must-not-be-returned' } } }; } },
     signInWithOtp: async input => { calls.push({ name: 'otp', input }); return { error: options.mailFailure || null }; },
   } };
-  const handler = createTeamAccessHandler({ env, createClient: (_url, key, configuration) => { calls.push({ name: 'client', key, configuration }); return key === 'public-test-key' ? caller : server; } });
+  const handler = createTeamAccessHandler({ env, log:event=>{logs.push(event);if(options.logFailure)throw new Error('logger unavailable');}, createClient: (_url, key, configuration) => { calls.push({ name: 'client', key, configuration }); return key === 'public-test-key' ? caller : server; } });
   const request = (body, headers = {}, method = 'POST') => handler(new Request(origin + '/functions/v1/team-access', { method, headers: { origin, authorization: 'Bearer test-session', 'content-type': 'application/json', ...headers }, body: method === 'POST' ? JSON.stringify(body) : undefined }));
-  return { calls, request };
+  return { calls, logs, request };
 }
 const invitation = { action: 'invite', email: ' COLLEAGUE@example.org ', fullName: ' Colleague ', role: 'employee', studioIds: [studioId] };
 
@@ -45,7 +45,7 @@ test('invite stages authorized access, fixes the redirect and returns no privile
   const { calls, request } = setup();
   const response = await request({ ...invitation, redirectTo: 'https://untrusted.example' });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { code: 'invitation_requested', userId: memberId });
+  const receipt=await response.json();assert.equal(receipt.code,'invitation_requested');assert.equal(receipt.userId,memberId);assert.match(receipt.requestId,/^[a-f\d-]{36}$/i);assert.deepEqual(Object.keys(receipt).sort(),['code','requestId','userId']);
   assert.deepEqual(calls.find(c => c.name === 'admin_prepare_team_invitation').args, { p_email: 'colleague@example.org', p_full_name: 'Colleague', p_role: 'employee', p_studio_ids: [studioId] });
   assert.equal(calls.find(c => c.name === 'invite').args[1].redirectTo, origin + '/Fitness-Gesundheit/?team=1');
   assert.equal(calls.find(c => c.name === 'invite').args[1].data.team_invitation_id, memberId);
@@ -103,4 +103,20 @@ test('delegated login resend uses server-scoped targets and does not grant invit
  const denied=setup({role:'employee',capabilities:['users.login'],rpcFailure:{code:'42501'}});
  assert.equal((await denied.request({action:'send_login',userId:memberId})).status,403);
  assert.equal(denied.calls.some(c=>c.name==='otp'),false);
+});
+
+test('mail provider restrictions return safe categories and a log reference without private provider content',async()=>{
+ const sensitive='smtp-password-and-private-provider-detail';
+ for(const [error,reason] of [[{code:'email_address_not_authorized',message:sensitive},'recipient_restricted'],[{status:429,code:'over_email_send_rate_limit',message:sensitive},'rate_limited'],[{code:'email_provider_disabled',message:sensitive},'provider_disabled'],[{status:500,message:'SMTP '+sensitive},'mail_service_error'],[{code:'signup_disabled',message:sensitive},'account_unavailable']]){
+  const {request,logs}=setup({mailFailure:error});const response=await request({action:'send_login',userId:memberId});const result=await response.json();assert.equal(response.status,502);assert.equal(result.code,'email_not_confirmed');assert.equal(result.reason,reason);assert.match(result.requestId,/^[a-f\d-]{36}$/i);assert.ok(logs.some(row=>row.requestId===result.requestId&&row.reason===reason));const output=JSON.stringify({result,logs});for(const forbidden of [sensitive,'colleague@example.org','private-test-key','Bearer test-session'])assert.equal(output.includes(forbidden),false);
+ }
+});
+test('invitation errors also preserve their failure category and never expose a generated Auth link',async()=>{
+ const {request}=setup({mailFailure:{code:'email_address_not_authorized'}});const response=await request(invitation),result=await response.json();assert.equal(result.code,'invitation_not_confirmed');assert.equal(result.reason,'recipient_restricted');assert.equal(JSON.stringify(result).includes('redirectTo'),false);
+});
+test('target permission failures never construct the privileged client or send a mail',async()=>{
+ const {request,calls}=setup({rpcFailure:{code:'42501'}});assert.equal((await request({action:'send_login',userId:memberId})).status,403);assert.equal(calls.some(c=>c.key==='private-test-key'),false);assert.equal(calls.some(c=>c.name==='otp'),false);
+});
+test('logging failure cannot turn a successfully requested link into an apparent mail failure',async()=>{
+ const {request,calls}=setup({logFailure:true});const response=await request({action:'send_login',userId:memberId});assert.equal(response.status,200);assert.equal((await response.json()).code,'login_link_requested');assert.equal(calls.filter(c=>c.name==='otp').length,1);
 });
