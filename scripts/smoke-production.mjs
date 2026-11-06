@@ -18,7 +18,8 @@ const token=`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.test-signature`;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 try {
  const context=await browser.newContext();
- const errors=[],unexpected=[],calls=[];
+ const errors=[],unexpected=[],calls=[];let learningNotification=false,learningRead=false;
+ const smokeCourse='00000000-0000-4000-8000-000000000081',smokeAssignment='00000000-0000-4000-8000-000000000082';
  await context.addInitScript(({storageKey,user,token})=>{if(!sessionStorage.getItem('production-smoke-seeded')){localStorage.setItem(storageKey,JSON.stringify({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user}));sessionStorage.setItem('production-smoke-seeded','1');}},{storageKey,user,token});
  await context.route('**/*',async route=>{
   const url=new URL(route.request().url());calls.push(url.pathname);
@@ -40,7 +41,12 @@ try {
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
    else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[],total:0,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
    else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
-   else if(url.pathname==='/rest/v1/rpc/team_notification_inbox')body={items:[],unread:0,total:0};
+   else if(url.pathname==='/rest/v1/rpc/team_notification_inbox')body=learningNotification?{items:[{id:1,kind:'learning',target_id:smokeAssignment,title:'Neuer Lernauftrag',body:'Sicherheit im Studio',occurred_at:'2026-11-06T10:00:00Z',read_at:learningRead?'2026-11-06T11:00:00Z':null}],unread:learningRead?0:1,total:1}:{items:[],unread:0,total:0};
+   else if(url.pathname==='/rest/v1/rpc/mark_team_notifications_read'){learningRead=true;body=null;}
+   else if(learningNotification&&url.pathname==='/rest/v1/learning_courses')body=[{id:smokeCourse,title:'Sicherheit im Studio',lesson_count:1,active:true}];
+   else if(learningNotification&&url.pathname==='/rest/v1/learning_assignments')body=[{id:smokeAssignment,course_id:smokeCourse,learner_id:uid,studio_id:'00000000-0000-4000-8000-000000000002',requires_practice:false}];
+   else if(learningNotification&&url.pathname==='/rest/v1/learning_material')body=[{course_id:smokeCourse,revision:1,pass_percent:80,lessons:[{title:'Start',body:'Dieser neu zugewiesene Kurs wurde direkt aus der Glocke geöffnet.'}],questions:[{prompt:'Bereit?',options:['Ja','Nein']}]}];
+   else if(url.pathname==='/rest/v1/learning_attempts')body=[];
    else if(url.pathname==='/rest/v1/rpc/team_schedule_month')body={days:[]};
    else if(url.pathname==='/rest/v1/calendar_events')body=[];
    else if(url.pathname==='/rest/v1/rpc/learning_video_library')body={items:[],total:0};
@@ -126,8 +132,17 @@ try {
  await page.getByLabel('Dein Teamhub-Passwort',{exact:true}).fill('Smoke-Test-Passphrase-2026!');
  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Lernhub',exact:true}).click();
+ await page.getByRole('button',{name:'Mein Onboarding',exact:true}).click();
+ await page.getByRole('heading',{name:'Dein Onboarding startet hier.',exact:true}).waitFor();
+ learningNotification=true;
+ await page.evaluate(()=>window.dispatchEvent(new Event('team-notifications-changed')));
+ await page.getByRole('button',{name:'Benachrichtigungen: 1 ungelesen',exact:true}).click();
+ await page.getByRole('dialog',{name:'Benachrichtigungen',exact:true}).getByRole('button',{name:'Lernhub öffnen',exact:true}).click();
+ await page.getByText('Dieser neu zugewiesene Kurs wurde direkt aus der Glocke geöffnet.',{exact:true}).waitFor();
+ assert.equal(learningRead,true);
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation with onboarding choices and calendar dialogs, notification inbox, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}

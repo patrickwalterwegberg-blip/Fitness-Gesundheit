@@ -16,3 +16,11 @@ test('long source excerpts retain the matching passage and display omitted text'
  const excerpt=sourceExcerpt('Anfang. '.repeat(200)+'Gerätewartung: Alle sechs Monate prüfen. '+'Weitere Hinweise. '.repeat(200),'Wann ist die Gerätewartung?');
  assert.ok(excerpt.includes('Gerätewartung: Alle sechs Monate prüfen.'));assert.ok(excerpt.startsWith('…'));assert.ok(excerpt.endsWith('…'));assert.ok(excerpt.length<=702);
 });
+test('task questions distinguish all open tasks from due, overdue and unsupported scopes',async()=>{
+ const {assistantTaskIntent}=await import('../src/team-assistant-model.js');
+ assert.equal(assistantTaskIntent('Zeig meine offenen Aufgaben'),'open');
+ assert.equal(assistantTaskIntent('Welche meiner Aufgaben sind noch nicht erledigt?'),'open');
+ assert.equal(assistantTaskIntent('Welche meiner Aufgaben sind überfällig?'),'overdue');
+ for(const question of ['Welche Aufgaben sind morgen fällig?','Zeig meine Aufgaben nächste Woche','Welche Aufgaben haben die Kollegen?','Zeig meine erledigten Aufgaben','Zeig meine Aufgaben am 12.11.2026','Welche Aufgaben sind nicht fällig?'])assert.equal(assistantTaskIntent(question),'unsupported',question);
+ assert.equal(assistantTaskIntent('Wie erledige ich meine offenen Aufgaben?'),null);
+});

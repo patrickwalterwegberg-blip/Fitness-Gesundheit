@@ -2,17 +2,18 @@ import React,{useEffect,useRef,useState} from 'react';
 import {ArrowRight,BookOpen,FileText,ListTodo,LoaderCircle,Send,ShieldCheck,Sparkles,Trash2} from 'lucide-react';
 import {berlinDay} from './clock';
 import {knowledgeError} from './knowledge-model';
-import {asksForDueTasks,searchAssistantKnowledge} from './team-assistant-model';
+import {assistantTaskIntent,searchAssistantKnowledge} from './team-assistant-model';
 import './team-assistant.css';
 export default function TeamAssistant({client,profile,canTasks,onSource,onTask,onKnowledge}){
  const [input,setInput]=useState(''),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState('');const controller=useRef(null),operation=useRef(false),live=useRef(true),end=useRef(null);
  useEffect(()=>{live.current=true;return()=>{live.current=false;controller.current?.abort();};},[]);
  useEffect(()=>{if(messages.length)end.current?.scrollIntoView({block:'nearest',behavior:'instant'});},[messages]);
  async function ask(value){const question=value.trim();if(!question||operation.current)return;operation.current=true;setBusy(true);setError('');setInput('');const request=controller.current=new AbortController(),entry={id:crypto.randomUUID(),question,pending:true};setMessages(old=>[...old.slice(-19),entry]);
- try{let response;
-  if(asksForDueTasks(question)){
-   if(!canTasks)response={text:'Für Aufgaben ist dein Zugang derzeit nicht freigegeben. Bitte wende dich an Patrick Walter.'};
-   else{const today=berlinDay(),r=await client.from('tasks').select('id,title,due_date,status,studio:studios(name)',{count:'exact'}).eq('assignee_id',profile.id).neq('status','done').lte('due_date',today).order('due_date').order('id').range(0,9).abortSignal(request.signal);if(r.error)throw r.error;response={text:r.count?`${r.count} deiner offenen Aufgaben sind bis einschließlich heute fällig. ${r.count>10?'Hier sind die ersten zehn.':''}`:'Dir sind derzeit keine offenen Aufgaben bis einschließlich heute fällig.',tasks:r.data||[]};}
+ try{let response;const taskIntent=assistantTaskIntent(question);
+  if(taskIntent){
+   if(taskIntent==='unsupported')response={text:'Ich kann deine eigenen offenen Aufgaben und die bis heute fälligen Aufgaben anzeigen. Für andere Zeiträume oder Teamaufgaben öffne bitte den Kalender oder die Aufgabenübersicht.'};
+   else if(!canTasks)response={text:'Für Aufgaben ist dein Zugang derzeit nicht freigegeben. Bitte wende dich an Patrick Walter.'};
+   else{let query=client.from('tasks').select('id,title,due_date,status,studio:studios(name)',{count:'exact'}).eq('assignee_id',profile.id).neq('status','done');if(taskIntent==='due')query=query.lte('due_date',berlinDay());else if(taskIntent==='overdue')query=query.lt('due_date',berlinDay());const r=await query.order('due_date').order('id').range(0,9).abortSignal(request.signal);if(r.error)throw r.error;const count=r.count??r.data?.length??0;response={text:count?`${count} deiner Aufgaben sind ${taskIntent==='due'?'bis einschließlich heute fällig':taskIntent==='overdue'?'überfällig':'noch offen'}. ${count>10?'Hier sind die ersten zehn.':''}`:taskIntent==='due'?'Für dich sind derzeit keine offenen Aufgaben bis einschließlich heute fällig.':taskIntent==='overdue'?'Du hast derzeit keine überfälligen offenen Aufgaben.':'Du hast derzeit keine offenen Aufgaben.',tasks:r.data||[]};}
   }else{const r=await searchAssistantKnowledge(client,question,request.signal);response={text:r.sources.length?'Diese freigegebenen Quellen passen zu deiner Frage. Die Auszüge stammen direkt aus den hinterlegten Inhalten.':'Ich habe keine passende freigegebene Textstelle gefunden. Versuche einen konkreten Begriff oder wende dich an Patrick Walter.',sources:r.sources};}
   if(live.current&&!request.signal.aborted)setMessages(old=>old.map(m=>m.id===entry.id?{...m,...response,pending:false}:m));
  }catch(e){if(live.current&&!request.signal.aborted){setMessages(old=>old.map(m=>m.id===entry.id?{...m,pending:false,failed:true}:m));setError(knowledgeError(e));setInput(question);}}finally{operation.current=false;if(live.current)setBusy(false);}

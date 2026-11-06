@@ -21,6 +21,8 @@ Die Migration ist wiederholt ausführbar. Sie erhält bestehende Teamaufgaben, Z
 - **Gerätewartung:** Kalender → Gerätewartung → Wartungsplan anlegen. Gerät, Gerätenummer, Hinweise, Studio, verantwortliche Person, erste Fälligkeit und Abstand in Monaten festlegen. Der Standard ist sechs Monate. Der Plan erstellt automatisch eine verknüpfte Teamaufgabe. Änderungen erfolgen am Wartungsplan, der Abschluss über die Aufgabe. Nach dem Abschluss werden Folgeaufgabe und nächstes Wartungsdatum zusammen gespeichert.
 - **Glocke:** Öffnet das Benachrichtigungsfeld. Neueste Meldungen stehen oben, ältere Seiten bleiben erreichbar. „Als gelesen“ entfernt nichts aus dem Verlauf. „Angezeigte als gelesen“ betrifft nur die aktuell sichtbare Seite.
 
+Lernbenachrichtigungen öffnen den konkret zugewiesenen eigenen Kurs und laden neue Zuweisungen auch aus einer bereits geöffneten Onboarding-Ansicht nach. Ein nicht mehr verfügbarer Lernauftrag bleibt beim fehlgeschlagenen Öffnen ungelesen. Bei einer fehlgeschlagenen Lesebestätigung bleibt der aktuelle Bereich bestehen.
+
 Die Benachrichtigungen umfassen neue Aufgabenzuweisungen, fällige Aufgaben und Wartungen, neue Chatnachrichten, neue/geänderte/abgesagte Studiotermine, Terminbeginn, neue Lernaufträge und Feedback-Zuweisungen bzw. Statusantworten. Der Verlauf beginnt mit der Einrichtung dieser Erweiterung; vorhandene fällige Aufgaben und noch ungelesene Chatnachrichten werden übernommen. Sichtbarkeit wird bei jeder Abfrage erneut geprüft. Entzogene Studio-/Bereichsrechte geben auch über alte Benachrichtigungen keinen Zugriff.
 
 ## Erinnerungen und Hintergrundbetrieb
