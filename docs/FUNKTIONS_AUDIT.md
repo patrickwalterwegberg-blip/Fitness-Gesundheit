@@ -72,3 +72,9 @@ Die lokale SQL-Prüfung bildet Storage-Tabellen nach. Sie prüft Berechtigungen 
 3. **Lerninhalte und Rückmeldungen ausbauen:** Abgaben und Trainerbewertung, anschließend Lektionenfeedback und zusätzliche Editorbausteine. Vorhandene Lernnachweise und Rechte müssen erhalten bleiben.
 4. **Video erweitern:** Bildschirmaufnahme und Schnitt mit passenden Speicher-/Verarbeitungsgrenzen planen; tatsächliche Gerätekompatibilität prüfen.
 5. **Weitere Produktbereiche entscheiden:** Kundendashboards, Community, Gruppen/Bundles und native App sind eigenständige Erweiterungen. Sie gehören derzeit nicht zum abgenommenen Funktionsumfang.
+
+## Nachtrag: Rückmeldung bei der Anmeldelink-Anforderung
+
+Ein anschließender Codecheck bestätigte, dass ausdrücklich abgewiesene Auth-Anfragen (`signup_disabled` / `user_not_found`) zuvor wie angenommene Anfragen dargestellt wurden. Die Oberfläche meldet eine solche Ablehnung jetzt neutral als nicht bestätigten Linkversand. Für tatsächlich angenommene Anfragen wird ausdrücklich zwischen Annahme, Versand und Zustellung unterschieden; der Countdown bestätigt keine Zustellung. Empfängerbeschränkung, deaktivierter E-Mail-Anbieter, Dienst-/SMTP-Fehler und Rate-Limit erhalten passende Fehlermeldungen. Es bleibt bei bestehenden Zugängen; öffentliche Selbstregistrierung wird nicht aktiviert.
+
+Die gezielte Prüfung umfasst 42 bestandene Browserfälle für Anmeldung, Wiederherstellung, Zugänge und Einladungsformulare. Eine direkte öffentliche Auth-Konfigurationsabfrage wurde in der Entwicklungsumgebung vom Netzwerkproxy mit HTTP 403 blockiert. Es liegen keine administrativen Supabase-Zugangsdaten für eine private Versandprotokollprüfung vor. Die konkrete Ursache einer ausbleibenden echten Mail und die tatsächliche Zustellung sind damit weiterhin nicht bestätigt. [Prüfschritte für den Betreiber](PASSWORT_ANMELDUNG.md#wenn-kein-link-ankommt).

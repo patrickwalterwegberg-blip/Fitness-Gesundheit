@@ -84,7 +84,8 @@ test('email sign-in does not auto-register users and keeps demo data separate', 
   await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('test@example.org');
   await page.getByRole('button', { name: 'Mit Anmeldelink anmelden', exact: true }).click();
   await page.getByRole('button', { name: 'Anmeldelink anfordern' }).click();
-  await expect(page.getByRole('status')).toContainText('Falls für diese Adresse ein Zugang eingerichtet ist');
+  await expect(page.getByRole('status')).toContainText('Link-Anfrage angenommen');
+  await expect(page.getByRole('alert')).toHaveCount(0);
   const otp = calls.find(c => c.path === '/auth/v1/otp');
   expect(otp.body.create_user).toBe(false);
   expect(otp.body.email).toBe('test@example.org');
@@ -247,13 +248,14 @@ test('employee has no access management and signout clears team data', async ({ 
   await expect(page.getByRole('heading', { name: 'Gemeinsame Testaufgabe', exact: true })).toHaveCount(0);
 });
 
-test('unknown email gets a neutral answer and prevents repeated immediate requests', async ({ page }) => {
+test('a rejected link request shows neutral failure guidance and prevents repeated immediate requests', async ({ page }) => {
   const calls = await mockBackend(page, { loggedIn: false, unknownEmail: true });
   await page.goto('/tests/workspace.html');
   await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('unknown@example.org');
   await page.getByRole('button', { name: 'Mit Anmeldelink anmelden', exact: true }).click();
   await page.getByRole('button', { name: 'Anmeldelink anfordern', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Falls für diese Adresse ein Zugang eingerichtet ist');
+  await expect(page.getByRole('alert')).toContainText('Ein Linkversand konnte nicht bestätigt werden');
+  await expect(page.getByRole('status')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Erneut anfordern in/ })).toBeDisabled();
   expect(calls.filter(c => c.path === '/auth/v1/otp')).toHaveLength(1);
 });

@@ -28,6 +28,17 @@ Eine fehlgeschlagene Passwortspeicherung meldet keinen Erfolg. Bei einem ungült
 
 **Mit Anmeldelink anmelden** bleibt für bereits eingerichtete Konten verfügbar. Dabei werden keine neuen Benutzer automatisch registriert. Ein solcher Anmeldelink setzt kein neues Passwort; dazu den getrennten Weg **Passwort festlegen / vergessen?** verwenden.
 
+## Wenn kein Link ankommt
+
+Der Countdown ist eine lokale Wartezeit und kein Nachweis eines Mailversands. Eine vom Anmeldedienst angenommene Anfrage bestätigt weder den tatsächlichen Versand noch die Zustellung. Falls der Dienst die Anfrage ausdrücklich ablehnt, zeigt die Oberfläche jetzt eine Fehlermeldung statt einer positiven Rückmeldung. Unbekannte oder nicht eingerichtete Zugänge werden dabei nicht automatisch registriert.
+
+1. Die Geschäftsführung prüft unter **Mitarbeiterzugänge**, ob die genaue Adresse bereits eingeladen und der Zugang freigeschaltet ist. Neue Mitarbeiter benötigen zuerst **Mitarbeiter einladen**; eine öffentliche Link-Anforderung legt kein Konto an.
+2. Für einen bestehenden Zugang kann die Geschäftsführung **Anmeldelink anfordern** verwenden. Dieser geschützte Weg prüft den Mitarbeiterzugang vor dem Versand und zeigt eine Fehlermeldung, wenn der E-Mail-Dienst die Anfrage ablehnt.
+3. Bleibt eine Mail aus, im Supabase-Projekt die **Auth-Protokolle** und den Mailanbieter prüfen: Empfängerfreigabe des Standardversands, Versandlimit, aktivierter E-Mail-Anbieter, SMTP-Absender und Zustell-/Bounce-Meldungen. Eine angenommene Auth-Anfrage beweist nicht, dass die Mail im Postfach angekommen ist.
+4. Ein bereits gesetztes Teamhub-Passwort bleibt eine Alternative zur Link-Anmeldung.
+
+Die Oberfläche unterscheidet Empfängerbeschränkung, deaktivierten Link-Anbieter, Versand-/Dienstfehler und Rate-Limit. Ein unbekannter Zugang erhält einen neutralen Hinweis, die Einladung prüfen zu lassen. Eine Passwortwiederherstellung kann vom Dienst aus Datenschutzgründen auch für eine unbekannte Adresse angenommen werden; daraus folgt keine Mailzustellung.
+
 ## Supabase-Konfiguration
 
 - Der bestehende E-Mail-Anbieter unter **Authentication → Sign In / Providers → Email** muss aktiviert bleiben. Öffentliche Selbstregistrierung bleibt deaktiviert.

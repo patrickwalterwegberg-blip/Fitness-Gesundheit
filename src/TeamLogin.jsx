@@ -1,6 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
-import { ArrowLeft, BookOpen, CheckCircle2, ClipboardList, Eye, EyeOff, FolderOpen, KeyRound, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
-import { authErrorMessage,passwordValidation,teamAuthRedirect } from './team-auth';
+import { ArrowLeft, BookOpen, Info, ClipboardList, Eye, EyeOff, FolderOpen, KeyRound, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
+import { authErrorMessage,mailRetryDelay,passwordValidation,teamAuthRedirect } from './team-auth';
 import './team-login.css';
 
 function PasswordField({name,label,autoComplete='current-password',minLength,disabled}) {
@@ -27,19 +27,19 @@ export default function TeamLogin({client,onStart,accountEmail=null,onClose,init
         if(!result.data.session)throw new Error('No confirmed session');
       } else {
         const result=mode==='reset'?await client.auth.resetPasswordForEmail(address,{redirectTo:redirect}):await client.auth.signInWithOtp({email:address,options:{shouldCreateUser:false,emailRedirectTo:redirect}});
-        if(result.error&&!['user_not_found','signup_disabled'].includes(result.error.code)&&!/signups? not allowed|user not found/i.test(result.error.message||''))throw result.error;
+        if(result.error)throw result.error;
         if(!live.current)return;
-        setNotice(mode==='reset'?'Falls für diese Adresse ein Konto eingerichtet ist, erhältst du eine E-Mail zum Festlegen deines Passworts. Öffne den neuesten Link. Prüfe auch den Spamordner.':'Falls für diese Adresse ein Zugang eingerichtet ist, erhältst du einen Anmeldelink. Prüfe auch den Spamordner.');
+        setNotice(mode==='reset'?'Falls für diese Adresse ein Konto eingerichtet ist, wurde die Anfrage für eine E-Mail zum Festlegen deines Passworts angenommen. Versand und Zustellung sind damit nicht bestätigt. Prüfe auch den Spamordner.':'Link-Anfrage angenommen. Versand und Zustellung sind nicht bestätigt. Ein Link kann nur für einen bestehenden, eingeladenen Zugang versendet werden. Prüfe auch den Spamordner.');
         setCooldown(60);
       }
-    } catch(e){if(live.current)setError(authErrorMessage(e,mode==='password'?'login':'email'));}
+    } catch(e){if(live.current){setError(authErrorMessage(e,mode==='password'?'login':'email'));if(mode!=='password'){const delay=mailRetryDelay(e);if(delay)setCooldown(delay);}}}
     finally{operation.current=false;if(live.current)setBusy(false);}
   }
   const reset=mode==='reset',magic=mode==='magic';
   return <section className={'team-auth '+(accountEmail?'team-auth-account':'')} aria-label={accountEmail?'Passwort festlegen oder ändern':'Mitarbeiteranmeldung'}>
     {!accountEmail&&<aside className="auth-welcome"><div className="eyebrow">FITNESS & GESUNDHEIT · TEAMHUB</div><h2>Sieben Studios.<br/><span>Ein Team.</span></h2><p>Dein Arbeitsplatz für einen gut organisierten Studioalltag.</p><ul><li><ClipboardList size={21}/><div><strong>Wissen, was ansteht.</strong><span>Deine Aufgaben und Termine im Blick.</span></div></li><li><BookOpen size={21}/><div><strong>Gemeinsam besser werden.</strong><span>Lernen und Fortschritte verfolgen.</span></div></li><li><FolderOpen size={21}/><div><strong>Antworten schnell finden.</strong><span>Freigegebene Unterlagen an einem Ort.</span></div></li></ul><small>Sögel · Bersenbrück · Dörpen · Lathen · Haselünne · Löningen · Werlte</small></aside>}
     <div className="auth-card"><span className="auth-mark">{reset?<KeyRound size={25}/>:magic?<Mail size={25}/>:<LockKeyhole size={25}/>}</span><h2>{reset?'Dein Passwort festlegen.':magic?'Anmeldung per E-Mail.':'Willkommen im Team.'}</h2><p>{reset?'Beim ersten Mal oder wenn du dein Passwort vergessen hast: Fordere einen persönlichen Link per E-Mail an.':magic?'Du erhältst einen zeitlich begrenzten Anmeldelink für dein bestehendes Konto.':'Melde dich mit deiner Firmen-E-Mail-Adresse und deinem persönlichen Teamhub-Passwort an.'}</p>
-      {error&&<div className="auth-error" role="alert">{error}</div>}{notice&&<div className="auth-notice" role="status"><CheckCircle2 size={17}/><span>{notice}</span></div>}
+      {error&&<div className="auth-error" role="alert">{error}</div>}{notice&&<div className="auth-notice" role="status"><Info size={17}/><span>{notice}</span></div>}
       <form onSubmit={submit}><div className="auth-field"><label htmlFor={accountEmail?'account-auth-email':'login-auth-email'}>Deine Firmen-E-Mail-Adresse</label><input id={accountEmail?'account-auth-email':'login-auth-email'} name="email" type="email" autoComplete={mode==='password'?'username':'email'} required maxLength={254} value={email} readOnly={!!accountEmail} disabled={busy} onChange={e=>setEmail(e.target.value)} placeholder="name@hiermachtgesundheitspass.de"/></div>
         {mode==='password'&&<PasswordField name="password" label="Dein Teamhub-Passwort" disabled={busy}/>}
         <button className="button auth-submit" type="submit" disabled={busy||(mode!=='password'&&cooldown>0)}>{busy?<LoaderCircle size={17}/>:reset?<KeyRound size={17}/>:magic?<Mail size={17}/>:<LockKeyhole size={17}/>} {busy?'Bitte warten …':mode!=='password'&&cooldown?`Erneut anfordern in ${cooldown} s`:reset?'Link zum Passwort festlegen senden':magic?'Anmeldelink anfordern':'Anmelden'}</button>

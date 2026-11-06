@@ -28,6 +28,7 @@ try {
    const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-expose-headers':'content-range','content-type':'application/json','content-range':'*/0'};
    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers});
    if(url.pathname==='/auth/v1/logout')return route.fulfill({status:204,headers});
+   if(url.pathname==='/auth/v1/otp')return route.fulfill({status:400,headers,body:JSON.stringify({code:'signup_disabled',msg:'Signups not allowed for otp'})});
    let body;
    if(url.pathname==='/auth/v1/user')body=user;
    else if(url.pathname==='/auth/v1/token'){
@@ -128,6 +129,12 @@ try {
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
  await page.goto('https://teamhub-preview.example.org/Fitness-Gesundheit/login.html');
  await page.getByRole('heading',{name:'Willkommen im Team.'}).waitFor();
+ await page.getByRole('button',{name:'Mit Anmeldelink anmelden',exact:true}).click();
+ await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('mail-check@example.org');
+ await page.getByRole('button',{name:'Anmeldelink anfordern',exact:true}).click();
+ await page.getByRole('alert').filter({hasText:'Ein Linkversand konnte nicht bestätigt werden'}).waitFor();
+ assert.equal(await page.getByRole('status').count(),0,'A rejected mail request must never display accepted feedback');
+ await page.getByRole('button',{name:'Zur Passwort-Anmeldung',exact:true}).click();
  await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill(user.email);
  await page.getByLabel('Dein Teamhub-Passwort',{exact:true}).fill('Smoke-Test-Passphrase-2026!');
  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
@@ -144,5 +151,5 @@ try {
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
