@@ -29,7 +29,19 @@ Die Benachrichtigungen umfassen neue Aufgabenzuweisungen, fällige Aufgaben und 
 
 Fälligkeit von Aufgaben ist der Beginn des Fälligkeitstages in Europe/Berlin. Bei geöffnetem Teamhub wird die Glocke spätestens alle 30 Sekunden und beim Zurückkehren zum Fenster aktualisiert. Fällige Aufgaben werden bei jeder Abfrage nachgetragen. Der Lesestand ist auf dem Server gespeichert und gilt auch auf einem zweiten Gerät.
 
-Für die regelmäßige Erzeugung auch bei geschlossenem Teamhub kann in Supabase unter **Database → Extensions** die Erweiterung **pg_cron** aktiviert werden. Anschließend Migration 010 nochmals ausführen. Sie registriert dann den Job `teamhub-due-notifications` einmal pro Minute. Erneutes Ausführen aktualisiert den benannten Job. Ohne pg_cron werden fällige Meldungen beim nächsten Öffnen nachgetragen. E-Mail- oder Betriebssystem-Push-Nachrichten sind damit nicht verbunden.
+Für die regelmäßige Erzeugung auch bei geschlossenem Teamhub in Supabase unter **Database → Extensions** die Erweiterung **pg_cron** aktivieren. Bei einer bereits eingerichteten Kalenderverwaltung anschließend im SQL Editor mit der Standardrolle `postgres` ausschließlich diese Abfrage ausführen:
+
+```sql
+select cron.schedule(
+ 'teamhub-due-notifications',
+ '* * * * *',
+ 'select app_private.sync_due_notifications()'
+);
+```
+
+Die Kalenderfunktion muss bereits aus Erweiterung 010 vorhanden sein. Die Abfrage registriert beziehungsweise aktualisiert den benannten Job für diese Datenbankrolle, ohne die übrigen Funktionen neu anzulegen. Erwartet wird eine Job-ID. Danach die Betriebsprüfung aktualisieren: genau ein aktiver Job ist der technische Sollzustand. Nach mindestens einem tatsächlichen Lauf auch die Job-Ausführung und das Erscheinen einer fälligen Meldung prüfen. Ohne pg_cron werden Fälligkeiten beim nächsten Öffnen nachgetragen. E-Mail- oder Betriebssystem-Push-Nachrichten sind damit nicht verbunden.
+
+Bereits installierte neuere Erweiterungen bleiben erhalten. Für die alleinige Cron-Einrichtung nicht die vollständige ältere Migration 010 erneut ausführen: Sie würde unter anderem die Berechtigungsversion und den Funktionskatalog auf ihren älteren Stand zurücksetzen.
 
 ## Einzelne Freischaltungen
 
