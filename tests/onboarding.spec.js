@@ -88,3 +88,7 @@ test('finishing the real course and task brings the personal onboarding to 100 p
 test('the personal onboarding plan and its progress fit a phone screen',async({page})=>{
  await page.setViewportSize({width:390,height:844});await onboardingBackend(page);await mine(page);await expect(page.locator('.onboarding-plan-hero')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'test-results/onboarding-personal-mobile.png',fullPage:true});
 });
+
+test('clicking a checklist card opens it without marking it complete',async({page})=>{
+ const state=await onboardingBackend(page);await mine(page);const card=page.locator('.onboarding-step').filter({has:page.getByRole('heading',{name:'Im Team ankommen',exact:true})});const box=await card.locator('.academy-cover').boundingBox();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);const popup=page.getByRole('dialog',{name:'Im Team ankommen',exact:true});await expect(popup).toContainText('Profil und Ansprechpartner kennenlernen.');expect(state.checkDone).toBe(false);expect(state.calls.filter(c=>c.name==='complete_onboarding_step')).toHaveLength(0);await popup.getByLabel('Diesen Schritt als erledigt bestätigen').click();await expect.poll(()=>state.checkDone).toBe(true);expect(state.reviewDone).toBe(false);
+});

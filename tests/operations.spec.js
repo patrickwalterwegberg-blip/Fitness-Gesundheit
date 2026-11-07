@@ -36,3 +36,7 @@ test('the inventory fits a phone, allows scrolling to refresh and restores focus
 test('withdrawn area access clears an open operational report on the next permission refresh',async({page})=>{
  await page.clock.install({time:new Date('2026-11-06T10:00:00Z')});const {state}=await backend(page);const dialog=await start(page);await expect(dialog.getByText(/Serverprüfung am/)).toBeVisible();state.pages=['tasks'];state.caps=[];await page.clock.fastForward(31000);await expect(page.getByRole('dialog',{name:'Betriebsprüfung',exact:true})).toHaveCount(0);await expect(page.getByText(/Serverprüfung am/)).toHaveCount(0);expect(state.queries).toHaveLength(1);
 });
+
+test('finding cards open read-only details and Escape closes only the top popup',async({page})=>{
+ const {state,calls}=await backend(page);const outer=await start(page);const finding=outer.getByRole('button',{name:/Aktive Mitarbeiter ohne Studio: 0 – Prüfdetails öffnen/});await finding.click();const details=page.getByRole('dialog',{name:'Aktive Mitarbeiter ohne Studio: 0',exact:true});await expect(details).toContainText('Bestandsaufnahme');await page.keyboard.press('Escape');await expect(details).toHaveCount(0);await expect(outer).toBeVisible();await expect(finding).toBeFocused();expect(state.queries).toHaveLength(1);expect(calls.some(c=>c.path.startsWith('/functions/')||c.method==='PATCH'||c.method==='DELETE')).toBe(false);
+});

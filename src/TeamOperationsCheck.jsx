@@ -1,10 +1,11 @@
+import CardAction from './CardAction';
 import React,{useEffect,useState} from 'react';
 import {Activity,RefreshCw} from 'lucide-react';
 import ScheduleDialog from './ScheduleDialog';
 import {operationsError,operationsMigrationUrl,qualityChecks,validOperations} from './operations-model';
 import './team-operations.css';
 const when=value=>new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin',dateStyle:'short',timeStyle:'medium'});
-function Finding({title,okay,children}){return <li className={okay?'ops-okay':'ops-attention'}><div><strong>{title}</strong><span className="badge">{okay?'Geprüft':'Prüfen'}</span></div><p>{children}</p></li>;}
+function Finding({title,okay,children}){const[open,setOpen]=useState(false);return <li className={'action-card '+(okay?'ops-okay':'ops-attention')}><CardAction label={`${title} – Prüfdetails öffnen`} onOpen={()=>setOpen(true)}/><div><strong>{title}</strong><span className="badge">{okay?'Geprüft':'Prüfen'}</span></div><p>{children}</p>{open&&<ScheduleDialog title={title} onClose={()=>setOpen(false)}><span className="badge">{okay?'Geprüft':'Prüfen'}</span><p className="card-detail-text">{children}</p><p>Dieser Hinweis zeigt den Stand der letzten Bestandsaufnahme. Das Öffnen verändert keine Daten. Nutze die zuständige Verwaltung, um Einträge zu prüfen oder zu korrigieren.</p></ScheduleDialog>}</li>;}
 export function OperationsButton({client}){
  const [open,setOpen]=useState(false);
  return <><button className="button button-secondary" onClick={e=>{e.currentTarget.focus();setOpen(true);}}><Activity size={15}/>Betriebsprüfung öffnen</button>{open&&<TeamOperationsCheck client={client} onClose={()=>setOpen(false)}/>}</>;

@@ -73,3 +73,5 @@ Die gemeinsamen Fenster setzen den Fokus in das erste verfügbare Eingabefeld, h
 Startseitenlinks zu Lernaufträgen öffnen den zugehörigen Kurs anhand der persönlichen Zuweisung. Wissenseinträge öffnen den ausgewählten Inhalt; **Wissenshub öffnen** bei einer Datei behält den Inhalt bei. **Meine Einarbeitung** führt zum Onboarding, wenn Erweiterung 012 verfügbar ist, andernfalls zur Kursübersicht. **Feedback geben** auf der Startseite öffnet direkt das Formular. Rechte und Studiofreigaben werden weiterhin vom Backend geprüft. Kein Datenbank-Update ist für diese Oberflächenänderung nötig.
 
 Nachweis: `tests/module-links.spec.js`, `administration`, `shared-knowledge`, `pilot`, `communication` sowie die bestehenden Rechte-, Kalender- und Benachrichtigungstests. Browserprüfungen nutzen ein simuliertes Backend; externe Zielseiten und echte Mitarbeiterkonten sind damit nicht vollständig abgenommen.
+
+Die Kartenflächen selbst sind jetzt ebenfalls bedienbar. Im Baukasten öffnen sie bei Bearbeiterrecht den Editor; im Controlling öffnen Kennzahlen die zugehörigen Datensätze. Weitere Bereiche und Bedienregeln: [Karten öffnen und bearbeiten](ANKLICKBARKEIT_UND_KARTEN.md).

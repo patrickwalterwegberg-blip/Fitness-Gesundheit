@@ -20,5 +20,5 @@ export default function ScheduleDialog({title,onClose,busy=false,error,children,
   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
  }
- return <dialog onKeyDown={keepFocus} ref={ref} className={'panel schedule-dialog '+(wide?'schedule-dialog-wide ':'')+className} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();if(!busy)close.current();}}><div className="section-heading"><h2 id={titleId}>{title}</h2><button type="button" className="icon-button" aria-label={closeLabel} disabled={busy} onClick={onClose}><X size={20}/></button></div><div className="schedule-dialog-body">{error&&<div className="team-error" role="alert">{error}</div>}{children}</div></dialog>;
+ return <dialog onKeyDown={keepFocus} ref={ref} className={'panel schedule-dialog '+(wide?'schedule-dialog-wide ':'')+className} aria-labelledby={titleId} onCancel={e=>{e.preventDefault();e.stopPropagation();if(!busy)close.current();}}><div className="section-heading"><h2 id={titleId}>{title}</h2><button type="button" className="icon-button" aria-label={closeLabel} disabled={busy} onClick={onClose}><X size={20}/></button></div><div className="schedule-dialog-body">{error&&<div className="team-error" role="alert">{error}</div>}{children}</div></dialog>;
 }

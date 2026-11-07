@@ -74,3 +74,6 @@ Siehe [Prüfbericht und lesende Betreiberabfragen](SICHERHEIT_UND_DATENSCHUTZ_PR
 - [ ] Einen gespeicherten Moduleintrag öffnen, bearbeiten und speichern. Erneut öffnen: Änderungen und ursprüngliche Modulversion stimmen. Eine weitere Änderung abbrechen: Gespeicherter Stand bleibt erhalten.
 - [ ] Von der Startseite einen persönlichen Lernauftrag und einen Wissenseintrag öffnen: Der ausgewählte Kurs beziehungsweise Inhalt erscheint direkt. **Feedback geben** öffnet das Formular.
 - [ ] Popups mit Kreuz und Escape schließen; Tastaturfokus bleibt während der Eingabe im Fenster und kehrt danach zum Auslöser zurück. Keine Änderung wird durch bloßes Schließen gespeichert.
+
+- [ ] Auf Kartenfläche, Überschrift und Bild klicken: Es öffnet sich der passende Inhalt oder das erlaubte vorausgefüllte Formular. Hinweise und Prüffelder lassen sich vollständig lesen.
+- [ ] Anrufen, Erledigen, Statuswechsel und Veröffentlichungsaktionen funktionieren unabhängig von der Kartenfläche. Reines Öffnen verändert keine Daten. Escape schließt bei mehreren Fenstern nur das oberste.

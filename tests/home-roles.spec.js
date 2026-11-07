@@ -45,3 +45,16 @@ test('homepage and user profile remain usable on a phone',async({page})=>{
 test('missing homepage extension gives admin exact setup instructions and keeps task access available',async({page})=>{
  await backend(page,{missing:true});await dashboard(page);await expect(page.getByRole('link',{name:'008_home_portal.sql öffnen'})).toBeVisible();await page.getByRole('button',{name:/Meine Aufgaben.*Deine nächsten Schritte/}).click();await expect(page.getByRole('button',{name:'Teamaufgabe erstellen'})).toBeVisible();
 });
+
+test('news without a URL opens read-only details and an editable card opens its prefilled form',async({page})=>{
+ const state=await backend(page,{role:'employee'});await dashboard(page);const card=page.locator('.home-news-card');await card.scrollIntoViewIfNeeded();const bounds=await card.getByRole('heading').boundingBox();await page.mouse.click(bounds.x+bounds.width/2,bounds.y+bounds.height/2);const detail=page.getByRole('dialog',{name:'Unser gemeinsamer Teamtag'});await expect(detail).toContainText(state.items.find(i=>i.kind==='news').body);expect(state.calls.filter(c=>c.name==='save_team_home_item')).toHaveLength(0);await page.keyboard.press('Escape');await expect(detail).toHaveCount(0);
+});
+test('homepage card editing uses the same saved revision and retains publication controls',async({page})=>{
+ const state=await backend(page);await dashboard(page);await page.getByRole('button',{name:'Startseite bearbeiten',exact:true}).click();const card=page.locator('.home-news-card');await card.getByRole('button',{name:'Unser gemeinsamer Teamtag im Formular bearbeiten'}).click();const editor=page.getByRole('dialog');await expect(editor.getByLabel('Titel des Eintrags',{exact:true})).toHaveValue('Unser gemeinsamer Teamtag');await editor.getByRole('button',{name:'Startseitenformular schließen'}).click();expect(state.calls.filter(c=>c.name==='save_team_home_item')).toHaveLength(0);
+});
+
+
+test('profile counters and course cards open read-only details without closing the employee profile',async({page})=>{
+ const state=await backend(page);await dashboard(page);const outer=await member(page);await outer.getByRole('tab',{name:'Aufgaben',exact:true}).click();await outer.getByRole('button',{name:'Zugewiesen: Aufgabenzahl öffnen',exact:true}).click();const detail=page.getByRole('dialog',{name:'Zugewiesen · Mitarbeiter Beispiel',exact:true});await expect(detail).toContainText('5 Aufgabe(n)');await page.keyboard.press('Escape');await expect(detail).toHaveCount(0);await expect(outer).toBeVisible();
+ await outer.getByRole('tab',{name:'Lernfortschritt',exact:true}).click();await outer.getByRole('button',{name:'Einarbeitung Empfang: Lernziel öffnen'}).click();await expect(page.getByRole('dialog',{name:'Einarbeitung Empfang',exact:true})).toContainText('2/4 Lektionen gelesen');await page.keyboard.press('Escape');await expect(outer).toBeVisible();expect(state.calls.filter(c=>c.name==='save_team_home_item')).toHaveLength(0);
+});
