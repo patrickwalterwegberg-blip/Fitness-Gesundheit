@@ -1,6 +1,8 @@
 # Eigenständiger KI-Bot im Teamhub
 
-Stand: 06.11.2026. Der Bot ist direkt in den Teamhub integriert. Seine eigene Supabase Edge Function `team-assistant` verbindet freigegebene Wissensinhalte mit einem konfigurierbaren Sprachmodell. Make wird nicht benötigt. Das bestehende Schwarz-Gold-Design und die beiden Einstiege in der Navigation und als schwebender Button bleiben erhalten.
+Die weitere Modellanbindung ist auf Nutzerwunsch vorerst zurückgestellt. Die vorhandene Originalquellensuche bleibt verfügbar; die folgenden Aktivierungsschritte sind optional für einen späteren Zeitpunkt.
+
+Stand der technischen Anbindung: 06.11.2026. Der Bot ist direkt in den Teamhub integriert. Seine eigene Supabase Edge Function `team-assistant` verbindet freigegebene Wissensinhalte mit einem konfigurierbaren Sprachmodell. Make wird nicht benötigt. Das bestehende Schwarz-Gold-Design und die beiden Einstiege in der Navigation und als schwebender Button bleiben erhalten.
 
 **Für echte KI-Antworten müssen Datenbankerweiterung 013 und ein Modellzugang aktiviert sein.** Fehlt die Einrichtung, bleibt die bestehende Originalquellensuche nutzbar. Die Bereitstellung des Codes allein aktiviert kein kostenpflichtiges Modell. Ein tatsächlicher Modellaufruf mit dem produktiven Konto ist noch abzunehmen.
 

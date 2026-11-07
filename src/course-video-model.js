@@ -17,10 +17,16 @@ export function videoError(error){
  if(error?.message?.includes('Video-only lesson'))return 'Diese Lektion besteht nur aus einem Video. Ersetze das Video, statt es zu entfernen.';
  if(error?.message?.includes('another studio'))return 'Ein Kursvideo ist für ein anderes Studio bestimmt. Bitte nutze den passenden Standort oder ein Video für alle Studios.';
  if(error?.message?.includes('unfinished video uploads'))return 'Bitte entferne zuerst einen unvollständigen Upload aus der Videobibliothek.';
+ if(error?.message?.includes('Video is being deleted'))return 'Dieser Eintrag wird gerade entfernt. Aktualisiere die Bibliothek und prüfe dort „Entfernen abschließen“.';
  if(error?.code==='23514')return 'Die Videodatei oder Kurszuordnung konnte nicht bestätigt werden. Bitte prüfe Format, Größe und Kursstatus.';
  if(error?.name==='NotAllowedError'||error?.name==='SecurityError')return 'Kamera oder Mikrofon wurden nicht freigegeben. Erlaube den Zugriff im Browser oder wähle eine Videodatei.';
  if(error?.name==='NotFoundError'||error?.name==='NotReadableError')return 'Kamera oder Mikrofon sind nicht verfügbar. Schließe andere Kamera-Apps oder wähle eine Videodatei.';
  return 'Der Vorgang konnte nicht bestätigt werden. Dein ausgewähltes Video bleibt für einen erneuten Versuch erhalten.';
+}
+export function videoCompletionError(error){
+ if(error?.code==='23514'&&error?.message?.includes('Video is being deleted'))return 'Dieser Eintrag wird gerade entfernt. Bitte aktualisiere die Videobibliothek.';
+ if(error?.code==='23514')return 'Das Original ist noch nicht vollständig vom Server bestätigt. Wähle über „Fortsetzen“ die ursprüngliche Videodatei und prüfe die Übertragung.';
+ return videoError(error);
 }
 export const videoSize=bytes=>`${(bytes/1024/1024).toLocaleString('de-DE',{maximumFractionDigits:1})} MB`;
 export const recordingTime=seconds=>`${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,'0')}`;

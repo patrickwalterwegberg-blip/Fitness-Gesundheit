@@ -2,6 +2,8 @@
 
 Die Erweiterung ergänzt den bestehenden Lernhub im Schwarz-Gold-Design. Kursautoren können direkt über Kamera und Mikrofon aufnehmen, Videos hochladen und einer Lektion zuordnen. Lernende sehen die Videos innerhalb ihrer freigegebenen Kurse und bearbeiten anschließend den Wissenscheck.
 
+Die aktuelle Verbesserung der Upload-Wiederaufnahme benötigt keine neue SQL-Erweiterung. Bei bereits eingerichtetem Videostudio die veröffentlichte Oberfläche neu laden. Die folgenden Installationsschritte gelten für die erstmalige Einrichtung; ältere Migrationen nicht einzeln über neuere Erweiterungen ausführen.
+
 ## Einmalig aktivieren
 
 Voraussetzung: Erweiterungen 001 bis 010 sind installiert.
@@ -26,7 +28,19 @@ Die globale Uploadgrenze im Supabase-Projekt darf nicht unter der Dateigrenze de
 - Titel und Studio festlegen, dann ausdrücklich **Video hochladen** klicken. Die Geschäftsleitung kann Videos auch für alle Studios speichern.
 - Der Fortschritt zeigt die Übertragung an. Als bereit gilt ein Video erst, wenn die Datenbank die gespeicherte Datei samt Dateigröße und Typ bestätigt hat.
 - **Upload unterbrechen** hält die Übertragung an; **Upload fortsetzen** setzt sie mit derselben Datei fort. Nach Schließen des Fensters ist in der Bibliothek der unvollständige Upload sichtbar. Zum Fortsetzen muss die ursprüngliche Datei erneut ausgewählt werden. Für eine lokal aufgenommene Datei daher vor dem Schließen die Sicherung verwenden.
-- Nicht verwendete Videos und unvollständige Uploads können entfernt werden. Schlägt das Entfernen fehl, bleibt der Vorgang sichtbar und kann abgeschlossen werden. Videos mit Kurszuordnung bleiben geschützt.
+- Nicht verwendete Videos und unvollständige Uploads können nach einer ausdrücklichen Einzelbestätigung entfernt werden. Schlägt das Entfernen fehl, bleibt der Vorgang sichtbar und kann abgeschlossen werden. Videos mit Kurszuordnung bleiben geschützt.
+
+## Einen unvollständigen Upload prüfen
+
+1. **Lernhub → Videostudio** öffnen. Den Eintrag anhand von Titel, **Originaldateiname**, Dateigröße, Studio und **Anlegezeit in Europe/Berlin** zuordnen. Ein unvollständiger Eintrag beweist noch keinen Datenverlust.
+2. **Upload-Abschluss prüfen** wählen. Die bestehende Serverfunktion prüft das gespeicherte Original gegen Größe und Dateityp. Ist es vollständig vorhanden, wird derselbe Eintrag als bereit bestätigt. Dafür muss die Datei nicht erneut ausgewählt oder übertragen werden. Eine fehlgeschlagene Prüfung meldet keinen erfolgreichen Abschluss.
+3. Fehlen noch Daten: **Fortsetzen** wählen und genau die ursprüngliche Datei auswählen. Dateiname, Format und Größe müssen übereinstimmen. Der bereits vorhandene Eintrag wird wiederverwendet. Eine unterbrochene Aufnahme daher möglichst vorher über **Video auf diesem Gerät sichern** lokal sichern.
+4. Die Speicherregeln erlauben neue Upload-Daten nur innerhalb von sieben Tagen ab Anlage des Eintrags. Liegt danach noch kein vollständiges Original vor, muss ein neuer Upload angelegt werden. Die Abschlussprüfung eines bereits vorhandenen vollständigen Originals ist weiterhin möglich.
+5. Nur wenn der Eintrag tatsächlich verworfen werden soll: **Upload entfernen** beziehungsweise **Video löschen** wählen. Vor **Endgültig entfernen** werden Titel, Originaldatei, Größe und Anlegezeit zur Prüfung angezeigt. **Abbrechen** startet keine Löschung. Dies gilt auch beim Entfernen aus einem geöffneten Wiederaufnahmeformular.
+
+Die bestätigte Entfernung betrifft genau diesen Eintrag und seine Datei. Eine inzwischen bestehende Kurszuordnung verhindert die Entfernung serverseitig. Bei unterbrochener Entfernung bleibt der Zustand sichtbar und kann über **Entfernen abschließen** erneut geprüft werden. Bereits gelöschte Dateien lassen sich über diese Oberfläche nicht wiederherstellen. Lokale, noch nicht hochgeladene Entwürfe zu anderen Einträgen bleiben bei einer Abschlussprüfung erhalten.
+
+Anschließend **Mitarbeiterzugänge → Betriebsprüfung öffnen → Betriebsprüfung aktualisieren** wählen. Der Zähler unvollständiger Video-Uploads sinkt erst nach einem tatsächlich bestätigten Abschluss oder einer abgeschlossenen Entfernung. Die Entwicklungsprüfung verändert den echten Eintrag nicht.
 
 Die direkte Kameraaufnahme benötigt HTTPS und einen Browser mit MediaRecorder-Unterstützung. Das veröffentlichte GitHub-Pages-Portal verwendet HTTPS. Bei verweigerter Kamerafreigabe bleiben Dateiauswahl und gegebenenfalls die native Handykamera verfügbar. MP4 mit H.264 ist für unterschiedliche Geräte meist am kompatibelsten. MOV-Dateien mit bestimmten Codecs lassen sich nicht auf jedem Gerät abspielen; der Player zeigt dann einen Hinweis zum erneuten Laden beziehungsweise zur Verwendung eines MP4-Videos.
 

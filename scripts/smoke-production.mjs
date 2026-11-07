@@ -23,7 +23,7 @@ const token=`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.test-signature`;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 try {
  const context=await browser.newContext();
- const errors=[],unexpected=[],calls=[],backendReferrers=[];let blockedRequests=0;let learningNotification=false,learningRead=false,aiEnabled=false;
+ const errors=[],unexpected=[],calls=[],backendReferrers=[];let blockedRequests=0;let learningNotification=false,learningRead=false,aiEnabled=false,videoRecovery=null;
  const smokeCourse='00000000-0000-4000-8000-000000000081',smokeAssignment='00000000-0000-4000-8000-000000000082';
  await context.addInitScript(({storageKey,user,token})=>{if(!sessionStorage.getItem('production-smoke-seeded')){localStorage.setItem(storageKey,JSON.stringify({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user}));sessionStorage.setItem('production-smoke-seeded','1');}},{storageKey,user,token});
  await context.route('**/*',async route=>{
@@ -62,7 +62,8 @@ try {
    else if(url.pathname==='/rest/v1/learning_attempts')body=[];
    else if(url.pathname==='/rest/v1/rpc/team_schedule_month')body={days:[]};
    else if(url.pathname==='/rest/v1/calendar_events')body=[];
-   else if(url.pathname==='/rest/v1/rpc/learning_video_library')body={items:[],total:0};
+   else if(url.pathname==='/rest/v1/rpc/learning_video_library')body={items:videoRecovery?[videoRecovery]:[],total:videoRecovery?1:0};
+   else if(url.pathname==='/rest/v1/rpc/finish_learning_video'){assert.equal(route.request().postDataJSON().p_video,videoRecovery.id);videoRecovery.state='ready';body=null;}
    else if(url.pathname==='/rest/v1/rpc/my_onboarding')body={plans:[]};
    else if(url.pathname==='/rest/v1/rpc/team_onboarding')body={plans:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/onboarding_mentors')body=[];
@@ -163,6 +164,19 @@ try {
  await videoStudio.getByLabel('Vorschau deiner Videodatei',{exact:true}).waitFor();
  assert.ok(!calls.includes('/rest/v1/rpc/prepare_learning_video'),'Choosing a local video must not upload it');
  await videoStudio.getByRole('button',{name:'Fenster schließen',exact:true}).click();
+ videoRecovery={id:'00000000-0000-4000-8000-000000000097',title:'Upload ausstehend',created_by:uid,studio_id:null,file_name:'recovery-smoke.mp4',mime_type:'video/mp4',file_size:32,object_path:'local-smoke/recovery.mp4',state:'uploading',used_count:0,created_at:'2026-11-06T10:00:00Z'};
+ await page.getByRole('button',{name:'Videostudio',exact:true}).click();
+ const recovery=page.getByRole('dialog',{name:'Videostudio',exact:true});
+ await recovery.getByText('recovery-smoke.mp4',{exact:true}).waitFor();
+ await recovery.getByRole('button',{name:'Upload-Abschluss prüfen',exact:true}).click();
+ await recovery.getByText(/jetzt bereit/).waitFor();
+ assert.ok(!calls.includes('/rest/v1/rpc/prepare_learning_video'),'Confirming an existing upload must not create a new video');
+ assert.ok(!calls.some(path=>path.includes('/upload/resumable')),'Confirming an existing upload must not transfer its file again');
+ await recovery.getByRole('button',{name:'Video löschen',exact:true}).click();
+ await recovery.getByRole('group',{name:'Entfernung prüfen: Upload ausstehend',exact:true}).getByRole('button',{name:'Abbrechen',exact:true}).click();
+ assert.ok(!calls.includes('/rest/v1/rpc/prepare_delete_learning_video'),'Canceling removal must never start deletion');
+ await recovery.getByRole('button',{name:'Fenster schließen',exact:true}).click();
+
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
  await page.goto('https://teamhub-preview.example.org/Fitness-Gesundheit/login.html');
  await page.getByRole('heading',{name:'Willkommen im Team.'}).waitFor();
@@ -189,5 +203,5 @@ try {
  assert.ok(calls.includes('/auth/v1/token'));
  assert.ok(backendReferrers.length>0&&backendReferrers.every(value=>!value),'Backend requests must not disclose the page URL');
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, read-only operational inventory and email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, read-only operational inventory and email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy, onboarding draft, local video preview, upload confirmation without retransmission and canceled removal, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}

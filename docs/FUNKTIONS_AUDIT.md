@@ -69,7 +69,7 @@ Die lokale SQL-Prüfung bildet Storage-Tabellen nach. Sie prüft Berechtigungen 
 ## Reihenfolge der weiteren Arbeit
 
 1. **Grundfunktionen im echten Betrieb abnehmen:** [Checkliste mit echten Konten](ABNAHME_CHECKLISTE.md), insbesondere Mailzustellung, Mitarbeiterrechte, Kamera-/Storage-Upload und Fälligkeitsmeldungen. Ergebnisse mit Datum festhalten; nur bestätigte Ergebnisse als bestanden markieren.
-2. **Echte KI anbinden:** Modellzugriff im Backend einrichten und freigegebene Quellen als Grundlage verwenden. Ein sicher konfigurierter Modellzugang steht derzeit nicht zur Verfügung. Die vorhandene Suche bleibt bis dahin ausdrücklich als Wissenssuche gekennzeichnet.
+2. **KI-Modell später:** Die weitere Modellanbindung ist auf Nutzerwunsch zurückgestellt. Die vorhandene Originalquellensuche bleibt verfügbar. Eine tatsächliche Modellkonfiguration ist weiterhin nicht bestätigt.
 3. **Lerninhalte und Rückmeldungen ausbauen:** Abgaben und Trainerbewertung, anschließend Lektionenfeedback und zusätzliche Editorbausteine. Vorhandene Lernnachweise und Rechte müssen erhalten bleiben.
 4. **Video erweitern:** Bildschirmaufnahme und Schnitt mit passenden Speicher-/Verarbeitungsgrenzen planen; tatsächliche Gerätekompatibilität prüfen.
 5. **Weitere Produktbereiche entscheiden:** Kundendashboards, Community, Gruppen/Bundles und native App sind eigenständige Erweiterungen. Sie gehören derzeit nicht zum abgenommenen Funktionsumfang.
@@ -98,3 +98,10 @@ Prüfstand der Bot-Erweiterung: **207 Browserfälle, 135 Datenbank-/Modelltests,
 ## Ergänzung: Sicherheits- und Datenschutzprüfung
 
 Die anschließende [Sicherheits- und Datenschutzprüfung](SICHERHEIT_UND_DATENSCHUTZ_PRUEFUNG.md) ergänzt CSP/Referrer-Schutz im Produktionsbuild, einen gemeinsamen CSV-Encoder gegen Formeleingaben und die korrekte Kennzeichnung echter Controlling-Exporte. Nach der Korrektur bestehen 208 Browserfälle, 136 SQL-/Modelltests, 13 Einladungsdiensttests und 9 Bot-Diensttests sowie der Produktionstest. npm-Audit meldet 0 bekannte Schwachstellen. Private Live-Konfiguration, Datenschutzinformation, Aufbewahrung und Backup-/Wiederherstellungsnachweise bleiben separat zu prüfen. Der Bericht ist kein ausgeführter Codex-Security-Scan und keine Datenschutz-Zertifizierung.
+
+
+## Ergänzung: unvollständige Video-Uploads zuordnen und abschließen
+
+Das Videostudio zeigt Originaldateinamen und Anlegezeit in Europe/Berlin. **Upload-Abschluss prüfen** verwendet die bestehende Serverbestätigung: Ein vollständig vorhandenes Original kann ohne erneute Dateiauswahl oder Übertragung als bereit bestätigt werden. Fehlende Daten bleiben als unvollständig sichtbar. Fortsetzen verwendet denselben Eintrag und die ursprüngliche Datei. Entfernen erfordert jetzt die Prüfung des konkreten Eintrags und eine ausdrückliche Einzelbestätigung; auch das Wiederaufnahmeformular nutzt diese Bestätigung. Ein Abbruch startet keine Löschung. Aktuelle Kurszuordnungen werden weiterhin serverseitig geschützt; lokale Entwürfe anderer Einträge bleiben bei einer Abschlussprüfung erhalten.
+
+Keine neue SQL-Erweiterung erforderlich. **227 Browserfälle, 141 Datenbank-/Modelltests, 13 Einladungsdiensttests und 9 Bot-Diensttests bestehen**, zusätzlich ein bestandener Produktionstest mit simulierter Abschlussprüfung und abgebrochener Entfernung. Der echte unvollständige Upload muss weiterhin im eigenen Hub zugeordnet und geprüft werden. Eine tatsächliche Datei wurde bei den Entwicklungstests nicht verändert. Die KI-Modellanbindung bleibt auf Nutzerwunsch zurückgestellt; die Datenschutzinformation bleibt bis zur Vervollständigung ihrer Angaben ein Entwurf.
