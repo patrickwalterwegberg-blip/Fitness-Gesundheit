@@ -6,6 +6,7 @@ import { isAdmin } from './module-model';
 import { berlinDay } from './clock';
 import { taskStatus } from './task-model';
 import './administration.css';
+import {csvText} from './csv';
 
 function completion(task) {
   if (!task.done) return null;
@@ -34,8 +35,8 @@ export default function ControllingCenter({ actor, people, studios, tasks, cours
   const unknownDates = rows.flatMap(r => r.tasks).filter(t => t.done && !completion(t)).length;
   function exportCsv() {
     const cells = [['Mitarbeiter', 'Studio', 'Offen aktuell', 'Überfällig aktuell', 'Zugewiesene Aufgaben erledigt im Zeitraum', 'Gelesene Lektionen', 'Verfügbare Lektionen', 'Wissenstests bestanden', 'Lernziele abgeschlossen'], ...rows.map(r => [r.person.name, r.person.studio, r.open.length, r.overdue.length, r.done.length, r.read, r.totalLessons, r.passed, r.complete.length])];
-    const text = cells.map(row => row.map(v => { const s = String(v); return '"' + (/^[=+@\-\t\r]/.test(s) ? "'" : '') + s.replaceAll('"', '""') + '"'; }).join(';')).join('\r\n');
-    const url = URL.createObjectURL(new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' })); const link = document.createElement('a'); link.href = url; link.download = 'fg-controlling-demo.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const text = csvText(cells);
+    const url = URL.createObjectURL(new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' })); const link = document.createElement('a'); link.href = url; link.download = online?'fg-controlling.csv':'fg-controlling-demo.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <>
     <div className="page-heading"><div><div className="eyebrow">FÜHRUNG & ENTWICKLUNG</div><h1>Dein Team im Überblick.</h1><p>Aufgaben nachvollziehen, Lernziele begleiten und Fortschritte richtig einordnen.</p></div><div className="button-group">{permit('controlling.export')&&<button className="button button-secondary" onClick={exportCsv}><Download size={15}/>CSV exportieren</button>}{permit('learning.assign')&&<button className="button" onClick={() => { setAssigning(true); setConfirming(null); setError(''); }}><Plus size={15}/>Lernziel zuweisen</button>}</div></div>

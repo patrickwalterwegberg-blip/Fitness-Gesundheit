@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {csvText} from './csv';
 import { ArrowRight, ArrowUpRight, Building2, CheckCircle2, Download, ExternalLink, GraduationCap, ListTodo, Package, TrendingUp, Users } from 'lucide-react';
 
 const existingUrl = 'https://fg-gmbh-statistiken-2026.pwalter98.chatgpt.site/';
@@ -17,7 +18,7 @@ export default function StatisticsPage({ tasks, leads, inventory, studio, studio
   const rows = studios.slice(1).filter(s => studio === 'Alle Studios' || s === studio).map(s => ({ studio: s, open: tasks.filter(t => t.studio === s && !t.done).length, done: tasks.filter(t => t.studio === s && t.done).length, leads: leads.filter(l => l.studio === s).length, low: inventory.filter(i => i.studio === s && i.stock < i.min).length }));
   const maxTasks = Math.max(1, ...rows.map(r => r.open + r.done));
   function exportCsv() {
-    const content = [['Studio', 'Offene Aufgaben', 'Erledigte Aufgaben', 'Interessenten', 'Artikel unter Mindestbestand'], ...rows.map(r => [r.studio, r.open, r.done, r.leads, r.low])].map(row => row.map(v => '"' + String(v).replaceAll('"', '""') + '"').join(';')).join('\r\n');
+    const content = csvText([['Studio', 'Offene Aufgaben', 'Erledigte Aufgaben', 'Interessenten', 'Artikel unter Mindestbestand'], ...rows.map(r => [r.studio, r.open, r.done, r.leads, r.low])]);
     const url = URL.createObjectURL(new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a'); a.href = url; a.download = 'fg-studiostatistiken-demo.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

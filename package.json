@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "playwright test",
     "test:production": "node scripts/smoke-production.mjs",
-    "test:db": "node --test --test-isolation=none tests/database.test.mjs tests/schedule-model.test.mjs tests/course-video-model.test.mjs tests/onboarding-model.test.mjs tests/assistant-model.test.mjs tests/layout-order.test.mjs tests/invitation-onboarding-model.test.mjs",
+    "test:db": "node --test --test-isolation=none tests/database.test.mjs tests/schedule-model.test.mjs tests/course-video-model.test.mjs tests/onboarding-model.test.mjs tests/assistant-model.test.mjs tests/layout-order.test.mjs tests/invitation-onboarding-model.test.mjs tests/security-model.test.mjs",
     "test:assistant": "node --test --test-isolation=none tests/assistant-function.test.mjs",
     "test:access": "node --test --test-isolation=none tests/team-access-function.test.mjs"
   },

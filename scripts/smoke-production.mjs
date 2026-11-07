@@ -3,8 +3,12 @@
 import { chromium } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 
 const html=await readFile('dist/Teamhub.html','utf8');
+const inline=html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
+assert.ok(inline,'Standalone script is present');
+assert.ok(html.includes("'sha256-"+createHash('sha256').update(inline).digest('base64')+"'"),'CSP hash matches the exact inline script');
 const functionCatalog=JSON.parse(await readFile('src/function-catalog.json','utf8'));
 const loginHtml=await readFile('dist/login.html','utf8');
 const backend=process.env.VITE_SUPABASE_URL||'https://ftcurcqduzrxsvkujfql.supabase.co';
@@ -18,13 +22,15 @@ const token=`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.test-signature`;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
 try {
  const context=await browser.newContext();
- const errors=[],unexpected=[],calls=[];let learningNotification=false,learningRead=false,aiEnabled=false;
+ const errors=[],unexpected=[],calls=[],backendReferrers=[];let blockedRequests=0;let learningNotification=false,learningRead=false,aiEnabled=false;
  const smokeCourse='00000000-0000-4000-8000-000000000081',smokeAssignment='00000000-0000-4000-8000-000000000082';
  await context.addInitScript(({storageKey,user,token})=>{if(!sessionStorage.getItem('production-smoke-seeded')){localStorage.setItem(storageKey,JSON.stringify({access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user}));sessionStorage.setItem('production-smoke-seeded','1');}},{storageKey,user,token});
  await context.route('**/*',async route=>{
   const url=new URL(route.request().url());calls.push(url.pathname);
+  if(url.hostname==='blocked-origin.example.org'){blockedRequests++;return route.abort();}
   if(url.origin==='https://teamhub-preview.example.org')return route.fulfill({contentType:'text/html',body:url.pathname.endsWith('/login.html')?loginHtml:html});
   if(url.origin===backend){
+   backendReferrers.push(route.request().headers().referer||'');
    const headers={'access-control-allow-origin':'*','access-control-allow-headers':'*','access-control-expose-headers':'content-range','content-type':'application/json','content-range':'*/0'};
    if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers});
    if(url.pathname==='/auth/v1/logout')return route.fulfill({status:204,headers});
@@ -71,6 +77,12 @@ try {
  });
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto('https://teamhub-preview.example.org/');
+ assert.equal(await page.locator('meta[name="referrer"]').getAttribute('content'),'no-referrer');
+ const policyProbe=await page.evaluate(async()=>{const probe=document.createElement('script');probe.textContent='window.untrustedSecurityProbe=true';document.head.appendChild(probe);let rejected=false;try{await fetch('https://blocked-origin.example.org/probe');}catch{rejected=true;}return {inlineRan:window.untrustedSecurityProbe===true,rejected};});
+ assert.equal(policyProbe.inlineRan,false,'Unapproved inline JavaScript must not execute');
+ assert.equal(policyProbe.rejected,true,'Connections outside the configured allowlist must fail');
+ assert.equal(blockedRequests,0,'CSP blocks an unapproved request before it reaches the network');
+
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByText('Aktuell sind dir keine offenen Aufgaben zugewiesen.').waitFor();
  await page.getByRole('button',{name:'Anordnung ändern',exact:true}).click();
@@ -167,6 +179,7 @@ try {
  assert.equal(learningRead,true);
  assert.ok(calls.includes('/rest/v1/rpc/my_team_dashboard'));
  assert.ok(calls.includes('/auth/v1/token'));
+ assert.ok(backendReferrers.length>0&&backendReferrers.every(value=>!value),'Backend requests must not disclose the page URL');
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
  console.log('Compiled production entry, read-only email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}

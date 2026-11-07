@@ -24,7 +24,7 @@ Diese Liste ergänzt die automatisierten Prüfungen. Ergebnisse erst nach einem 
 - [ ] Einen Link oder eine Nachricht für ein Studio und eine Rolle veröffentlichen. Berechtigte sehen den Eintrag, das andere Studio beziehungsweise eine nicht freigegebene Rolle nicht.
 - [ ] Menü und Schnellzugriffe sortieren, speichern und dieselbe Browserseite neu laden. Reihenfolge bleibt erhalten. Abbrechen verwirft Änderungen; Standardreihenfolge lässt sich wiederherstellen.
 - [ ] Eine Wissensdatei als Entwurf hochladen. Ein normaler Mitarbeiter sieht sie erst nach Veröffentlichung und nur innerhalb seiner Freigabe. Original herunterladen und eine neue Version freigeben; frühere Versionen bleiben erhalten.
-- [ ] Als Mitarbeiter einen Begriff im Wissenshub und im Assistenten suchen. Die Quelle lässt sich öffnen; unveröffentlichte Texte und fremde Studios erscheinen nicht. Der Assistent liefert Originalauszüge und keine frei erzeugte KI-Antwort.
+- [ ] Als Mitarbeiter einen Begriff im Wissenshub und im Assistenten suchen. Die Quelle lässt sich öffnen; unveröffentlichte Texte und fremde Studios erscheinen nicht. Im Modus Originalquellen liefert der Assistent Originalauszüge. Der optionale KI-Modus setzt Erweiterung 013, Modellkonfiguration und das eigene KI-Zusatzrecht voraus; erzeugte Antworten müssen anhand der Quellen geprüft werden.
 
 ## Aufgaben, Kalender, Wartung und Glocke
 
@@ -50,4 +50,16 @@ Diese Liste ergänzt die automatisierten Prüfungen. Ergebnisse erst nach einem 
 |---|---|---|---|
 | Noch auszufüllen | | | |
 
-Offene Screenshot-Funktionen wie generative KI, Videoschnitt, Bildschirmaufnahme, Medienabgaben, native App und Kundenportal nicht als bestanden markieren; sie sind im [Funktionsaudit](FUNKTIONS_AUDIT.md) als offen beschrieben.
+Offene Screenshot-Funktionen wie KI-Wizard, Videoschnitt, Bildschirmaufnahme, Medienabgaben, native App und Kundenportal nicht als bestanden markieren; sie sind im [Funktionsaudit](FUNKTIONS_AUDIT.md) als offen beschrieben.
+
+
+## Sicherheits- und Datenschutzabnahme
+
+Siehe [Prüfbericht und lesende Betreiberabfragen](SICHERHEIT_UND_DATENSCHUTZ_PRUEFUNG.md).
+
+- [ ] Aktuelle produktive RLS-/Storage-Regeln mit zwei Rollen und zwei Studios geprüft.
+- [ ] Vollständige Datenschutzinformation, Anbietervereinbarungen und Speicherregionen dokumentiert.
+- [ ] Löschfristen, Mitarbeiter-Austritt und Zuständigkeiten festgelegt.
+- [ ] Backup einschließlich Storage und Wiederherstellung im Testprojekt erfolgreich geprüft.
+- [ ] Echte Controlling-Exporte sind korrekt bezeichnet und enthalten keine ausführbaren Formeln aus Mitarbeiterangaben.
+- [ ] Browserregeln und Sicherheitsheader an der veröffentlichten Domain geprüft.

@@ -2,7 +2,7 @@
 
 Responsive Plattform im Schwarz-Gold-Design für Sögel, Bersenbrück, Dörpen, Lathen, Haselünne, Löningen und Werlte. Der angemeldete Teamzugang verwendet Supabase für gemeinsame Daten und serverseitige Rechte. Die separat gekennzeichnete Demo verwendet ausschließlich lokale Browserdaten.
 
-[Teamhub öffnen](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/) · [Passwort-Anmeldung](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) · [Funktionsaudit und offene Punkte](docs/FUNKTIONS_AUDIT.md) · [Abnahme mit echten Konten](docs/ABNAHME_CHECKLISTE.md)
+[Teamhub öffnen](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/) · [Passwort-Anmeldung](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) · [Funktionsaudit und offene Punkte](docs/FUNKTIONS_AUDIT.md) · [Abnahme mit echten Konten](docs/ABNAHME_CHECKLISTE.md) · [Sicherheits- und Datenschutzprüfung](docs/SICHERHEIT_UND_DATENSCHUTZ_PRUEFUNG.md)
 
 ## Gemeinsame Funktionen im Teamzugang
 

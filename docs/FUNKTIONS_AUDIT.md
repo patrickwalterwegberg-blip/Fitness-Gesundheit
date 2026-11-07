@@ -94,3 +94,7 @@ Der neue Dienst `team-assistant` verbindet Fragen direkt mit einem konfigurierba
 
 
 Prüfstand der Bot-Erweiterung: **207 Browserfälle, 135 Datenbank-/Modelltests, 9 Bot-Diensttests und 13 Einladungsdiensttests bestanden**, zusätzlich ein bestandener Test des kompilierten Produktionsbuilds mit beiden Antwortmodi. Backend und Modell sind bei Browser-/Produktionstests vollständig simuliert. Die Bereitstellung ersetzt nicht die ausstehende Installation von 013 und die Abnahme mit einem echten Modellzugang.
+
+## Ergänzung: Sicherheits- und Datenschutzprüfung
+
+Die anschließende [Sicherheits- und Datenschutzprüfung](SICHERHEIT_UND_DATENSCHUTZ_PRUEFUNG.md) ergänzt CSP/Referrer-Schutz im Produktionsbuild, einen gemeinsamen CSV-Encoder gegen Formeleingaben und die korrekte Kennzeichnung echter Controlling-Exporte. Nach der Korrektur bestehen 208 Browserfälle, 136 SQL-/Modelltests, 13 Einladungsdiensttests und 9 Bot-Diensttests sowie der Produktionstest. npm-Audit meldet 0 bekannte Schwachstellen. Private Live-Konfiguration, Datenschutzinformation, Aufbewahrung und Backup-/Wiederherstellungsnachweise bleiben separat zu prüfen. Der Bericht ist kein ausgeführter Codex-Security-Scan und keine Datenschutz-Zertifizierung.
