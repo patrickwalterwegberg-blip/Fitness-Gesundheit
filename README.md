@@ -2,7 +2,7 @@
 
 Responsive Plattform im Schwarz-Gold-Design für Sögel, Bersenbrück, Dörpen, Lathen, Haselünne, Löningen und Werlte. Der angemeldete Teamzugang verwendet Supabase für gemeinsame Daten und serverseitige Rechte. Die separat gekennzeichnete Demo verwendet ausschließlich lokale Browserdaten.
 
-[Teamhub öffnen](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/) · [Passwort-Anmeldung](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) · [Funktionsaudit und offene Punkte](docs/FUNKTIONS_AUDIT.md) · [Abnahme mit echten Konten](docs/ABNAHME_CHECKLISTE.md) · [Sicherheits- und Datenschutzprüfung](docs/SICHERHEIT_UND_DATENSCHUTZ_PRUEFUNG.md)
+[Teamhub öffnen](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/) · [Passwort-Anmeldung](https://patrickwalterwegberg-blip.github.io/Fitness-Gesundheit/login.html) · [Funktionsaudit und offene Punkte](docs/FUNKTIONS_AUDIT.md) · [Abnahme mit echten Konten](docs/ABNAHME_CHECKLISTE.md) · [Sicherheits- und Datenschutzprüfung](docs/SICHERHEIT_UND_DATENSCHUTZ_PRUEFUNG.md) · [Betriebsprüfung im Hub](docs/BETRIEBSPRUEFUNG.md)
 
 ## Gemeinsame Funktionen im Teamzugang
 
@@ -10,6 +10,7 @@ Responsive Plattform im Schwarz-Gold-Design für Sögel, Bersenbrück, Dörpen, 
 |---|---|---|
 | Startseite | Persönliche Schnellzugriffe, freigegebene Links, Neuigkeiten, Ansprechpartner; Inhalte nach Studio und Rolle | [Startseite und Profile](docs/STARTSEITE_UND_PROFILE.md) |
 | Mitarbeiter | Profile, drei Grundrollen, Studios, einzelne Zusatzrechte, Einladung, Import, Passwort, Wiederherstellung und geschützte E-Mail-Zugangsprüfung | [Zugänge](docs/MITARBEITERZUGAENGE.md), [Einzelrechte](docs/FUNKTIONSRECHTE.md), [E-Mail-Prüfung](docs/EMAIL_VERSAND.md) |
+| Betriebsprüfung | Lesende Admin-Bestandsaufnahme zu privaten Dateibereichen, zehn zentralen Tabellen, Kontozuordnung, Dateikonsistenz und Hintergrundjob; benötigt 014 | [Betriebsprüfung](docs/BETRIEBSPRUEFUNG.md) |
 | Aufgaben und Kalender | Eigene private Aufgaben und Termine, Teamzuweisung, Wiederholungen, Gerätewartung mit verknüpften Kalenderaufgaben | [Kalender und Benachrichtigungen](docs/KALENDER_AUFGABEN_BENACHRICHTIGUNGEN.md) |
 | Benachrichtigungen | Chronologischer Verlauf, Lesestand, Fälligkeiten, Aufgaben, Termine, Chat, Feedback, Lernaufträge und Onboarding | [Kalender und Benachrichtigungen](docs/KALENDER_AUFGABEN_BENACHRICHTIGUNGEN.md) |
 | Wissen und Dateien | Private Originale, Versionen, Entwurf/Freigabe, Standort-/Rollenrechte und Textsuche; bis 50 MB je Datei | [Dateien und Wissen](docs/DATEIEN_WISSEN_NUTZER.md) |

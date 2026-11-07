@@ -6,3 +6,9 @@ test('spreadsheet exports treat formulas and prefixed control/whitespace payload
  for(const value of ['Mitarbeiter Beispiel','Max; Beispiel','Name "Zitat"','Gerät\nWartung','123'])assert.equal(csvCell(value),'"'+value.replaceAll('"','""')+'"');
  assert.equal(csvText([['Name','Studio'],['A;B','"Dörpen"']]),'"Name";"Studio"\r\n"A;B";"""Dörpen"""');
 });
+
+test('operational snapshots require all counts and explicit private/missing states before showing results',async()=>{
+ const {validOperations}=await import('../src/operations-model.js');const {operationsFixture}=await import('./operations-fixture.js');assert.equal(validOperations(operationsFixture()),true);
+ for(const change of [d=>{delete d.quality.auth_without_profile;},d=>{d.quality.active_without_studio=-1;},d=>{d.tables.pop();},d=>{d.buckets[0].exists=false;},d=>{d.checked_at='unknown';},d=>{d.cron.active_jobs=-1;}]){const data=operationsFixture();change(data);assert.equal(validOperations(data),false);}
+ const data=operationsFixture();data.buckets[0]={id:data.buckets[0].id,exists:false,private:null,size_limit:null};assert.equal(validOperations(data),true);
+});

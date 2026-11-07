@@ -58,7 +58,7 @@ from storage.buckets where id in ('team-knowledge','course-videos');
 
 -- RLS und anonyme Tabellenrechte für die zentralen Fachbereiche.
 select c.relname, c.relrowsecurity as rls,
-       has_table_privilege('anon',c.oid,'SELECT') as anonymous_select
+       has_any_column_privilege('anon',c.oid,'SELECT') as anonymous_select
 from pg_class c join pg_namespace n on n.oid=c.relnamespace
 where n.nspname='public' and c.relkind in ('r','p')
   and c.relname in ('profiles','tasks','calendar_events','knowledge_documents',
@@ -106,3 +106,8 @@ Die [Abnahme mit echten Konten](ABNAHME_CHECKLISTE.md) ist die nächste verbindl
 | Signaturprüfung privater Schlüssel | Kein Treffer in den geprüften versionierten Arbeitsdateien; keine Aussage über alle denkbaren Geheimnisformate oder die vollständige Historie |
 
 Browser-/Diensttests und Produktionstest verwenden simulierte Backend-/Mail-/Modellantworten. SQL-Regeln werden lokal in PGlite ausgeführt. Die produktiven Betriebsnachweise in diesem Bericht bleiben davon unabhängig offen.
+
+
+## Ergänzung: Betriebsprüfung in der Anwendung
+
+Die [Betriebsprüfung](BETRIEBSPRUEFUNG.md) stellt die lesende technische Bestandsaufnahme für aktive Admins direkt auf Startseite und unter Mitarbeiterzugänge bereit. Erweiterung 014 ergänzt eine geschützte RPC mit festgelegten Metadaten und aggregierten Zählern. Damit können Betreiber tatsächliche Werte im eigenen Projekt abrufen, ohne personenbezogene Inhalte oder Secrets weiterzugeben. Die Anzeige erteilt keine pauschale Freigabe und bestätigt keine Backups, Verträge, Region, Zustellung oder Modellantworten. Installation und echter produktiver Abruf bleiben separat auszuführen. Der [Datenschutzhinweis-Entwurf](DATENSCHUTZHINWEISE_ENTWURF.md) enthält noch auszufüllende Unternehmensangaben und wird deshalb nicht als fertige Erklärung in der Anwendung veröffentlicht.

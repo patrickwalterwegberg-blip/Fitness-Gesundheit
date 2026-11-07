@@ -50,6 +50,7 @@ const schedule=await readFile('backend/supabase/010_calendar_tasks_notifications
 const video=await readFile('backend/supabase/011_course_videos.sql','utf8');await db.exec(video);await db.exec(video);
 const onboarding=await readFile('backend/supabase/012_employee_onboarding.sql','utf8');await db.exec(onboarding);await db.exec(onboarding);
 const assistant=await readFile('backend/supabase/013_team_assistant.sql','utf8');await db.exec(assistant);await db.exec(assistant);
+const operations=await readFile('backend/supabase/014_operations_check.sql','utf8');await db.exec(operations);await db.exec(operations);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -1069,4 +1070,35 @@ test('AI is a separately granted function; withdrawing it preserves knowledge ac
  assert.equal((await assistantAs(user,'select public.team_assistant_status() as result')).can_ask,true);
  grant=await asUser('admin',async tx=>(await tx.query('select public.admin_function_access($1,array[]::text[],$2) as result',[user,grant.revision])).rows[0].result);
  assert.equal((await assistantAs(user,'select public.team_assistant_status() as result')).can_ask,false);await assert.rejects(assistantAs(user,'select public.reserve_team_assistant_request() as result'),e=>e.code==='42501');
+});
+
+test('operations inventory is restricted to active admins even when an employee has delegated user-management functions',async()=>{
+ for(const who of ['employee','manager','inactive'])await assert.rejects(asUser(who,tx=>tx.query('select public.admin_operations_status()')),e=>e.code==='42501');
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');await tx.query('select public.admin_operations_status()');}),e=>e.code==='42501');
+ const user=await assistantUser(9201);await db.query("update public.team_function_access set grants=array['users.view','users.access','users.login','assistant.ask'] where user_id=$1",[user]);
+ await assert.rejects(assistantAs(user,'select public.admin_operations_status() as result'),e=>e.code==='42501');
+});
+test('operations inventory returns only complete predetermined metadata and counters and does not mutate records',async()=>{
+ const before=(await db.query("select (select count(*) from public.team_access_events) as events,(select count(*) from public.profiles) as profiles,(select count(*) from storage.objects) as objects,(select count(*) from app_private.team_assistant_requests) as ai_requests")).rows[0];
+ const result=(await asUser('admin',tx=>tx.query('select public.admin_operations_status() as result'))).rows[0].result;
+ const {validOperations}=await import('../src/operations-model.js');assert.equal(validOperations(result),true);assert.equal(result.tables.length,10);assert.equal(result.buckets.length,2);assert.equal(result.private_schema_anonymous,false);assert.equal(result.installations.assistant,true);assert.equal(result.installations.onboarding,true);assert.equal(result.cron.installed,false);assert.equal(result.cron.active_jobs,null);
+ assert.ok(result.tables.every(t=>t.exists&&t.rls&&!t.anonymous_select));assert.ok(result.buckets.every(b=>b.exists&&b.private));
+ const output=JSON.stringify(result);for(const forbidden of ['@example.org','password','command','full_name','access_token','body','text_content'])assert.equal(output.includes(forbidden),false,forbidden);
+ const after=(await db.query("select (select count(*) from public.team_access_events) as events,(select count(*) from public.profiles) as profiles,(select count(*) from storage.objects) as objects,(select count(*) from app_private.team_assistant_requests) as ai_requests")).rows[0];assert.deepEqual(after,before);
+});
+test('operations counters expose known issues as counts without identities; public storage and lost RLS are reported',async()=>{
+ const prior=(await asUser('admin',tx=>tx.query('select public.admin_operations_status() as r'))).rows[0].r;
+ const uid=await assistantUser(9202);await db.query('delete from public.studio_memberships where user_id=$1',[uid]);
+ const unlinked=id(9203);await db.query('insert into auth.users(id,email) values($1,$2)',[unlinked,'operations-orphan@example.org']);
+ await db.query("insert into storage.objects(bucket_id,name) values('team-knowledge','operations-orphan.txt')");
+ const report=(await asUser('admin',tx=>tx.query('select public.admin_operations_status() as r'))).rows[0].r;
+ assert.equal(report.quality.active_without_studio,prior.quality.active_without_studio+1);assert.equal(report.quality.auth_without_profile,prior.quality.auth_without_profile+1);assert.equal(report.quality.unlinked_knowledge_objects,prior.quality.unlinked_knowledge_objects+1);assert.equal(JSON.stringify(report).includes('operations-orphan'),false);
+ await db.transaction(async tx=>{await tx.exec("update storage.buckets set public=true where id='course-videos'; alter table public.calendar_events disable row level security;grant select on public.calendar_events to anon;");await tx.exec('set local role authenticated');await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.admin]);const r=(await tx.query('select public.admin_operations_status() as r')).rows[0].r;assert.equal(r.buckets.find(b=>b.id==='course-videos').private,false);assert.equal(r.tables.find(t=>t.name==='calendar_events').rls,false);assert.equal(r.tables.find(t=>t.name==='calendar_events').anonymous_select,true);});
+ await db.exec("update storage.buckets set public=false where id='course-videos'; alter table public.calendar_events enable row level security;revoke select on public.calendar_events from anon;");
+});
+test('operations inventory also detects column-level anonymous read grants and metadata pointing to missing originals',async()=>{
+ const initial=(await asUser('admin',tx=>tx.query('select public.admin_operations_status() as r'))).rows[0].r;
+ const file=(await db.query("select o.id from storage.objects o join public.knowledge_versions v on v.object_path=o.name where o.bucket_id='team-knowledge' and v.kind='file' and v.state='ready' limit 1")).rows[0];
+ const video=(await db.query("select o.id from storage.objects o join public.learning_videos v on v.object_path=o.name where o.bucket_id='course-videos' and v.state='ready' limit 1")).rows[0];assert.ok(file);assert.ok(video);
+ await db.transaction(async tx=>{await tx.query('delete from storage.objects where id in($1,$2)',[file.id,video.id]);await tx.exec('grant select(full_name) on public.profiles to anon');await tx.exec('set local role authenticated');await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.admin]);const r=(await tx.query('select public.admin_operations_status() as r')).rows[0].r;assert.equal(r.tables.find(t=>t.name==='profiles').anonymous_select,true);assert.equal(r.quality.missing_knowledge_objects,initial.quality.missing_knowledge_objects+1);assert.equal(r.quality.missing_video_objects,initial.quality.missing_video_objects+1);});
 });

@@ -63,3 +63,7 @@ Siehe [Prüfbericht und lesende Betreiberabfragen](SICHERHEIT_UND_DATENSCHUTZ_PR
 - [ ] Backup einschließlich Storage und Wiederherstellung im Testprojekt erfolgreich geprüft.
 - [ ] Echte Controlling-Exporte sind korrekt bezeichnet und enthalten keine ausführbaren Formeln aus Mitarbeiterangaben.
 - [ ] Browserregeln und Sicherheitsheader an der veröffentlichten Domain geprüft.
+
+- [ ] Erweiterung 014 installiert und als aktiver Admin eine aktuelle Betriebsprüfung abgerufen. Werte mit Anbieter-Verwaltung verglichen; technische Prüffälle zuerst geklärt.
+- [ ] Mit einem delegierten Nutzerverwalter geprüft, dass die globale Betriebsprüfung nicht freigegeben ist.
+- [ ] Fehlende Originaldateien und unvollständige Uploads fachlich geprüft; keine automatische Löschung aufgrund eines Zählers.

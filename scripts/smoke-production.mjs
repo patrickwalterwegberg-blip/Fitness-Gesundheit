@@ -9,6 +9,7 @@ const html=await readFile('dist/Teamhub.html','utf8');
 const inline=html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
 assert.ok(inline,'Standalone script is present');
 assert.ok(html.includes("'sha256-"+createHash('sha256').update(inline).digest('base64')+"'"),'CSP hash matches the exact inline script');
+const {operationsFixture}=await import('../tests/operations-fixture.js');
 const functionCatalog=JSON.parse(await readFile('src/function-catalog.json','utf8'));
 const loginHtml=await readFile('dist/login.html','utf8');
 const backend=process.env.VITE_SUPABASE_URL||'https://ftcurcqduzrxsvkujfql.supabase.co';
@@ -48,6 +49,7 @@ try {
     assert.equal(credentials.password,'Smoke-Test-Passphrase-2026!');
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
+   else if(url.pathname==='/rest/v1/rpc/admin_operations_status')body=operationsFixture();
    else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:12,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
    else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[{...profile,email:user.email,studio_ids:[],invited_at:null,last_sign_in_at:null}],total:1,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
@@ -85,6 +87,12 @@ try {
 
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByText('Aktuell sind dir keine offenen Aufgaben zugewiesen.').waitFor();
+ await page.getByRole('button',{name:'Betriebsprüfung öffnen',exact:true}).click();
+ const operations=page.getByRole('dialog',{name:'Betriebsprüfung',exact:true});
+ await operations.getByText('Aktive Mitarbeiter ohne Studio: 0',{exact:true}).waitFor();
+ await operations.getByText('Weitere Nachweise bleiben offen',{exact:true}).waitFor();
+ assert.ok(!calls.includes('/functions/v1/team-access'),'Operational inventory must not request mail');
+ await operations.getByRole('button',{name:'Fenster schließen',exact:true}).click();
  await page.getByRole('button',{name:'Anordnung ändern',exact:true}).click();
  const layoutDialog=page.getByRole('dialog',{name:'Startseite anordnen',exact:true});
  await layoutDialog.getByRole('button',{name:'Mein Kalender nach oben',exact:true}).click();
@@ -181,5 +189,5 @@ try {
  assert.ok(calls.includes('/auth/v1/token'));
  assert.ok(backendReferrers.length>0&&backendReferrers.every(value=>!value),'Backend requests must not disclose the page URL');
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, read-only email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, read-only operational inventory and email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy, onboarding draft and local video preview, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
