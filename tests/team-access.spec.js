@@ -107,6 +107,7 @@ test('authenticated employee can update own status and reply, without management
   const update = calls.find(c => c.path === '/rest/v1/tasks' && c.method === 'PATCH');
   expect(update.body).toEqual({ status: 'in_progress' });
   expect(calls.find(c => c.path === '/rest/v1/task_comments' && c.method === 'POST').body.author_id).toBe(uid);
+  await page.getByRole('button',{name:'Teamaufgabe schließen'}).click();
   await page.getByRole('button', { name: 'Abmelden', exact: true }).click();
   await expect(page.getByLabel('Deine Firmen-E-Mail-Adresse')).toBeVisible();
   await expect(page.getByText('Beschreibung aus der Datenbank')).toHaveCount(0);

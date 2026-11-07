@@ -93,6 +93,8 @@ test('administrator creates a course only on save and assigns it to their own re
   await page.getByRole('button',{name:'Kurs auf dem Server speichern',exact:true}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('heading',{name:'[TEST] Den Teamhub kennenlernen',exact:true})).toBeVisible();
   expect(state.courses).toHaveLength(1);expect(state.assignments).toHaveLength(0);
+  await page.getByRole('button',{name:'Lernauftrag zuweisen',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Lernauftrag zuweisen'})).toBeVisible();
   await page.getByRole('button',{name:'Kurs zuweisen',exact:true}).click();
   await expect(page.getByRole('status').filter({hasText:'Lernauftrag auf dem Server erstellt'})).toBeVisible();
   expect(state.assignments[0].learner_id).toBe(sharedIds.user);expect(state.assignments[0].requires_practice).toBe(false);
@@ -127,4 +129,13 @@ test('personal overview, course reader and editor fit a mobile viewport',async({
   await page.getByRole('button',{name:'Kurs erstellen',exact:true}).click();await page.getByRole('button',{name:'Testvorlage einsetzen'}).click();
   await expect(page.getByRole('dialog')).toBeVisible();expect(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await page.screenshot({path:'test-results/pilot-mobile.png',fullPage:true});
+});
+
+
+test('dashboard learning entry opens exactly its assignment instead of only the catalog',async({page})=>{
+ const state=await pilotBackend(page);await page.goto('/tests/workspace.html?start=dashboard');
+ await page.getByRole('button',{name:/Einarbeitung Empfang 0\/2/}).click();
+ await expect(page.getByRole('navigation',{name:'Kurslektionen'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Aufgaben bearbeiten',exact:true})).toBeVisible();
+ expect(state.calls.some(c=>c.name==='learning_assignments')).toBe(true);
 });

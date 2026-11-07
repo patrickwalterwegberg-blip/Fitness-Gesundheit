@@ -1,3 +1,4 @@
+import ScheduleDialog from './ScheduleDialog';
 import React,{useEffect,useRef,useState} from 'react';
 import { ArrowLeft, BookOpen, Info, ClipboardList, Eye, EyeOff, FolderOpen, KeyRound, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
 import { authErrorMessage,mailRetryDelay,passwordValidation,teamAuthRedirect } from './team-auth';
@@ -36,7 +37,7 @@ export default function TeamLogin({client,onStart,accountEmail=null,onClose,init
     finally{operation.current=false;if(live.current)setBusy(false);}
   }
   const reset=mode==='reset',magic=mode==='magic';
-  return <section className={'team-auth '+(accountEmail?'team-auth-account':'')} aria-label={accountEmail?'Passwort festlegen oder ändern':'Mitarbeiteranmeldung'}>
+  const content=<section className={'team-auth '+(accountEmail?'team-auth-account':'')} aria-label={accountEmail?'Passwort festlegen oder ändern':'Mitarbeiteranmeldung'}>
     {!accountEmail&&<aside className="auth-welcome"><div className="eyebrow">FITNESS & GESUNDHEIT · TEAMHUB</div><h2>Sieben Studios.<br/><span>Ein Team.</span></h2><p>Dein Arbeitsplatz für einen gut organisierten Studioalltag.</p><ul><li><ClipboardList size={21}/><div><strong>Wissen, was ansteht.</strong><span>Deine Aufgaben und Termine im Blick.</span></div></li><li><BookOpen size={21}/><div><strong>Gemeinsam besser werden.</strong><span>Lernen und Fortschritte verfolgen.</span></div></li><li><FolderOpen size={21}/><div><strong>Antworten schnell finden.</strong><span>Freigegebene Unterlagen an einem Ort.</span></div></li></ul><small>Sögel · Bersenbrück · Dörpen · Lathen · Haselünne · Löningen · Werlte</small></aside>}
     <div className="auth-card"><span className="auth-mark">{reset?<KeyRound size={25}/>:magic?<Mail size={25}/>:<LockKeyhole size={25}/>}</span><h2>{reset?'Dein Passwort festlegen.':magic?'Anmeldung per E-Mail.':'Willkommen im Team.'}</h2><p>{reset?'Beim ersten Mal oder wenn du dein Passwort vergessen hast: Fordere einen persönlichen Link per E-Mail an.':magic?'Du erhältst einen zeitlich begrenzten Anmeldelink für dein bestehendes Konto.':'Melde dich mit deiner Firmen-E-Mail-Adresse und deinem persönlichen Teamhub-Passwort an.'}</p>
       {error&&<div className="auth-error" role="alert">{error}</div>}{notice&&<div className="auth-notice" role="status"><Info size={17}/><span>{notice}</span></div>}
@@ -49,6 +50,7 @@ export default function TeamLogin({client,onStart,accountEmail=null,onClose,init
       <p className="auth-help">{mode==='password'?'Noch kein Teamhub-Passwort? Wähle „Passwort festlegen / vergessen“. ':''}Neue Mitarbeiter benötigen zuerst eine persönliche Einladung in den Teamhub. Eine Link-Anforderung erstellt kein neues Konto. Nur freigeschaltete Mitarbeiter können auf Teamdaten zugreifen. Bei Problemen wende dich an Patrick Walter.</p>
     </div>
   </section>;
+  return accountEmail?<ScheduleDialog title="Passwort festlegen oder ändern" busy={busy} onClose={onClose}>{content}</ScheduleDialog>:content;
 }
 
 export function TeamNewPassword({onSave,email,disabled=false}) {

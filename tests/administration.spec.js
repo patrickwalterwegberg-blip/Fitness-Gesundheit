@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date('2026-11-04T10:00:00+01:00')); });
 async function profile(page, id) {
+  if(await page.getByRole('button',{name:'Mitarbeiterdetails schließen'}).isVisible())await page.getByRole('button',{name:'Mitarbeiterdetails schließen'}).click();
   await page.getByRole('button', { name: 'Demo-Profil wechseln', exact: true }).click();
   await page.getByLabel('Profil für die Vorschau').selectOption(id);
 }
@@ -16,7 +17,7 @@ async function createModule(page, title, label, type = 'text', target = 'standal
   await page.getByLabel('Pflichtfeld 1', { exact: true }).check();
 }
 async function publish(page) { await page.getByRole('button', { name: 'Veröffentlichen', exact: true }).click(); await expect(page.locator('.admin-success')).toContainText('Neue Modulversion veröffentlicht'); }
-async function openModule(page, title) { await page.locator('.builder-module-card').filter({ has: page.getByRole('heading', { name: title, exact: true }) }).getByRole('button', { name: 'Modul öffnen' }).click(); }
+async function openModule(page, title) { if(await page.getByRole('button',{name:'Moduleditor schließen'}).isVisible()){await page.getByRole('dialog').getByRole('button',{name:'Modul öffnen',exact:true}).click();return;} await page.locator('.builder-module-card').filter({ has: page.getByRole('heading', { name: title, exact: true }) }).getByRole('button', { name: 'Modul öffnen' }).click(); }
 
 test('module versions preserve original records and can be restored', async ({ page }) => {
   await createModule(page, 'Serviceprotokoll', 'Seriencode');
@@ -125,6 +126,7 @@ test('controlling shows documented completion actor and respects the completion 
   await page.getByLabel('Mitarbeiter im Controlling').selectOption('p2');
   await page.getByRole('button', { name: 'Details zu Studioleitung', exact: true }).click();
   await expect(page.locator('.control-detail')).toContainText('Erledigt von: Studioleitung');
+  await page.getByRole('button',{name:'Mitarbeiterdetails schließen'}).click();
   await page.getByLabel('Zeitraum für Aufgabenabschlüsse').selectOption('custom');
   await page.getByLabel('Abschluss von').fill('2027-01-01'); await page.getByLabel('Abschluss bis').fill('2027-01-31');
   const row = page.locator('.control-table tbody tr').first();
@@ -152,4 +154,25 @@ test('builder and controlling fit mobile screens', async ({ page }) => {
   await page.goto('/#controlling');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/controlling-mobile.png', fullPage: true });
+});
+
+
+test('module record popup edits its original version and cancellation leaves saved data intact',async({page})=>{
+ await createModule(page,'Prüfprotokoll','Prüfnotiz');await publish(page);await openModule(page,'Prüfprotokoll');
+ await page.getByRole('button',{name:'Neuer Eintrag',exact:true}).click();const form=page.getByRole('dialog',{name:'Neuer Eintrag · Version 1'});
+ await form.getByLabel('Prüfnotiz *',{exact:true}).fill('Erste Kontrolle');await form.getByRole('button',{name:'Eintrag speichern'}).click();
+ await page.getByRole('button',{name:'Eintrag 1',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Eintrag bearbeiten'}).click();
+ const editor=page.getByRole('dialog',{name:'Eintrag bearbeiten · Version 1'});await expect(editor.getByLabel('Prüfnotiz *',{exact:true})).toHaveValue('Erste Kontrolle');await expect(editor.getByLabel('Prüfnotiz *',{exact:true})).toBeFocused();
+ await editor.getByLabel('Prüfnotiz *',{exact:true}).fill('Geprüft und ergänzt');await editor.getByRole('button',{name:'Eintrag speichern'}).click();
+ await page.getByRole('button',{name:'Eintrag 1',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('Geprüft und ergänzt');
+ await page.getByRole('dialog').getByRole('button',{name:'Eintrag bearbeiten'}).click();await editor.getByLabel('Prüfnotiz *',{exact:true}).fill('Nicht speichern');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Eintrag 1',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('Geprüft und ergänzt');await expect(page.getByRole('dialog')).not.toContainText('Nicht speichern');
+});
+
+
+test('Escape closes only the top additional-field popup and returns focus to the parent',async({page})=>{
+ await createModule(page,'Wartungsfenster','Servicenotiz','text','equipment');await publish(page);await page.getByRole('button',{name:'Moduleditor schließen'}).click();await page.goto('/#equipment');
+ await page.getByRole('button',{name:'Zusatzfelder für Laufband 01',exact:true}).click();const parent=page.getByRole('dialog');const trigger=parent.getByRole('button',{name:'Neuer Eintrag',exact:true});await trigger.click();
+ const child=page.getByRole('dialog',{name:'Neuer Eintrag · Version 1'});await expect(child).toBeVisible();await child.getByLabel('Servicenotiz').fill('Nicht speichern');await page.keyboard.press('Escape');await expect(child).toHaveCount(0);await expect(page.getByRole('dialog')).toHaveCount(1);await expect(trigger).toBeFocused();
+ await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('fg-hub-module-records')))).toEqual([]);
 });

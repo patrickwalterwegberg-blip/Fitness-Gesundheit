@@ -12,6 +12,7 @@ async function article(page, title, text) {
   await expect(page.getByRole('status')).toContainText('Entwurf gemeinsam gespeichert');
 }
 async function upload(page, name, mimeType, buffer) {
+  if(await page.getByRole('button',{name:'Wissensdetails schließen'}).isVisible())await page.getByRole('button',{name:'Wissensdetails schließen'}).click();
   await page.getByRole('button', { name: 'Datei hochladen', exact: true }).click();
   await page.getByLabel('Originaldatei auswählen', { exact: true }).setInputFiles({ name, mimeType, buffer });
   await page.getByRole('button', { name: 'Entwurf speichern', exact: true }).click();
@@ -26,6 +27,7 @@ test('shared articles require publication and remain plain text in search and de
   expect(backend.documents[0].published_version_id).toBeNull();
   await page.getByRole('button', { name: 'Version freigeben', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Version freigegeben');
+  await page.getByRole('button',{name:'Wissensdetails schließen'}).click();
   await page.getByRole('button', { name: 'Wissenshub', exact: true }).click();
   await page.getByLabel('Wissen durchsuchen', { exact: true }).fill('Handtuch');
   await page.getByRole('button', { name: 'Suchen', exact: true }).click();
@@ -131,6 +133,7 @@ test('an uploaded draft can be found, released and displayed in knowledge with f
   await upload(page, 'studio-anleitung.txt', 'text/plain', Buffer.from('Freigegebene Studioanleitung.'));
   await expect(page.getByRole('status')).toContainText('Entwurf gemeinsam gespeichert');
   await expect(page.locator('.knowledge-detail')).toContainText('Dieser Inhalt ist ein Entwurf');
+  await page.getByRole('button',{name:'Wissensdetails schließen'}).click();
   await page.getByRole('button', { name: 'Wissenshub', exact: true }).click();
   await expect(page.locator('.knowledge-empty')).toContainText('Neue Uploads bleiben bis zur Freigabe');
   await page.getByRole('button', { name: 'Sichtbare Entwürfe anzeigen', exact: true }).click();
@@ -141,6 +144,7 @@ test('an uploaded draft can be found, released and displayed in knowledge with f
   await expect(page.getByRole('status')).toContainText('Version freigegeben');
   await expect(page.getByLabel('Freigabestatus', { exact: true })).toHaveValue('published');
   await expect(card).toBeVisible();
+  await page.getByRole('button',{name:'Wissensdetails schließen'}).click();
   await page.getByLabel('Thema', { exact: true }).selectOption('Einarbeitung');
   await expect(card).toHaveCount(0);
   await page.getByRole('button', { name: 'Filter zurücksetzen', exact: true }).click();
@@ -153,6 +157,8 @@ test('published files open the shared knowledge view directly', async ({ page })
   await upload(page, 'regelwerk.txt', 'text/plain', Buffer.from('Studio-Regelwerk.'));
   await page.getByRole('button', { name: 'Version freigeben', exact: true }).click();
   await page.getByRole('button', { name: 'Wissenshub öffnen', exact: true }).click();
+  await expect(page.getByRole('dialog',{name:'regelwerk.txt'})).toContainText('Studio-Regelwerk.');
+  await page.getByRole('button',{name:'Wissensdetails schließen'}).click();
   await expect(page.getByRole('heading', { name: 'Gutes Wissen. Für dein Team.', exact: true })).toBeVisible();
   await expect(page.locator('.shared-document-card').filter({ hasText: 'regelwerk.txt' })).toBeVisible();
 });

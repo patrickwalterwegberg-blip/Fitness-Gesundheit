@@ -14,12 +14,12 @@ Baukastenrechte gelten global für die Gestaltung der Module. Sie erlauben keine
 
 ### Ein eigenes Modul oder Zusatzfelder erstellen
 
-1. **Neues Modul** wählen, Namen und Bereich festlegen. Ein eigenständiges Modul erscheint unter **Eigene Module**. Zusatzfelder werden beim zugehörigen Eintrag geöffnet, zum Beispiel über das Zusatzfelder-Symbol eines Geräts oder in den Aufgabendetails.
+1. **Neues Modul** wählen. Im Popup Namen und Bereich festlegen. Ein eigenständiges Modul erscheint unter **Eigene Module**. Zusatzfelder werden beim zugehörigen Eintrag geöffnet, zum Beispiel über das Zusatzfelder-Symbol eines Geräts oder in den Aufgabendetails.
 2. Standorte sowie Leser- und Schreiberrollen festlegen. Administratoren behalten zur Verwaltung Einsicht. Standortzugehörigkeit wird im echten Backend zusätzlich geprüft.
 3. Felder hinzufügen: Text, langer Text, Zahl, Datum, Auswahl, Checkbox, Mitarbeiter oder lokale Datei. Pflichtfelder und Reihenfolge einstellen; Auswahloptionen zeilenweise eingeben.
 4. Über **Vorschau** das Formular ansehen. Die Vorschau speichert keine Einträge.
 5. **Entwurf speichern** oder **Veröffentlichen** wählen. Ein Entwurf verändert das bisher veröffentlichte Formular nicht.
-6. Das veröffentlichte Modul öffnen und einen Eintrag anlegen.
+6. Im Popup **Modul öffnen** wählen. **Neuer Eintrag** öffnet das Eingabeformular als weiteres Popup; ein gespeicherter Eintrag öffnet seine Details. Über **Eintrag bearbeiten** sind seine bisherigen Werte vorausgefüllt.
 
 Änderungen werden als neue Version veröffentlicht. Bestehende Einträge behalten die ursprüngliche Feldstruktur, auch beim späteren Bearbeiten. Das Entfernen oder Umbenennen eines Feldes löscht keine alten Einträge. **Versionsverlauf → Wiederherstellen** veröffentlicht eine frühere Gestaltung als weitere Version; die Historie bleibt erhalten. Der Bereich eines bereits veröffentlichten Moduls lässt sich nicht wechseln. Gleichzeitige Bearbeitung wird über Versionsstände geprüft; bei einem Konflikt den Entwurf neu öffnen und Änderungen abgleichen.
 
@@ -63,3 +63,13 @@ Zur Integration einer tatsächlichen Akademie stehen folgende Schnittstellen ber
 | `admin_controlling` | Nur Administratoren erhalten die gemeinsame Aufgaben- und Lernübersicht. |
 
 Vor dem Mitarbeiterbetrieb mit mindestens zwei echten Konten verschiedener Rollen und Standorte prüfen: Entwürfe bleiben für normale Leser verborgen; Rechteentzug wirkt bei der nächsten Abfrage; fremde Aufgaben-Zusatzfelder bleiben unsichtbar; Baukastenrechte ermöglichen kein Controlling; Lernende können Wissens- und Praxisnachweise nicht selbst erteilen. Die automatischen Datenbankprüfungen testen diese Regeln lokal, ersetzen aber keine Prüfung im eingerichteten Projekt.
+
+## Verlinkungen und Eingabefenster
+
+Stand 07.11.2026: Die Modulmenüs wechseln weiterhin in den jeweiligen Bereich. Anlegen, Bearbeiten und Detailaktionen verwenden Popups: Modulgestaltung, Moduleinträge, gemeinsame Aufgaben, Wissensinhalte und Datei-Uploads, Controllingdetails, Lernziele und Praxisbestätigungen. Lernaufträge im Kurs, Feedback-Zuständigkeiten und die Passwort-Link-Anforderung aus dem angemeldeten Konto öffnen ebenfalls ein Popup. Mitarbeiterverwaltung, Startseitenformulare, Termine, Wartungspläne, Onboardingvorlagen, Kurseditor und Videostudio hatten bereits Popups. Filter, Suche, Chatnachrichten und das Lesen von Kursen bleiben direkt im jeweiligen Bereich bedienbar.
+
+Die gemeinsamen Fenster setzen den Fokus in das erste verfügbare Eingabefeld, halten Tab im Fenster und lassen sich über das Kreuz oder Escape schließen. Während einer laufenden Speicherung ist Schließen gesperrt. Fehler lassen sich im Formular korrigieren. Bei Moduleinträgen verändern Schließen und Abbrechen keine zuvor gespeicherten Werte. Auf kleinen Bildschirmen ist der Inhalt scrollbar.
+
+Startseitenlinks zu Lernaufträgen öffnen den zugehörigen Kurs anhand der persönlichen Zuweisung. Wissenseinträge öffnen den ausgewählten Inhalt; **Wissenshub öffnen** bei einer Datei behält den Inhalt bei. **Meine Einarbeitung** führt zum Onboarding, wenn Erweiterung 012 verfügbar ist, andernfalls zur Kursübersicht. **Feedback geben** auf der Startseite öffnet direkt das Formular. Rechte und Studiofreigaben werden weiterhin vom Backend geprüft. Kein Datenbank-Update ist für diese Oberflächenänderung nötig.
+
+Nachweis: `tests/module-links.spec.js`, `administration`, `shared-knowledge`, `pilot`, `communication` sowie die bestehenden Rechte-, Kalender- und Benachrichtigungstests. Browserprüfungen nutzen ein simuliertes Backend; externe Zielseiten und echte Mitarbeiterkonten sind damit nicht vollständig abgenommen.

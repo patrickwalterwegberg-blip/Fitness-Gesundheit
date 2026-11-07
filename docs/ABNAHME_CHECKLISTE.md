@@ -67,3 +67,10 @@ Siehe [Prüfbericht und lesende Betreiberabfragen](SICHERHEIT_UND_DATENSCHUTZ_PR
 - [ ] Erweiterung 014 installiert und als aktiver Admin eine aktuelle Betriebsprüfung abgerufen. Werte mit Anbieter-Verwaltung verglichen; technische Prüffälle zuerst geklärt.
 - [ ] Mit einem delegierten Nutzerverwalter geprüft, dass die globale Betriebsprüfung nicht freigegeben ist.
 - [ ] Fehlende Originaldateien und unvollständige Uploads fachlich geprüft; keine automatische Löschung aufgrund eines Zählers.
+
+## Modulverlinkungen und Popups
+
+- [ ] In den freigegebenen Bereichen ein neues Formular öffnen; das erste verfügbare Feld ist direkt erreichbar. Am Handy passen Popup und Eingaben in den Bildschirm.
+- [ ] Einen gespeicherten Moduleintrag öffnen, bearbeiten und speichern. Erneut öffnen: Änderungen und ursprüngliche Modulversion stimmen. Eine weitere Änderung abbrechen: Gespeicherter Stand bleibt erhalten.
+- [ ] Von der Startseite einen persönlichen Lernauftrag und einen Wissenseintrag öffnen: Der ausgewählte Kurs beziehungsweise Inhalt erscheint direkt. **Feedback geben** öffnet das Formular.
+- [ ] Popups mit Kreuz und Escape schließen; Tastaturfokus bleibt während der Eingabe im Fenster und kehrt danach zum Auslöser zurück. Keine Änderung wird durch bloßes Schließen gespeichert.
