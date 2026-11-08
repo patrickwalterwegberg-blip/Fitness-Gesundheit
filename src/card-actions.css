@@ -3,5 +3,5 @@
 .action-card>.card-open-target:hover,.action-card>.card-open-target:active{background:transparent;transform:none;box-shadow:inset 0 0 0 1px var(--gold,#b99545)}
 .action-card>.card-open-target:focus-visible{outline:3px solid var(--gold,#b99545);outline-offset:-3px}
 .action-card>.card-open-target:disabled{cursor:wait;box-shadow:none}
-.action-card :is(button,a,input,select,textarea,summary,video,audio,object):not(.card-open-target),.action-card .card-controls{position:relative;z-index:2}
+.action-card :is(button,a,input,select,textarea,summary,label,video,audio,object):not(.card-open-target),.action-card .card-controls{position:relative;z-index:2}
 .card-detail-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}

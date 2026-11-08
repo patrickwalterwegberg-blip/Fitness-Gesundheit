@@ -39,3 +39,7 @@ Quellstand für die isolierte Prüfung: auf GitHub übertragener Paket-1A-Commit
 Der Abschluss der automatischen GitHub-Veröffentlichung kann aus dieser Umgebung nicht per API bestätigt werden (Netzwerkzugriff auf die GitHub-Status-API gesperrt). Git-Übertragung, bestätigtes Deployment und echte Kontoabnahme bleiben getrennt.
 
 Nach Veröffentlichung mit einem berechtigten Prüfzugang die drei leeren Bereiche öffnen, je ein Formular abbrechen und anschließend einen ausdrücklich gewählten Prüfeintrag als Entwurf speichern. Mit dem Mitarbeiterkonto ohne Anlegerecht dürfen die Buttons nicht erscheinen. Keine echten persönlichen Informationen für Testeinträge verwenden.
+
+## Nachtrag zur Veröffentlichung
+
+Am 08.11.2026 wurde über GitHubs öffentliche Workflowseite der erfolgreiche Abschluss von „Teamhub veröffentlichen“ für Commit `86c6c83` bestätigt: [Workflowlauf 42494408480](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42494408480). Die strukturierte Webantwort meldet `COMPLETED` und `SUCCESS` für genau diesen Commit auf `main`. Damit ist der zuvor offene Workflowabschluss belegt; echte Konto-/Geräteabnahmen werden dadurch nicht ersetzt.

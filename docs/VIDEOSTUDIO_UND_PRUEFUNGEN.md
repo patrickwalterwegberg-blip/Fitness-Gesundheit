@@ -79,3 +79,11 @@ Ein freigeschalteter Kursautor verwaltet seine eigenen Videos innerhalb seiner S
 - `npm run test:production`: Das fertig gebaute Portal einschließlich Videostudio und lokaler Vorschau mit abgefangenen Netzwerkzugriffen.
 
 Diese Tests ersetzen nicht den ersten praktischen Upload auf dem produktiven Supabase-Projekt und eine Aufnahme auf dem tatsächlichen iPhone beziehungsweise Android-Gerät. Videoschnitt, Bildschirmaufnahme und Video-/Audioabgaben von Lernenden gehören noch nicht zu dieser Version.
+
+### Zwischen geöffneten Videos wechseln
+
+Ist bereits eine lokale Datei oder gestoppte Browseraufnahme geöffnet, zeigen „Fortsetzen“ eines anderen Uploads und „Video aufnehmen / hochladen“ vor einem Wechsel ein Auswahlfenster. Auch das Schließen der Bibliothek und „Dieses Video verwenden“ bei vorhandener lokaler Vorschau sind geschützt. **Geöffnete Auswahl behalten** und Escape im Auswahlfenster erhalten Datei, Vorschau, Titel und Studio. Erst **Auswahl verwerfen und wechseln**, **… und schließen** oder **… und Video verwenden** führt die gewünschte Aktion aus. Scheitert die Videozuordnung, bleibt der noch geöffnete Entwurf erhalten.
+
+Bei Bedarf das Video zuvor über **Video auf diesem Gerät sichern** herunterladen. Diese Wechselaktionen löschen keine gespeicherten Serveruploads. Ohne lokale Datei sowie beim erneuten Aufruf derselben effektiven Uploadticket-ID ist keine Verlustabfrage nötig. Während einer laufenden Aufnahme oder Übertragung bleiben die bisherigen Sperren bestehen. Beim lokalen Verwerfen wird eine verbleibende Vorschau-URL nicht mehr ohne ihre zugehörige Datei gerendert.
+
+Dieser Schutz bezieht sich auf die Bedienwege innerhalb der Bibliothek. Neuladen, Tab-Schließen, Sitzungsende und ein unerwarteter Seitenwechsel speichern einen lokalen Entwurf nicht automatisch; die Aufnahme vorher herunterladen oder ausdrücklich hochladen. Echte iPhone-/Android-Aufnahmen und produktive Uploads müssen separat geprüft werden.

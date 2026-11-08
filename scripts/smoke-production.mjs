@@ -182,6 +182,16 @@ try {
  await videoStudio.getByLabel('Vorschau deiner Videodatei',{exact:true}).waitFor();
  assert.ok(!calls.includes('/rest/v1/rpc/prepare_learning_video'),'Choosing a local video must not upload it');
  await videoStudio.getByRole('button',{name:'Fenster schließen',exact:true}).click();
+ const videoCloseReview=page.getByRole('dialog',{name:'Videostudio schließen?',exact:true});
+ await videoCloseReview.waitFor();
+ await videoCloseReview.getByRole('button',{name:'Geöffnete Auswahl behalten',exact:true}).click();
+ const localDownload=page.waitForEvent('download');
+ await videoStudio.getByRole('link',{name:'Video auf diesem Gerät sichern',exact:true}).click();
+ const downloadedVideo=await localDownload;
+ assert.equal((await readFile(await downloadedVideo.path())).toString(),'local-video-preview','Canceling closure must preserve the original bytes through the actual download action');
+ await videoStudio.getByRole('button',{name:'Fenster schließen',exact:true}).click();
+ await videoCloseReview.getByRole('button',{name:'Auswahl verwerfen und schließen',exact:true}).click();
+ await videoStudio.waitFor({state:'detached'});
  videoRecovery={id:'00000000-0000-4000-8000-000000000097',title:'Upload ausstehend',created_by:uid,studio_id:null,file_name:'recovery-smoke.mp4',mime_type:'video/mp4',file_size:32,object_path:'local-smoke/recovery.mp4',state:'uploading',used_count:0,created_at:'2026-11-06T10:00:00Z'};
  await page.getByRole('button',{name:'Videostudio',exact:true}).click();
  const recovery=page.getByRole('dialog',{name:'Videostudio',exact:true});

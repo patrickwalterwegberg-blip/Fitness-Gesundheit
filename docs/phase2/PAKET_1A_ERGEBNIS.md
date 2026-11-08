@@ -54,3 +54,7 @@ Gehostete Rollen-/Studio-/Privatheitstests, echte E-Mail-Zustellung, Datenschutz
 Bei einem bestätigten Fehler ausschließlich den isolierten Frontend-Paketcommit zurücknehmen und den vorherigen geprüften Stand erneut bereitstellen. Es gibt keine Datenbankänderung zurückzurollen.
 
 Als Nächstes folgen einzeln Paket 1B (direkte Pflegeaktionen in leeren Startseitenbereichen) und 1C (Assistentenbutton ohne Überlagerungen). Auftrag und Rollen stehen in [PAKET_1A_AUFGABENFILTER.md](PAKET_1A_AUFGABENFILTER.md) und [AGENTENTEAM.md](AGENTENTEAM.md).
+
+## Nachtrag zur Veröffentlichung
+
+Am 08.11.2026 wurde über GitHubs öffentliche Workflowseite der erfolgreiche Abschluss von „Teamhub veröffentlichen“ für Commit `8b6fb81` bestätigt: [Workflowlauf 42492803713](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42492803713). Die strukturierte Webantwort meldet `COMPLETED` und `SUCCESS` für genau diesen Commit auf `main`. Damit ist der zuvor offene Workflowabschluss belegt; echte Konto-/Geräteabnahmen werden dadurch nicht ersetzt.

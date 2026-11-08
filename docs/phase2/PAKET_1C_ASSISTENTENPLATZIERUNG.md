@@ -43,3 +43,7 @@ Lokale Tests verwenden synthetische Daten und simulierte Backendaufrufe. Echte i
 Nach Bereitstellung mit beiden Prüfzugängen Startseite, Aufgaben und ein Formular öffnen, scrollen und den Assistenten über Button und Menü aufrufen. Ohne Wissensfreigabe dürfen die Einstiege nicht erscheinen. Bei einem Fehler ausschließlich den isolierten Frontend-Paketcommit zurücknehmen; keine Datenbankänderung zurückzurollen.
 
 Der Abschluss der automatischen GitHub-Pages-Veröffentlichung ist aus dieser Umgebung nicht bestätigt; der Zugriff auf die GitHub-Status-API war bislang netzwerkseitig gesperrt. Git-Übertragung und bestätigtes Deployment werden getrennt ausgewiesen.
+
+## Nachtrag zur Veröffentlichung
+
+Am 08.11.2026 wurde über GitHubs öffentliche Workflowseite der erfolgreiche Abschluss von „Teamhub veröffentlichen“ für Commit `7bbe8e8` bestätigt: [Workflowlauf 42496550412](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42496550412). Die strukturierte Webantwort meldet `COMPLETED` und `SUCCESS` für genau diesen Commit auf `main`. Damit ist der zuvor offene Workflowabschluss belegt; echte Konto-/Geräteabnahmen werden dadurch nicht ersetzt.

@@ -90,3 +90,7 @@ Diese Phase legt die Zusammenarbeit fest. Sie ändert keine Anwendung, Datenbank
 - **1C – Mobile Klickflächen:** Assistentenbutton so platzieren, dass andere Inhalte erreichbar bleiben; echte Geräteprüfung vorbereiten. [Auftrag und Ergebnis](PAKET_1C_ASSISTENTENPLATZIERUNG.md).
 
 Diese drei Pakete werden nacheinander behandelt. CRM/Marketing/Lager, E-Mail-Einrichtung, Datenbereinigung und die unveröffentlichten Videokorrekturen werden damit nicht nebenbei umgesetzt.
+
+## Ergänzendes Korrekturpaket
+
+- **1D – Video- und Formularschutz:** Die seit Phase 1 separat zurückgestellten Korrekturen sowie die bei der erneuten Prüfung bestätigten Verlassens-/Vorschaufehler werden als eigenes Paket geprüft. [Auftrag und Ergebnis](PAKET_1D_VIDEO_UND_FORMULARSCHUTZ.md).

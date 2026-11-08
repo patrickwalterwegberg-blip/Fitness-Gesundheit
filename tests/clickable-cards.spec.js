@@ -39,3 +39,8 @@ test('statistic and controlling cards show matching read-only details',async({pa
 test('card editing fits a phone and touching its surface opens the correct form',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/#equipment');await clickSurface(page,page.locator('.equipment-card').first().getByRole('heading'));const popup=page.getByRole('dialog',{name:'Gerät bearbeiten'});await expect(popup).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'test-results/clickable-card-phone.png'});await page.keyboard.press('Escape');await expect(popup).toHaveCount(0);
 });
+
+
+test('clicking the CRM selection label focuses its field without opening the card or changing data',async({page})=>{
+ await page.goto('/#crm');const before=await record(page,'leads');const card=page.locator('.lead-card').first();const label=card.getByText('Kontaktstufe',{exact:true});await clickSurface(page,label);await expect(card.getByRole('combobox')).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);expect(await record(page,'leads')).toEqual(before);
+});

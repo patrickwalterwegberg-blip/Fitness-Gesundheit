@@ -92,3 +92,10 @@ test('the personal onboarding plan and its progress fit a phone screen',async({p
 test('clicking a checklist card opens it without marking it complete',async({page})=>{
  const state=await onboardingBackend(page);await mine(page);const card=page.locator('.onboarding-step').filter({has:page.getByRole('heading',{name:'Im Team ankommen',exact:true})});const box=await card.locator('.academy-cover').boundingBox();await page.mouse.click(box.x+box.width/2,box.y+box.height/2);const popup=page.getByRole('dialog',{name:'Im Team ankommen',exact:true});await expect(popup).toContainText('Profil und Ansprechpartner kennenlernen.');expect(state.checkDone).toBe(false);expect(state.calls.filter(c=>c.name==='complete_onboarding_step')).toHaveLength(0);await popup.getByLabel('Diesen Schritt als erledigt bestätigen').click();await expect.poll(()=>state.checkDone).toBe(true);expect(state.reviewDone).toBe(false);
 });
+
+
+test('clicking the checklist label confirms the step once instead of opening the card',async({page})=>{
+ const state=await onboardingBackend(page);await mine(page);
+ const text=page.locator('.onboarding-check span').filter({hasText:'Ich habe diesen Schritt erledigt'});await text.scrollIntoViewIfNeeded();const bounds=await text.boundingBox();await page.mouse.click(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+ await expect.poll(()=>state.calls.filter(c=>c.name==='complete_onboarding_step').length).toBe(1);await expect.poll(()=>state.checkDone).toBe(true);expect(state.reviewDone).toBe(false);expect(state.calls.find(c=>c.name==='complete_onboarding_step').body.p_review).toBe(false);await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('.onboarding-progress-circle strong')).toContainText('0');
+});
