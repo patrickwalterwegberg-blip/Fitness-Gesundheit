@@ -98,6 +98,13 @@ try {
  assert.ok(loadedFonts.some(name=>name.includes('Manrope')),'Compiled heading font must load');
  await page.screenshot({path:'test-results/production-home-contact-mobile.png'});
  await mobileHomeEditor.getByRole('button',{name:'Startseitenformular schließen',exact:true}).click();
+ const mobileAssistantShortcut=page.getByRole('button',{name:'KI-Assistent öffnen',exact:true});
+ await mobileAssistantShortcut.scrollIntoViewIfNeeded();
+ assert.ok(await mobileAssistantShortcut.evaluate(el=>{
+  const r=el.getBoundingClientRect(),main=document.querySelector('main').getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+  return r.height>=44&&r.bottom<=main.top&&!!hit&&el.contains(hit)&&document.documentElement.scrollWidth<=innerWidth;
+ }),'Compiled mobile assistant launcher must reserve space and stay clickable without covering main content');
+ await page.screenshot({path:'test-results/production-assistant-placement-mobile.png'});
  await page.setViewportSize({width:1440,height:1050});
  await page.getByRole('button',{name:'Betriebsprüfung öffnen',exact:true}).click();
  const operations=page.getByRole('dialog',{name:'Betriebsprüfung',exact:true});

@@ -87,6 +87,6 @@ Diese Phase legt die Zusammenarbeit fest. Sie ändert keine Anwendung, Datenbank
 
 - **1A – Zahlenkacheln:** Passenden persönlichen Aufgabenfilter öffnen und die belegten Zählregeln beibehalten. Umfang und Prüfmatrix stehen in [PAKET_1A_AUFGABENFILTER.md](PAKET_1A_AUFGABENFILTER.md).
 - **1B – Leere Inhaltsbereiche:** Direkte passende Pflegeaktionen für berechtigte Personen, verständliche Leertexte für Leser. [Auftrag und Ergebnis](PAKET_1B_STARTSEITENPFLEGE.md).
-- **1C – Mobile Klickflächen:** Assistentenbutton so platzieren, dass andere Inhalte erreichbar bleiben; echte Geräteprüfung vorbereiten.
+- **1C – Mobile Klickflächen:** Assistentenbutton so platzieren, dass andere Inhalte erreichbar bleiben; echte Geräteprüfung vorbereiten. [Auftrag und Ergebnis](PAKET_1C_ASSISTENTENPLATZIERUNG.md).
 
 Diese drei Pakete werden nacheinander behandelt. CRM/Marketing/Lager, E-Mail-Einrichtung, Datenbereinigung und die unveröffentlichten Videokorrekturen werden damit nicht nebenbei umgesetzt.
