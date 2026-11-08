@@ -88,6 +88,17 @@ try {
 
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByText('Aktuell sind dir keine offenen Aufgaben zugewiesen.').waitFor();
+ await page.setViewportSize({width:360,height:740});
+ await page.getByRole('button',{name:'Ansprechpartner hinzufügen',exact:true}).click();
+ const mobileHomeEditor=page.getByRole('dialog',{name:'Startseiteneintrag bearbeiten',exact:true});
+ assert.ok(await mobileHomeEditor.locator('input[name="title"]').evaluate(el=>el===document.activeElement),'Direct homepage creation must focus its title');
+ assert.ok(await mobileHomeEditor.evaluate(el=>el.scrollWidth<=el.clientWidth),'Compiled mobile homepage editor must fit its dialog');
+ const loadedFonts=await page.evaluate(async()=>{await document.fonts.ready;return [...document.fonts].filter(font=>font.status==='loaded').map(font=>font.family);});
+ assert.ok(loadedFonts.some(name=>name.includes('DM Sans')),'Compiled body font must load');
+ assert.ok(loadedFonts.some(name=>name.includes('Manrope')),'Compiled heading font must load');
+ await page.screenshot({path:'test-results/production-home-contact-mobile.png'});
+ await mobileHomeEditor.getByRole('button',{name:'Startseitenformular schließen',exact:true}).click();
+ await page.setViewportSize({width:1440,height:1050});
  await page.getByRole('button',{name:'Betriebsprüfung öffnen',exact:true}).click();
  const operations=page.getByRole('dialog',{name:'Betriebsprüfung',exact:true});
  await operations.getByText('Aktive Mitarbeiter ohne Studio: 0',{exact:true}).waitFor();
