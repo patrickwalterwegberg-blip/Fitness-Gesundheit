@@ -65,9 +65,9 @@ Die Prüfuhr ist in zeitabhängigen Browserfällen fixiert. Produktive Fälligke
 
 ## Veröffentlichung
 
-`.github/workflows/pages.yml` baut und veröffentlicht Änderungen auf `main` über GitHub Pages. In **Settings → Pages → Build and deployment → Source** wird **GitHub Actions** benötigt. Ein erfolgreicher Pages-Lauf bestätigt die Bereitstellung des Webseiten-Builds; er ersetzt keine Abnahme von Authentifizierung, SMTP, Storage oder Hintergrundjobs im gehosteten Backend.
+`.github/workflows/pages.yml` prüft Änderungen auf `main` und veröffentlicht sie über GitHub Pages. Datenbank-/Dienstprüfungen, die vollständige Browserreihe und der Test der kompilierten Anwendung müssen vor der Artefaktübergabe erfolgreich sein. Der Workflow installiert dafür die zur Playwright-Version passende Chromium-Version und stellt deren Pfad jobweit bereit. Build und Produktionsprüfung verwenden dieselbe öffentliche Backend-URL. In **Settings → Pages → Build and deployment → Source** wird **GitHub Actions** benötigt. Ein erfolgreicher Pages-Lauf bestätigt die Bereitstellung des Webseiten-Builds; er ersetzt keine Abnahme von Authentifizierung, SMTP, Storage oder Hintergrundjobs im gehosteten Backend.
 
-Die Edge Function für Einladungen wird separat über `team-access.yml` bereitgestellt. Der Workflow läuft nur bei manuellem Start mit dem konfigurierten Bereitstellungstoken. Normale Frontend-Änderungen starten diesen Workflow nicht.
+Die Edge Function für Einladungen wird separat über `team-access.yml` mit dem konfigurierten Bereitstellungstoken bereitgestellt. Der Workflow startet manuell oder bei Änderungen an `backend/supabase/functions/team-access/**` beziehungsweise seiner eigenen Workflowdatei auf `main`. Normale Frontend-Änderungen starten diesen Workflow nicht.
 
 ## Bestehende Demo-Daten
 

@@ -31,7 +31,7 @@ Der aktualisierte Einladungsdienst gibt für abgelehnte Mail-Anfragen eine begre
 
 Mit der **Vorgangsnummer** kann ein Betreiber das zugehörige Ereignis im Protokoll der Supabase Edge Function `team-access` suchen (`event: teamhub_mail_request`). Der Eintrag enthält nur Vorgangsnummer, erlaubte Aktion, Ergebniscode, HTTP-Status und gegebenenfalls die Kategorie. Er enthält keine Empfängeradresse, Tokens, Auth-Links, Passwörter oder rohen Providerfehler. Das Auth- und SMTP-Protokoll muss der Betreiber separat korrelieren; dessen Einträge übernehmen diese eigene Vorgangsnummer nicht automatisch.
 
-Öffentliche Link-Anfragen auf der Loginseite und die Passwortwiederherstellung laufen direkt über Supabase Auth. Sie erhalten keine Vorgangsnummer dieses Einladungsdienstes. Die öffentliche Loginseite bleibt neutral und verrät nicht, ob eine eingegebene Adresse ein Mitarbeiterkonto besitzt. Zugangsdaten oder vollständige Anmeldelinks niemals in einen Fehlerbericht kopieren.
+Öffentliche Link-Anfragen auf der Loginseite und die Passwortwiederherstellung laufen direkt über Supabase Auth. Sie erhalten keine Vorgangsnummer dieses Einladungsdienstes. Öffentliche Erfolgsmeldungen nennen keine Kontodetails; Providerfehler werden bereinigt dargestellt. Direkte Auth-Endpunkte können ausdrücklich abgelehnte Anfragen jedoch mit anderen Fehlercodes beantworten. Eine vollständige Verhinderung von Rückschlüssen auf Konten ist damit nicht nachgewiesen. Zugangsdaten oder vollständige Anmeldelinks niemals in einen Fehlerbericht kopieren.
 
 ## Bereitstellung und Abnahme
 
@@ -40,3 +40,5 @@ Keine neue SQL-Migration erforderlich. Benötigt werden die bereits vorhandene M
 Automatisierte Browser- und Produktionstests simulieren das Backend; Diensttests simulieren den Mailanbieter. Sie prüfen Rechte, aktuellen Kontostatus, fehlenden Versand beim Lesen, eine ausdrückliche Anfrage, Fehlerdarstellung und mobile Bedienung. Sie bestätigen keinen echten Mailversand. Der aktuelle Empfang bei einem weiteren Mitarbeiterkonto und die Ursache der zuvor ausgebliebenen Mail bleiben bis zur Postfach- und Betreiberprüfung offen. Die Entwicklungsumgebung hat keinen Zugriff auf die privaten Auth-/SMTP-Protokolle.
 
 Automatische Erinnerungsmails für Aufgaben sind eine separate offene Funktion. [Ursprüngliche Ideen und offene Punkte](FUNKTIONS_AUDIT.md).
+
+Für die noch offene echte Zustellungsprüfung gibt es eine [Schritt-für-Schritt-Abnahme](EMAIL_ABNAHME_SCHRITT_FUER_SCHRITT.md).
