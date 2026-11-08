@@ -18,7 +18,14 @@ async function pilotBackend(page,{role='admin',missing=false,failRead=false,empt
     if(missing&&['my_team_dashboard','admin_pilot_status','team_task_calendar','learning_material'].includes(name))return send({code:name==='learning_material'?'PGRST205':'PGRST202'},404);
     if(name==='tasks'){
       if(method==='PATCH'){Object.assign(tasks[0],body);return send(tasks[0]);}
-      return send(tasks,200,{'content-range':`0-${tasks.length-1}/${tasks.length}`});
+      let matching=tasks;
+      for(const key of ['id','assignee_id','studio_id','status','due_date'])for(const condition of url.searchParams.getAll(key)){
+        const dot=condition.indexOf('.'),operator=condition.slice(0,dot),value=condition.slice(dot+1);
+        matching=matching.filter(t=>operator==='eq'?String(t[key])===value:operator==='neq'?String(t[key])!==value:operator==='lt'?t[key]<value:false);
+      }
+      const total=matching.length,offset=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||total||1);
+      matching=matching.slice(offset,offset+limit);
+      return send(matching,200,{'content-range':matching.length?`${offset}-${offset+matching.length-1}/${total}`:`*/${total}`});
     }
     if(name==='my_team_dashboard')return send({today:'2026-11-04',counts:{open:1,overdue:0,today:1,done:0},tasks,learning:assignments.map(a=>({...a,...courses.find(c=>c.id===a.course_id),...progress.find(p=>p.assignment_id===a.id),id:a.id})),knowledge:[]});
     if(name==='admin_pilot_status')return send({migration:6,active_users:2,tasks:1,courses:courses.length,storage_private:true,documents:2,published:0,drafts:2,pending_uploads:0,unlinked_objects:1});
@@ -56,7 +63,7 @@ test('personal dashboard shows server totals, opens real tasks and diagnoses unp
   await page.getByRole('button',{name:/Reale Testaufgabe öffnen/}).click();
   await expect(page.getByRole('heading',{name:'Reale Testaufgabe öffnen',level:2})).toBeVisible();
   await page.getByLabel('Bearbeitungsstatus').selectOption('in_progress');
-  await expect(page.getByRole('status')).toContainText('Bearbeitungsstatus auf dem Server gespeichert');
+  await expect(page.getByRole('dialog').getByRole('status')).toContainText('Bearbeitungsstatus auf dem Server gespeichert');
   expect(state.calls.some(c=>c.name==='tasks'&&c.method==='PATCH'&&c.body.status==='in_progress')).toBeTruthy();
 });
 test('calendar uses server aggregation and opens a selected day task',async({page})=>{

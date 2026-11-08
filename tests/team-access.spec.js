@@ -100,7 +100,7 @@ test('authenticated employee can update own status and reply, without management
   await expect(page.getByRole('button', { name: 'Teamaufgabe erstellen', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: /Gemeinsame Testaufgabe/ }).click();
   await page.getByLabel('Bearbeitungsstatus').selectOption('in_progress');
-  await expect(page.getByRole('status')).toContainText('Bearbeitungsstatus auf dem Server gespeichert');
+  await expect(page.getByRole('dialog').getByRole('status')).toContainText('Bearbeitungsstatus auf dem Server gespeichert');
   await page.getByLabel('Deine Rückmeldung zur Teamaufgabe').fill('Aufgabe übernommen.');
   await page.getByRole('button', { name: 'Auf dem Server speichern' }).click();
   await expect(page.locator('.team-comment')).toContainText('Aufgabe übernommen.');

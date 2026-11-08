@@ -21,10 +21,24 @@ function usePilotQuery(client, name, args, refresh) {
   },[client,name,argKey,refresh]);
   return {data,error,loading};
 }
-export default function TeamDashboard({client,profile,sites,onArea,onTask,allowedPages=['dashboard','tasks','calendar','learning','knowledge','files']}) {
+export default function TeamDashboard({client,profile,sites,onArea,onTask,taskReturn,allowedPages=['dashboard','tasks','calendar','learning','knowledge','files']}) {
   const can=area=>allowedPages.includes(area);
   const {shortDate,today}=useStudioClock(); const [refresh,setRefresh]=useState(0);
   const {data,error,loading}=usePilotQuery(client,'my_team_dashboard',{},`${refresh}-${today}`);
+  const taskButtons=useRef({}),restoredTaskReturn=useRef(null);
+  useEffect(()=>{
+    const button=taskButtons.current[taskReturn?.preset];
+    if(loading||!button||restoredTaskReturn.current===taskReturn)return;
+    restoredTaskReturn.current=taskReturn;
+    window.scrollTo({top:taskReturn.scrollY,behavior:'instant'});
+    button.focus({preventScroll:true});
+    const headerHeight=document.querySelector('.team-shell-topbar')?.getBoundingClientRect().height||0;
+    const topInset=Math.ceil(headerHeight)+16;
+    button.style.scrollMarginTop=`${topInset}px`;
+    button.style.scrollMarginBottom='16px';
+    const bounds=button.getBoundingClientRect();
+    if(bounds.top<topInset||bounds.bottom>window.innerHeight-16)button.scrollIntoView({block:'nearest',behavior:'instant'});
+  },[loading,data,taskReturn]);
   const [status,setStatus]=useState(null),[statusError,setStatusError]=useState(''),[checking,setChecking]=useState(false);
   const live=useRef(true); useEffect(()=>{live.current=true;return()=>{live.current=false;};},[]);
   async function check(){setChecking(true);setStatusError('');setStatus(null);try{const result=await pilotRpc(client,'admin_pilot_status');if(live.current)setStatus(result);}catch(e){if(live.current)setStatusError(pilotError(e));}finally{if(live.current)setChecking(false);}}
@@ -35,7 +49,7 @@ export default function TeamDashboard({client,profile,sites,onArea,onTask,allowe
       <section className="welcome-banner team-welcome home-welcome"><div className="welcome-copy"><span className="badge hero-badge"><span className="tiny-dot"/>DEIN FITNESS & GESUNDHEIT TEAMHUB</span><h2>Willkommen in deinem Teamhub.<br/><span>Schön, dass du da bist, {profile.full_name.split(' ')[0]}.</span></h2><p>Deine Aufgaben, neues Wissen und deine nächsten Lernschritte – alles an einem Ort.</p>{can('tasks')?<button onClick={()=>onArea('tasks')}><ClipboardList size={16}/>Meine Aufgaben ansehen<ArrowRight size={16}/></button>:can('learning')?<button onClick={()=>onArea('learning')}><BookOpen size={16}/>Weiterlernen<ArrowRight size={16}/></button>:null}</div><div className="team-welcome-art" aria-hidden="true"><Activity/></div></section>
       {can('learning')&&<OnboardingSummary client={client} refreshKey={refresh} onOpen={()=>onArea('learning',{view:'onboarding'})}/>}
       <TeamHome client={client} profile={profile} sites={sites} allowedPages={allowedPages} onArea={onArea} refreshKey={refresh}/>
-      {can('tasks')&&<div className="pilot-stats">{[['Offene Aufgaben',data.counts.open,ClipboardList],['Überfällig',data.counts.overdue,CircleAlert],['Heute fällig',data.counts.today,Clock3],['Erledigte Aufgaben',data.counts.done,CheckCircle2]].map(([label,value,Icon])=><button className="panel" key={label} onClick={()=>onArea('tasks')}><span>{label}</span><strong>{value}</strong><Icon size={19}/></button>)}</div>}
+      {can('tasks')&&<div className="pilot-stats">{[['open','Offene Aufgaben',data.counts.open,ClipboardList],['overdue','Überfällig',data.counts.overdue,CircleAlert],['today','Heute fällig',data.counts.today,Clock3],['done','Erledigte Aufgaben',data.counts.done,CheckCircle2]].map(([preset,label,value,Icon])=><button className="panel" key={preset} ref={node=>{taskButtons.current[preset]=node;}} onClick={()=>onArea('tasks',{taskPreset:preset,taskDay:data.today,returnScrollY:window.scrollY})}><span>{label}</span><strong>{value}</strong><Icon size={19}/></button>)}</div>}
       <div className="pilot-columns">{can('tasks')&&<section className="panel pilot-section action-card"><CardAction label="Aufgabenübersicht öffnen" onOpen={()=>onArea('tasks')}/><div className="section-heading"><h3><ClipboardList size={18}/>Das steht als Nächstes an</h3><button className="text-link" onClick={()=>onArea('tasks')}>Alle Aufgaben</button></div>{data.tasks.length?data.tasks.map(t=><button className={'pilot-row '+(t.due_date<data.today?'pilot-overdue':'')} key={t.id} onClick={()=>onTask({...t,studio:{name:sites.find(s=>s.id===t.studio_id)?.name}})}><div><strong>{t.title}</strong><small>{sites.find(s=>s.id===t.studio_id)?.name} · {pilotDate(t.due_date)} · {t.status==='in_progress'?'In Bearbeitung':'Offen'}</small></div><ArrowRight size={16}/></button>):<p className="pilot-empty">Aktuell sind dir keine offenen Aufgaben zugewiesen.</p>}</section>}
       {can('learning')&&<section className="panel pilot-section action-card"><CardAction label="Persönliche Lernübersicht öffnen" onOpen={()=>onArea('learning')}/><div className="section-heading"><h3><BookOpen size={18}/>Mein Lernfortschritt</h3><button className="text-link" onClick={()=>onArea('learning')}>Lernhub öffnen</button></div>{data.learning.length?data.learning.map(a=><button className="pilot-row" key={a.id} onClick={()=>onArea('learning',{assignmentId:a.id})}><div><strong>{a.title}</strong><small>{a.lessons_read}/{a.lesson_count} gelesen · Quiz {a.quiz_passed?'bestanden':'offen'}{a.requires_practice?` · Praxis ${a.practice_confirmed?'bestätigt':'offen'}`:''}</small><progress value={a.lessons_read} max={a.lesson_count} aria-label={'Lesefortschritt '+a.title}/></div></button>):<p className="pilot-empty">Noch kein Kurs zugewiesen. Die Geschäftsführung kann Kurse im Lernhub anlegen und zuweisen.</p>}<p className="pilot-footnote">{incomplete.length} Lernaufträge offen. Gelesen, Quiz und Praxiseinweisung werden getrennt erfasst.</p></section>}</div>
       {can('knowledge')&&<section className="panel pilot-section action-card"><CardAction label="Wissensübersicht öffnen" onOpen={()=>onArea('knowledge')}/><div className="section-heading"><h3><FileText size={18}/>Aktuell im Wissenshub</h3><button className="text-link" onClick={()=>onArea('knowledge')}>Wissenshub öffnen</button></div>{data.knowledge.length?data.knowledge.map(d=><button className="pilot-row" key={d.id} onClick={()=>onArea('knowledge',{documentId:d.id})}><div><strong>{d.title}</strong><small>{d.category}</small></div><ArrowRight size={16}/></button>):<p className="pilot-empty">Noch keine freigegebenen Inhalte sichtbar. Unter „Dateien“ können berechtigte Personen Inhalte hochladen und anschließend freigeben.</p>}</section>}
