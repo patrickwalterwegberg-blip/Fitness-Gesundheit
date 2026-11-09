@@ -40,6 +40,30 @@ async function onboardingBackend(page,{role='employee',empty=false,failSave=fals
 test.beforeEach(async({page})=>{await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'));});
 async function mine(page){await page.goto('/tests/workspace.html?start=learning');await page.getByRole('button',{name:'Mein Onboarding',exact:true}).click();}
 async function manage(page){await page.goto('/tests/workspace.html?start=learning');await page.getByRole('button',{name:'Onboarding verwalten',exact:true}).click();}
+
+async function personalPlanPair(page){
+ const state=await onboardingBackend(page),open={...structuredClone(state.plans[0]),title:'Offener Studio-Start'};
+ open.steps=open.steps.map(step=>step.kind==='course'?{...step,lessons_read:0,lesson_count:2,quiz_passed:false,practice_required:false,practice_confirmed:false}:step.kind==='task'?{...step,task_status:'open'}:step);
+ const completed={...structuredClone(open),id:id(2990),template_id:id(2991),title:'Einführung abgeschlossen',created_at:'2026-11-05T09:00Z',done:open.total,steps:open.steps.map((step,index)=>({...step,id:id(2992+index),enrollment_id:id(2990),kind:'check',course_id:null,learning_assignment_id:null,task_id:null,requires_review:false,completed_at:'2026-11-05T09:00Z',reviewed_at:null,done:true}))};
+ const visible={plans:[completed,open]};
+ await page.route('https://teamhub-test.supabase.co/rest/v1/rpc/my_onboarding',route=>route.fulfill({json:{plans:visible.plans}}));
+ return {state,open,completed,visible};
+}
+for(const entry of [{width:1440,height:1050,kind:'card'},{width:390,height:844,kind:'button'}])test(`dashboard onboarding ${entry.kind} opens the displayed unfinished plan at ${entry.width}px`,async({page})=>{
+ await page.setViewportSize({width:entry.width,height:entry.height});const {state,open,completed}=await personalPlanPair(page);await page.goto('/tests/workspace.html?start=dashboard');const summary=page.locator('.onboarding-summary');await expect(summary.getByRole('heading',{name:open.title,exact:true})).toBeVisible();
+ await summary.getByRole('button',{name:entry.kind==='card'?`Einarbeitungsplan ${open.title} öffnen`:'Onboarding fortsetzen',exact:true}).click();
+ await expect(page.locator('.onboarding-plan-hero').getByRole('heading',{name:open.title,exact:true})).toBeVisible();await expect(page.locator('.onboarding-plan-list').getByRole('button').filter({hasText:open.title})).toHaveAttribute('aria-pressed','true');await expect(page.locator('.onboarding-plan-hero').getByRole('heading',{name:completed.title,exact:true})).toHaveCount(0);
+ expect(state.calls.some(c=>['enroll_onboarding','complete_onboarding_step','submit_learning_quiz'].includes(c.name))).toBe(false);
+});
+for(const remaining of ['other','none'])test(`an unavailable dashboard onboarding target never substitutes another personal plan (${remaining})`,async({page})=>{
+ const {state,open,completed,visible}=await personalPlanPair(page);await page.goto('/tests/workspace.html?start=dashboard');const summary=page.locator('.onboarding-summary');await expect(summary.getByRole('heading',{name:open.title,exact:true})).toBeVisible();visible.plans=remaining==='other'?[completed]:[];await summary.getByRole('button',{name:'Onboarding fortsetzen',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Einarbeitungsplan ist nicht mehr für deinen Zugang verfügbar');await expect(page.locator('.onboarding-plan-hero')).toHaveCount(0);await expect(page.getByRole('heading',{name:'Dein Onboarding startet hier.',exact:true})).toHaveCount(0);if(remaining==='other'){const button=page.locator('.onboarding-plan-list').getByRole('button').filter({hasText:completed.title});await expect(button).toHaveAttribute('aria-pressed','false');await button.click();await expect(page.locator('.onboarding-plan-hero').getByRole('heading',{name:completed.title,exact:true})).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);}
+ expect(state.calls.some(c=>['enroll_onboarding','complete_onboarding_step'].includes(c.name))).toBe(false);
+});
+test('refreshing a withdrawn selected plan keeps the missing-target explanation instead of showing another plan',async({page})=>{
+ const {open,completed,visible}=await personalPlanPair(page);await page.goto('/tests/workspace.html?start=dashboard');await page.locator('.onboarding-summary').getByRole('button',{name:'Onboarding fortsetzen',exact:true}).click();await expect(page.locator('.onboarding-plan-hero').getByRole('heading',{name:open.title,exact:true})).toBeVisible();visible.plans=[completed];await page.getByRole('button',{name:'Onboarding aktualisieren',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Einarbeitungsplan ist nicht mehr für deinen Zugang verfügbar');await expect(page.locator('.onboarding-plan-hero')).toHaveCount(0);
+});
 test('course tiles show the company design and keep exams in the actual progress calculation',async({page})=>{
  const state=await onboardingBackend(page);state.reads.push({assignment_id:aid,lesson_index:0},{assignment_id:aid,lesson_index:1});await page.goto('/tests/workspace.html?start=learning');const card=page.getByRole('button',{name:/Einarbeitung Empfang 2\/2/});await expect(card).toContainText('66 % Fortschritt');await expect(card.locator('.academy-cover')).toBeVisible();await expect(card).toContainText('Wissenscheck offen');
 });

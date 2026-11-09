@@ -173,7 +173,7 @@ export default function TeamWorkspace({ onDemo, config = backendConfig(), initia
         setTaskReturn(null);setFilter(options.taskPreset==='done'?'done':'not_done');setSite('all');setPage(0);focusTaskHeading.current=true;
       }else{clearTaskSelection();setFilter('open');setPage(0);}
     }
-    if(id==='learning'){setLearningView(options?.view||'courses');setNotificationTarget(options?.assignmentId?{kind:'learning',assignment_id:options.assignmentId}:null);}
+    if(id==='learning'){setLearningView(options?.view||'courses');setNotificationTarget(options?.assignmentId?{kind:'learning',assignment_id:options.assignmentId}:options?.enrollmentId?{kind:'onboarding',target_id:options.enrollmentId}:null);}
     if(id==='knowledge')setKnowledgeTarget(options?.documentId||null);
     if(id==='feedback'&&options?.action==='create')setNotificationTarget({kind:'feedback',action:'create'});
     setArea(id);setSelected(null);setEditor(null);

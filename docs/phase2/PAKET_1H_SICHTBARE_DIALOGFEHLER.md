@@ -23,3 +23,7 @@ Alle Daten und Backendantworten der Browserprüfungen sind synthetisch. Echte Po
 Manuell prüfen: Einen längeren Dialog am Handy öffnen und nach unten scrollen. Falls eine Aktion eine Fehlermeldung auslöst, muss deren Anfang unter der Kopfzeile sichtbar sein und der Entwurf erhalten bleiben. Keine SMTP-Einstellungen ändern oder echte Mails wiederholt anfordern, um einen Fehler zu erzeugen.
 
 Rückweg: den isolierten Komponenten-/Test-/Dokumentationscommit zurücknehmen; keine Datenrückmigration erforderlich.
+
+## Nachgewiesener Abschluss
+
+Der Commit `8a6bfa0a4743919ca1249241bb83d9533c342fb0` wurde im [GitHub-Lauf 42576873190](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42576873190) erfolgreich geprüft und veröffentlicht: 339 Browserfälle bestanden (6,8 Minuten), danach erfolgreicher Produktionssmoke und erfolgreiches Deployment.
