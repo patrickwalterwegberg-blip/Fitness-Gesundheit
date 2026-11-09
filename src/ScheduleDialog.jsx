@@ -10,7 +10,14 @@ export default function ScheduleDialog({title,onClose,busy=false,error,children,
   (field||dialog.querySelector('button:not(:disabled)'))?.focus({preventScroll:true});
   return()=>{dialog.close();if(previous?.isConnected)previous.focus({preventScroll:true});};
  },[]);
- useEffect(()=>{if(error)ref.current?.querySelector('[role="alert"]')?.scrollIntoView({block:'nearest'});},[error]);
+ useEffect(()=>{
+  if(!error)return;
+  const dialog=ref.current,alert=dialog?.querySelector(':scope > .schedule-dialog-body > [role="alert"]'),header=dialog?.querySelector(':scope > .section-heading');
+  if(!alert||!header)return;
+  const bounds=alert.getBoundingClientRect(),top=header.getBoundingClientRect().bottom+8,bottom=dialog.getBoundingClientRect().top+dialog.clientTop+dialog.clientHeight-8;
+  const delta=bounds.top<top?bounds.top-top:bounds.bottom>bottom?Math.min(bounds.bottom-bottom,bounds.top-top):0;
+  if(delta)dialog.scrollBy({top:delta,behavior:'instant'});
+ },[error]);
  function keepFocus(event){
   const dialog=ref.current;
   if(event.key!=='Tab'||event.target.closest('dialog')!==dialog)return;

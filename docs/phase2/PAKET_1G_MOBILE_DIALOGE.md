@@ -15,3 +15,7 @@ Der bestehende mobile E-Mail-Dialogtest wird für 360 × 740 und 390 × 844 ausg
 Die CSS-Änderung wirkt in allen bestehenden ScheduleDialog-Dialogen. Daher folgen vollständige Browserregression und Produktionssmoke vor Veröffentlichung. Die Prüfungen sind Browser-Simulationen; echte iPhone-/Android-Geräte sind gesondert abzunehmen.
 
 Beide neuen Größenprüfungen scheiterten am bisherigen CSS nachvollziehbar mit 44 erwartet / 31 erhalten. Nach der Korrektur bestanden alle 16 Kontoprüfungsfälle in 19,1 Sekunden, einschließlich beider Handygrößen. Die Screenshots wurden visuell geprüft; Farben, Schrift und Symbol entsprechen dem vorhandenen Design. Build und Produktionssmoke der exakt übereinstimmenden Prüfkopie bestanden. Unabhängige QA- und UX-Quellsichten gaben den Diff frei. Die vollständige GitHub-Browserregression und Veröffentlichung bleiben bis zum konkreten Lauf offen. Rückweg: den isolierten CSS-/Test-/Dokumentationscommit zurücknehmen. Keine Datenbankänderung oder Datenrückmigration.
+
+## Nachgewiesener gemeinsamer Abschluss
+
+Die Pakete 1F und 1G sind gemeinsam mit Commit `d43c51354b688fe490893acef9d736ea4a48c9c5` veröffentlicht. Der [GitHub-Lauf 42569579286](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42569579286) bestätigt 336 bestandene Browserfälle (6,6 Minuten), erfolgreichen Produktionssmoke und erfolgreiches Deployment. Echte Postfach- und Geräteabnahmen bleiben davon getrennt.

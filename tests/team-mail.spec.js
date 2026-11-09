@@ -31,6 +31,18 @@ test('a deliberate login request uses only the verified ID and confirms request,
 test('provider failure category and request reference are visible without raw provider details',async({page})=>{
  const {state}=await backend(page);state.reason='recipient_restricted';await directory(page);const dialog=await check(page);await dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'}).click();await expect(dialog.getByRole('alert')).toContainText('Versand an diese Empfängeradresse abgelehnt');await expect(dialog.getByRole('alert')).toContainText(reference);await expect(dialog.getByRole('status')).toHaveCount(0);await expect(dialog).not.toContainText('must-not-be-shown');expect(state.mailCalls).toHaveLength(1);
 });
+
+for(const viewport of [{width:390,height:844},{width:844,height:390}])test(`a mail failure stays below the sticky dialog header at ${viewport.width}x${viewport.height}`,async({page})=>{
+ await page.setViewportSize(viewport);const {state}=await backend(page);state.reason='recipient_restricted';await directory(page);const dialog=await check(page),send=dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'});
+ await send.scrollIntoViewIfNeeded();await expect.poll(()=>dialog.evaluate(el=>el.scrollTop)).toBeGreaterThan(0);await send.click();const alert=dialog.getByRole('alert');await expect(alert).toContainText('Versand an diese Empfängeradresse abgelehnt');
+ const bounds=await alert.boundingBox(),header=await dialog.locator(':scope > .section-heading').boundingBox(),frame=await dialog.boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(header.y+header.height);expect(bounds.y+bounds.height).toBeLessThanOrEqual(Math.min(viewport.height,frame.y+frame.height));
+ await expect(dialog.getByText('Konto im Anmeldedienst vorhanden',{exact:true})).toHaveCount(1);expect(state.mailCalls).toEqual([{action:'send_login',userId:sharedIds.colleague}]);await page.screenshot({path:`test-results/mail-error-${viewport.width}.png`});
+});
+
+test('keyboard focus wraps inside the account dialog and Escape restores its trigger without sending',async({page})=>{
+ await page.setViewportSize({width:390,height:844});const {state}=await backend(page);await directory(page);const dialog=await check(page),close=dialog.getByRole('button',{name:'Fenster schließen'}),send=dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'});
+ await close.focus();await page.keyboard.press('Shift+Tab');await expect(send).toBeFocused();await page.keyboard.press('Tab');await expect(close).toBeFocused();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(page.getByRole('button',{name:'E-Mail-Zugang für Mitarbeiter Beispiel prüfen',exact:true})).toBeFocused();expect(state.mailCalls).toHaveLength(0);
+});
 test('a failed refresh removes earlier checked data and does not allow sending based on stale data',async({page})=>{
  const {state}=await backend(page);await directory(page);const dialog=await check(page);state.failCheck=true;await dialog.getByRole('button',{name:'Zugang erneut prüfen'}).click();await expect(dialog.getByRole('alert')).toBeVisible();await expect(dialog.getByText('Konto im Anmeldedienst vorhanden',{exact:true})).toHaveCount(0);await expect(dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'})).toHaveCount(0);expect(state.mailCalls).toHaveLength(0);
 });
