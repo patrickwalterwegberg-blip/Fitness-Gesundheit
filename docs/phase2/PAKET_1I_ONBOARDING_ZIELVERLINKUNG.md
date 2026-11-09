@@ -26,3 +26,7 @@ Die Bestandsaufnahme fand zwei weitere, getrennt zu behandelnde Codebefunde: Ein
 Manuell prüfen: Bei mehreren eigenen Plänen auf der Startseite den angezeigten Namen mit dem nach „Onboarding fortsetzen“ geöffneten Namen vergleichen. Bei zwischenzeitlich fehlendem Ziel muss ein Hinweis erscheinen; einen anderen verfügbaren Plan erst durch eigene Auswahl öffnen.
 
 Rückweg: den isolierten Komponenten-/Test-/Dokumentationscommit zurücknehmen. Keine Datenrückmigration erforderlich.
+
+## Nachgewiesener gemeinsamer Abschluss
+
+Die Pakete 1I und 1J wurden gemeinsam mit Commit `16bb1e234de5698bb31f9378ae6666f786070e44` veröffentlicht. Der [GitHub-Lauf 42583714037](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42583714037) bestätigt 348 bestandene Browserfälle (5,7 Minuten), erfolgreichen Produktionssmoke und erfolgreiches Deployment. Gehostete Mitarbeiterzuweisungen bleiben gesondert abzunehmen.

@@ -23,3 +23,7 @@ Alle vier neuen Fälle scheiterten am bisherigen Komponentenstand. Nach der Korr
 Manuell prüfen: Über die Startseite einen Kurs öffnen, anschließend einen anderen eigenen Kurs wählen und dort eine Lektion bestätigen. Der zweite Kurs muss geöffnet bleiben. Bei einem Wissenscheck müssen Ergebnis und Kurs zusammenpassen.
 
 Rückweg: den isolierten Komponenten-/Test-/Dokumentationscommit zurücknehmen. Gespeicherte Lernfortschritte werden durch diese reine Navigationsänderung nicht zurückgesetzt.
+
+## Nachgewiesener gemeinsamer Abschluss
+
+Die Pakete 1I und 1J wurden gemeinsam mit Commit `16bb1e234de5698bb31f9378ae6666f786070e44` veröffentlicht. Der [GitHub-Lauf 42583714037](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42583714037) bestätigt 348 bestandene Browserfälle (5,7 Minuten), erfolgreichen Produktionssmoke und erfolgreiches Deployment. Gehostete Mitarbeiterzuweisungen bleiben gesondert abzunehmen.
