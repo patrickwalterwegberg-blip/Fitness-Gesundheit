@@ -4,7 +4,7 @@
 .schedule-dialog.schedule-dialog-wide{width:min(1040px,calc(100vw - 32px))}
 .schedule-dialog.builder-editor,.schedule-dialog.knowledge-editor,.schedule-dialog.knowledge-detail,.schedule-dialog.team-detail,.schedule-dialog.control-detail,.schedule-dialog.control-assignment-form,.schedule-dialog.module-record-editor,.schedule-dialog.module-record-detail{margin:auto}
 .schedule-dialog .builder-editor-body,.schedule-dialog .control-detail-body,.schedule-dialog .knowledge-detail-body,.schedule-dialog .team-detail-body,.schedule-dialog.module-record-editor form,.schedule-dialog.control-assignment-form form,.schedule-dialog.knowledge-editor form{padding:0}
-.schedule-dialog .section-heading h2{overflow-wrap:anywhere;min-width:0}.schedule-dialog>.section-heading{gap:16px;align-items:flex-start}.schedule-dialog>.section-heading>.icon-button{flex-shrink:0}
+.schedule-dialog .section-heading h2{overflow-wrap:anywhere;min-width:0}.schedule-dialog>.section-heading{gap:16px;align-items:flex-start}.schedule-dialog>.section-heading>.icon-button{flex-shrink:0;min-width:44px;min-height:44px}
 .schedule-dialog-body{min-width:0;overflow-wrap:anywhere}.schedule-dialog-body>.admin-success{margin-bottom:20px}.schedule-dialog .button-group{flex-wrap:wrap}.schedule-dialog .form-grid{min-width:0}.schedule-dialog input,.schedule-dialog textarea,.schedule-dialog select{max-width:100%}.schedule-dialog.module-record-detail .detail-list{padding:0}
 @media(max-width:600px){.schedule-dialog.schedule-dialog-wide{width:calc(100vw - 24px)}.schedule-dialog .form-grid{grid-template-columns:1fr}.schedule-dialog .builder-field{padding:12px;gap:8px}.schedule-dialog .builder-actions{flex-wrap:wrap}.schedule-dialog-body>.admin-help{padding:0}}
 
