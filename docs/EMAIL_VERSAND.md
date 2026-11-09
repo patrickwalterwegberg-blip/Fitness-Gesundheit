@@ -1,12 +1,14 @@
 # E-Mail-Zugang und Versand prüfen
 
-Stand: 06.11.2026. Die geschützte Zugangskontrolle hilft, Kontofreigabe und Mailzustellung getrennt zu prüfen. Sie repariert keine SMTP-Konfiguration und bestätigt keinen Empfang im Postfach.
+Stand: 09.11.2026. Die geschützte Zugangskontrolle hilft, Kontofreigabe und Mailzustellung getrennt zu prüfen. Sie repariert keine SMTP-Konfiguration und bestätigt keinen Empfang im Postfach.
 
 ## Ohne Mail prüfen
 
 1. Mit einem berechtigten Konto **Mitarbeiterzugänge** öffnen und den Mitarbeiter suchen.
 2. **E-Mail-Zugang prüfen** wählen. Die Oberfläche lädt den passenden Datensatz erneut aus der serverseitig eingeschränkten Mitarbeiterliste. Bereits angezeigte Daten werden bei einem fehlgeschlagenen erneuten Abruf verworfen.
 3. Konto, aktives Mitarbeiterprofil, Studiofreigabe sowie vermerkte Einladung und letzte Anmeldung prüfen. Die Zeitangaben verwenden Europe/Berlin. Der Prüfzeitpunkt stammt vom Browser.
+
+Lange E-Mail-Adressen werden für die Suche auf höchstens 200 Unicode-Zeichen begrenzt; bei mehreren Ergebnisseiten wird die exakte ausgewählte Mitarbeiter-ID gesucht. Die angezeigte Adresse bleibt vollständig. Fehlende oder unklare Treffer ergeben keine Versandfreigabe.
 
 Die Kontrolle benötigt die bestehende Mitarbeiterlistenfreigabe und die Funktion `users.login`. Serverregeln begrenzen die sichtbaren Mitarbeiter zusätzlich. Eine reine Lesefreigabe für die Mitarbeiterliste erhält keine zusätzlichen Versandaktionen. Die Kontrolle versendet keine Nachricht und verbraucht kein Versandlimit. Sie prüft weder eine zusätzliche Auth-Sperre noch SMTP-Zugangsdaten, Domainfreigaben oder Postfachzustellung. Einladungsdatum und letzter Login sind historische Kontoinformationen, keine Zustellbelege.
 

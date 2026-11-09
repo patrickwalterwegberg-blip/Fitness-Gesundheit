@@ -59,4 +59,4 @@ Alle Punkte sind zunächst offen. Trage erst nach tatsächlicher Durchführung D
 
 Die Oberfläche und der Supabase-Einladungsdienst werden separat veröffentlicht. Ein grüner GitHub-Pages-Lauf beweist keine aktuelle Bereitstellung des Einladungsdienstes und keine Mailzustellung. Unklarheiten am Dienst anhand von [Mitarbeiterzugänge](MITARBEITERZUGAENGE.md) prüfen.
 
-Bekannter Randfall: Sehr lange erlaubte E-Mail-Adressen über 200 Zeichen können aktuell an der Kontoprüfung scheitern. Das ist separat zu beheben und erklärt nicht ohne weiteren Nachweis einen allgemeinen Versandfehler.
+Die Kontoprüfung begrenzt ihren Suchtext auf das Serverlimit und liest bei Bedarf weitere Ergebnisseiten. Auch bei langen Adressen wird ausschließlich die ausgewählte Mitarbeiter-ID bestätigt. Diese Korrektur erklärt oder bestätigt keinen allgemeinen SMTP-Versandfehler.

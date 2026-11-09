@@ -3,12 +3,17 @@ import {sharedBackend,sharedIds} from './shared-backend';
 import catalog from '../src/function-catalog.json' with {type:'json'};
 const reference='00000000-0000-4000-8000-000000005001';
 async function backend(page,{role='admin',login=true}={}){
- const base=await sharedBackend(page,{role,pages:['tasks','knowledge','learning','access']});const state={login,mailCalls:[],reason:null,failCheck:false,caps:null};
+ const base=await sharedBackend(page,{role,pages:['tasks','knowledge','learning','access']});const state={login,mailCalls:[],reason:null,failCheck:false,caps:null,checkPages:null,checkErrorPage:null};
  await page.route('https://teamhub-test.supabase.co/**',async route=>{
   const req=route.request(),name=new URL(req.url()).pathname.split('/').at(-1);const send=(json,status=200)=>route.fulfill({status,json});
   if(name==='team_access_context')return send({version:12,pages:['tasks','knowledge','learning','access'],capabilities:state.caps||catalog.filter(c=>state.login||c.key!=='users.login').map(c=>c.key),can_design:false});
   if(name==='team-access'){state.mailCalls.push(req.postDataJSON());return state.reason?send({code:'email_not_confirmed',reason:state.reason,requestId:reference,message:'must-not-be-shown-private-provider-detail'},502):send({code:'login_link_requested',requestId:reference});}
-  if(name==='admin_team_directory'&&state.failCheck&&req.postDataJSON()?.p_query)return send({code:'42501'},403);
+  if(name==='admin_team_directory'&&req.postDataJSON()?.p_query){
+   const args=req.postDataJSON();
+   if(Array.from(args.p_query).length>200)return send({code:'23514'},400);
+   if(state.failCheck||state.checkErrorPage===args.p_page)return send({code:'42501'},403);
+   if(state.checkPages){const result=state.checkPages[args.p_page]||{members:[],total:0};return send(result);}
+  }
   return route.fallback();
  });return {...base,state};
 }
@@ -37,4 +42,36 @@ test('revoking the delegated login function clears an open email-account check',
 });
 test('the account check fits a phone and returns focus to its trigger without requesting mail',async({page})=>{
  await page.setViewportSize({width:390,height:844});const {state}=await backend(page);await directory(page);const dialog=await check(page);expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);const send=dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern',exact:true});await send.scrollIntoViewIfNeeded();const bounds=await send.boundingBox();expect(bounds.y).toBeGreaterThanOrEqual(0);expect(bounds.y+bounds.height).toBeLessThanOrEqual(844);await page.screenshot({path:'test-results/mail-check-mobile.png'});await dialog.getByRole('button',{name:'Fenster schließen'}).click();await expect(page.getByRole('button',{name:'E-Mail-Zugang für Mitarbeiter Beispiel prüfen'})).toBeFocused();expect(state.mailCalls).toHaveLength(0);
+});
+
+const longEmail=length=>'a'.repeat(64)+'@'+'d'.repeat(63)+'.'+'e'.repeat(63)+'.'+'f'.repeat(length-198)+'.test';
+for(const length of [200,201,254])test(`the account check accepts a ${length}-character address without exceeding the directory query limit`,async({page})=>{
+ const {members,calls,state}=await backend(page);const address=longEmail(length);expect(address.length).toBe(length);members[1].email=address;
+ await directory(page);const dialog=await check(page);await expect(dialog.getByText(address,{exact:true})).toBeVisible();await expect(dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'})).toBeEnabled();
+ expect(calls.filter(c=>c.path.endsWith('admin_team_directory')&&c.body.p_query).every(c=>Array.from(c.body.p_query).length<=200)).toBe(true);expect(state.mailCalls).toHaveLength(0);
+});
+
+function pagedCheck(state,members,{includeTarget=true}={}){
+ const target={...members[1],full_name:'Aktueller Mitarbeiter'};
+ const others=Array.from({length:100},(_,i)=>({...target,id:`00000000-0000-4000-8000-${String(1000+i).padStart(12,'0')}`,full_name:`Anderer Treffer ${members[1].email}`,email:`anderer-${i}@example.org`,active:false}));
+ state.checkPages=[{members:others,total:101},{members:includeTarget?[target]:[{...others[0],id:'00000000-0000-4000-8000-000000002000'}],total:101}];
+}
+test('the account check follows later pages and uses only the exact selected employee ID',async({page})=>{
+ const {state,members}=await backend(page);pagedCheck(state,members);await directory(page);const dialog=await check(page);
+ await expect(dialog.getByText('Aktueller Mitarbeiter',{exact:true})).toBeVisible();await expect(dialog.getByText(/Anderer Treffer/)).toHaveCount(0);await expect(dialog.getByText('Teamhub-Zugang freigeschaltet',{exact:true})).toBeVisible();expect(state.mailCalls).toHaveLength(0);
+ await dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'}).click();expect(state.mailCalls).toEqual([{action:'send_login',userId:sharedIds.colleague}]);
+});
+test('a missing employee on the last page never substitutes a different account or sends a mail',async({page})=>{
+ const {state,members}=await backend(page);pagedCheck(state,members,{includeTarget:false});await directory(page);await page.getByRole('button',{name:'E-Mail-Zugang für Mitarbeiter Beispiel prüfen',exact:true}).click();const dialog=page.getByRole('dialog',{name:'E-Mail-Zugang prüfen',exact:true});
+ await expect(dialog.getByRole('alert')).toContainText('nicht eindeutig geprüft');await expect(dialog.getByText('Konto im Anmeldedienst vorhanden',{exact:true})).toHaveCount(0);await expect(dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'})).toHaveCount(0);expect(state.mailCalls).toHaveLength(0);
+});
+test('a later-page refresh failure removes the previously verified account and prevents sending',async({page})=>{
+ const {state,members}=await backend(page);await directory(page);const dialog=await check(page);pagedCheck(state,members);state.checkErrorPage=1;await dialog.getByRole('button',{name:'Zugang erneut prüfen'}).click();
+ await expect(dialog.getByRole('alert')).toBeVisible();await expect(dialog.getByText('Konto im Anmeldedienst vorhanden',{exact:true})).toHaveCount(0);await expect(dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'})).toHaveCount(0);expect(state.mailCalls).toHaveLength(0);
+});
+test('closing during a later-page request discards its eventual result and never sends a mail',async({page})=>{
+ const {state,members}=await backend(page);pagedCheck(state,members);let release,started=false;const waiting=new Promise(resolve=>{release=resolve;});
+ await page.route('https://teamhub-test.supabase.co/rest/v1/rpc/admin_team_directory',async route=>{if(route.request().postDataJSON()?.p_page!==1)return route.fallback();started=true;await waiting;await route.fallback();});
+ await directory(page);await page.getByRole('button',{name:'E-Mail-Zugang für Mitarbeiter Beispiel prüfen',exact:true}).click();const dialog=page.getByRole('dialog',{name:'E-Mail-Zugang prüfen',exact:true});await expect.poll(()=>started).toBe(true);await expect(dialog.getByText('Zugang wird geprüft …',{exact:true})).toBeVisible();await expect(dialog.getByRole('button',{name:'Anmeldelink für geprüften Zugang anfordern'})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Fenster schließen'}).click();release();await expect(page.getByRole('dialog',{name:'E-Mail-Zugang prüfen',exact:true})).toHaveCount(0);expect(state.mailCalls).toHaveLength(0);
 });
