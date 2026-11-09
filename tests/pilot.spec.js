@@ -47,7 +47,7 @@ async function pilotBackend(page,{role='admin',missing=false,failRead=false,empt
     }
     const tables={learning_courses:courses,learning_assignments:assignments,learning_progress:progress,learning_material:material,learning_reads:reads,learning_attempts:attempts};return send(tables[name]||[]);
   });
-  return {...base,calls,courses,assignments,progress,material,reads,attempts};
+  return {...base,calls,courses,assignments,progress,material,reads,attempts,keys};
 }
 test.beforeEach(async({page})=>{await page.clock.setFixedTime(new Date('2026-11-04T09:00:00Z'));});
 test('personal dashboard shows server totals, opens real tasks and diagnoses unpublished knowledge',async({page})=>{
@@ -145,4 +145,24 @@ test('dashboard learning entry opens exactly its assignment instead of only the 
  await expect(page.getByRole('navigation',{name:'Kurslektionen'})).toBeVisible();
  await expect(page.getByRole('heading',{name:'Aufgaben bearbeiten',exact:true})).toBeVisible();
  expect(state.calls.some(c=>c.name==='learning_assignments')).toBe(true);
+});
+
+const secondCourse='00000000-0000-4000-8000-000000000083',secondAssignment='00000000-0000-4000-8000-000000000084';
+async function twoLearningCourses(page,{read=false}={}){
+ const state=await pilotBackend(page,{role:'employee'});
+ state.courses.push({id:secondCourse,title:'Geräte sicher prüfen',lesson_count:2,active:true});state.assignments.push({id:secondAssignment,course_id:secondCourse,learner_id:sharedIds.user,studio_id:sharedIds.studio,due_date:'2026-11-21',requires_practice:false});state.progress.push({assignment_id:secondAssignment,lessons_read:read?2:0,quiz_passed:false,practice_confirmed:false});state.material.push({...structuredClone(state.material[0]),course_id:secondCourse,lessons:[{title:'Sicherheitsstart',body:'Die Geräte vor der Nutzung kontrollieren.'},{title:'Abschlusskontrolle',body:'Offene Punkte mit der Leitung klären.'}]});state.keys.set(secondCourse,[1,0]);
+ if(read)state.reads.push({assignment_id:secondAssignment,lesson_index:0},{assignment_id:secondAssignment,lesson_index:1});
+ await page.goto('/tests/workspace.html?start=dashboard');await page.getByRole('button',{name:/Einarbeitung Empfang 0\/2/}).click();await expect(page.getByRole('heading',{name:'Aufgaben bearbeiten',exact:true})).toBeVisible();await page.getByRole('button',{name:/^Geräte sicher prüfen/}).click();await expect(page.getByRole('heading',{name:'Sicherheitsstart',exact:true})).toBeVisible();return state;
+}
+test('a manually chosen second course stays open after reading despite the original dashboard target',async({page})=>{
+ const state=await twoLearningCourses(page);await page.getByRole('button',{name:'Lektion als gelesen bestätigen',exact:true}).click();await expect(page.getByRole('button',{name:'Als gelesen bestätigt',exact:true})).toBeDisabled();await expect(page.getByRole('heading',{name:'Geräte sicher prüfen',exact:true})).toBeVisible();expect(state.reads).toEqual([{assignment_id:secondAssignment,lesson_index:0,read_at:'2026-11-04T10:00:00Z'}]);expect(state.progress.find(p=>p.assignment_id===aid).lessons_read).toBe(0);
+});
+test('a manually chosen second course keeps its quiz result after the refresh',async({page})=>{
+ const state=await twoLearningCourses(page,{read:true});await page.getByRole('radio',{name:'Nach Abschluss',exact:true}).check();await page.getByRole('radio',{name:'Im Wissenshub',exact:true}).check();await page.getByRole('button',{name:'Quiz auswerten',exact:true}).click();await expect(page.getByRole('status').filter({hasText:'2/2 richtig'})).toContainText('Bestanden.');await expect(page.getByRole('heading',{name:'Geräte sicher prüfen',exact:true})).toBeVisible();expect(state.attempts).toHaveLength(1);expect(state.attempts[0].assignment_id).toBe(secondAssignment);expect(state.progress.find(p=>p.assignment_id===aid).quiz_passed).toBe(false);
+});
+test('refreshing after closing a dashboard-opened course does not reopen it',async({page})=>{
+ await twoLearningCourses(page);await page.getByRole('button',{name:'Kurs schließen',exact:true}).click();await page.getByRole('button',{name:'Lernhub aktualisieren',exact:true}).click();await expect(page.getByRole('button',{name:'Lernhub aktualisieren',exact:true})).toBeEnabled();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect(page.locator('.pilot-reader')).toHaveCount(0);
+});
+test('an unavailable initial learning target does not keep overriding later valid course choices',async({page})=>{
+ const state=await pilotBackend(page,{role:'employee'});state.courses.push({id:secondCourse,title:'Geräte sicher prüfen',lesson_count:2,active:true});state.assignments.push({id:secondAssignment,course_id:secondCourse,learner_id:sharedIds.user,studio_id:sharedIds.studio,due_date:'2026-11-21',requires_practice:false});state.progress.push({assignment_id:secondAssignment,lessons_read:0,quiz_passed:false,practice_confirmed:false});state.material.push({...structuredClone(state.material[0]),course_id:secondCourse});await page.goto('/tests/workspace.html?start=dashboard');const entry=page.getByRole('button',{name:/Einarbeitung Empfang 0\/2/});await expect(entry).toBeVisible();state.assignments.splice(0,1);await entry.click();await expect(page.getByRole('alert')).toContainText('Lernauftrag ist nicht mehr für deinen Zugang verfügbar');await page.getByRole('button',{name:/^Geräte sicher prüfen/}).click();await page.getByRole('button',{name:'Lernhub aktualisieren',exact:true}).click();await expect(page.getByRole('button',{name:'Lernhub aktualisieren',exact:true})).toBeEnabled();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await expect(page.getByRole('heading',{name:'Geräte sicher prüfen',exact:true})).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
 });
