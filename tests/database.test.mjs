@@ -51,6 +51,7 @@ const video=await readFile('backend/supabase/011_course_videos.sql','utf8');awai
 const onboarding=await readFile('backend/supabase/012_employee_onboarding.sql','utf8');await db.exec(onboarding);await db.exec(onboarding);
 const assistant=await readFile('backend/supabase/013_team_assistant.sql','utf8');await db.exec(assistant);await db.exec(assistant);
 const operations=await readFile('backend/supabase/014_operations_check.sql','utf8');await db.exec(operations);await db.exec(operations);
+const evidenceReview=await readFile('backend/supabase/015_learning_evidence_review.sql','utf8');await db.exec(evidenceReview);await db.exec(evidenceReview);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -1101,4 +1102,73 @@ test('operations inventory also detects column-level anonymous read grants and m
  const file=(await db.query("select o.id from storage.objects o join public.knowledge_versions v on v.object_path=o.name where o.bucket_id='team-knowledge' and v.kind='file' and v.state='ready' limit 1")).rows[0];
  const video=(await db.query("select o.id from storage.objects o join public.learning_videos v on v.object_path=o.name where o.bucket_id='course-videos' and v.state='ready' limit 1")).rows[0];assert.ok(file);assert.ok(video);
  await db.transaction(async tx=>{await tx.query('delete from storage.objects where id in($1,$2)',[file.id,video.id]);await tx.exec('grant select(full_name) on public.profiles to anon');await tx.exec('set local role authenticated');await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.admin]);const r=(await tx.query('select public.admin_operations_status() as r')).rows[0].r;assert.equal(r.tables.find(t=>t.name==='profiles').anonymous_select,true);assert.equal(r.quality.missing_knowledge_objects,initial.quality.missing_knowledge_objects+1);assert.equal(r.quality.missing_video_objects,initial.quality.missing_video_objects+1);});
+});
+
+
+// Synthetic learners and authoritative PostgreSQL state, never hosted accounts.
+let evidenceSequence=9300;
+async function evidencePerson(studio,role='employee'){
+ const alias='evidence'+evidenceSequence++,uid=id(evidenceSequence++);ids[alias]=uid;
+ await db.query('insert into auth.users(id,email) values($1,$2)',[uid,alias+'@example.org']);
+ await db.query('insert into public.profiles(id,full_name,role,active) values($1,$2,$3,true)',[uid,alias,role]);
+ await db.query('insert into public.studio_memberships values($1,$2)',[uid,studio]);
+ return alias;
+}
+async function evidenceFixture({self=false,right='learning.practice',grant=true,studio=a,admin=false,ready=true}={}){
+ const reviewer=admin?'admin':await evidencePerson(a),learner=self?reviewer:await evidencePerson(studio);
+ if(!admin&&grant)await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,null)',[ids[reviewer],[right]]));
+ const course=(await asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Evidence boundary fixture',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[1,0]']))).rows[0].id;
+ const assignment=(await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,true) as id',[ids[learner],course,studio]))).rows[0].id;
+ // Seed prerequisites, not a claim that a browser quiz or a real employee was tested.
+ await db.query('update public.learning_progress set lessons_read=$1,quiz_passed=$2 where assignment_id=$3',[ready?pilotLessons.length:0,right==='learning.practice'&&ready,assignment]);
+ return {reviewer,learner,assignment};
+}
+async function evidenceState(assignment){return (await db.query("select (select to_jsonb(p) from public.learning_progress p where assignment_id=$1) as progress,(select coalesce(jsonb_agg(to_jsonb(e) order by e.id),'[]') from public.learning_events e where assignment_id=$1) as events",[assignment])).rows[0];}
+for(const [right,rpc] of [['learning.practice','confirm_learning_practice'],['learning.assess','record_learning_assessment']]){
+ const invoke=({reviewer,assignment})=>asUser(reviewer,tx=>tx.query(right==='learning.practice'?'select public.confirm_learning_practice($1,$2)':'select public.record_learning_assessment($1,true,$2)',[assignment,'Personally reviewed fixture']));
+ test(rpc+' rejects delegated self-confirmation without changing progress or evidence',async()=>{
+  const fixture=await evidenceFixture({self:true,right}),before=await evidenceState(fixture.assignment);
+  await assert.rejects(invoke(fixture),e=>e.code==='42501'&&e.message.includes('Another reviewer'));
+  assert.deepEqual(await evidenceState(fixture.assignment),before);
+ });
+ test(rpc+' still permits an authorized colleague in the same studio and records its actor',async()=>{
+  const fixture=await evidenceFixture({right});await invoke(fixture);const state=await evidenceState(fixture.assignment);
+  assert.equal(state.events.at(-1).actor_id,ids[fixture.reviewer]);
+  assert.equal(state.progress[right==='learning.practice'?'practice_confirmed':'quiz_passed'],true);
+  if(right==='learning.practice'){assert.equal(state.progress.confirmed_by,ids[fixture.reviewer]);assert.ok(state.progress.confirmed_at);}
+ });
+ for(const boundary of ['different studio','missing grant'])test(rpc+' rejects '+boundary+' without writing evidence',async()=>{
+  const fixture=await evidenceFixture({right,studio:boundary==='different studio'?b:a,grant:boundary!=='missing grant'}),before=await evidenceState(fixture.assignment);
+  await assert.rejects(invoke(fixture),e=>e.code==='42501');assert.deepEqual(await evidenceState(fixture.assignment),before);
+ });
+ test(rpc+' preserves the existing administrator self-confirmation behavior',async()=>{
+  const fixture=await evidenceFixture({self:true,right,admin:true});await invoke(fixture);const state=await evidenceState(fixture.assignment);
+  assert.equal(state.events.at(-1).actor_id,ids.admin);assert.equal(state.progress[right==='learning.practice'?'practice_confirmed':'quiz_passed'],true);
+ });
+ test(rpc+' preserves prerequisites even for an authorized colleague',async()=>{
+  const fixture=await evidenceFixture({right,ready:false}),before=await evidenceState(fixture.assignment);
+  await assert.rejects(invoke(fixture),e=>e.code==='23514');assert.deepEqual(await evidenceState(fixture.assignment),before);
+ });
+}
+
+test('delegated external assessment cannot revoke its own existing quiz and practice evidence',async()=>{
+ const fixture=await evidenceFixture({self:true,right:'learning.assess'});
+ await db.query('update public.learning_progress set quiz_passed=true,practice_confirmed=true,confirmed_by=$1,confirmed_at=clock_timestamp() where assignment_id=$2',[ids.admin,fixture.assignment]);
+ const before=await evidenceState(fixture.assignment);
+ await assert.rejects(asUser(fixture.reviewer,tx=>tx.query('select public.record_learning_assessment($1,false,$2)',[fixture.assignment,'Attempted self-revocation'])),e=>e.code==='42501'&&e.message.includes('Another reviewer'));
+ assert.deepEqual(await evidenceState(fixture.assignment),before);
+});
+test('evidence migration rollback and reapplication preserve stored progress and events',async()=>{
+ const fixture=await evidenceFixture({self:true}),before=await evidenceState(fixture.assignment);
+ const rollback=await readFile('backend/supabase/rollback/015_learning_evidence_review.sql','utf8');
+ const forward=await readFile('backend/supabase/015_learning_evidence_review.sql','utf8');
+ await db.exec(rollback);
+ try{
+  assert.deepEqual(await evidenceState(fixture.assignment),before);
+  // Verify the documented old behavior only in the isolated synthetic database.
+  await asUser(fixture.reviewer,tx=>tx.query('select public.confirm_learning_practice($1)',[fixture.assignment]));
+ }finally{await db.exec(forward);}
+ const saved=await evidenceState(fixture.assignment);assert.equal(saved.progress.practice_confirmed,true);assert.equal(saved.events.length,before.events.length+1);
+ await assert.rejects(asUser(fixture.reviewer,tx=>tx.query('select public.confirm_learning_practice($1)',[fixture.assignment])),e=>e.code==='42501');
+ assert.deepEqual(await evidenceState(fixture.assignment),saved);
 });

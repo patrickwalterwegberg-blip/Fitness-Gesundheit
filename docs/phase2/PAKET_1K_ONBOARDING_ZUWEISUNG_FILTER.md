@@ -29,3 +29,7 @@ Die Browser-Testdaten wenden echte Studiofilterung, Sortierung nach Erstellzeit 
 Manuell prüfen: In „Onboarding verwalten“ zunächst einen Studiofilter beziehungsweise eine Folgeseite wählen, dann einen Plan zuweisen. Nach Erfolg müssen Studio, Seite und geöffneter Plan zusammenpassen. Bei einem Hinweis die Seitenauswahl oder die bewusste Auswahl aus der Liste verwenden.
 
 Rückweg: den isolierten Komponenten-/Test-/Dokumentationscommit zurücknehmen. Gespeicherte Zuweisungen werden dabei nicht gelöscht.
+
+## Nachgewiesener Abschluss
+
+Am 20.11.2026 wurde der Abschluss des bereits am 09.11.2026 ausgeführten [GitHub-Laufs 42608217692](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/42608217692) für `bdbf967ab3ca81a7307364169be24fe0be68757e` erneut anhand der öffentlichen Jobs geprüft: 354 Browserfälle bestanden (6,6 Minuten), erfolgreicher Build, Produktionssmoke und erfolgreicher Deploymentjob. Der Schritt „Webseite veröffentlichen“ wurde am 09.11.2026 um 11:28:10 UTC erfolgreich beendet. Damit ist die zuvor im Pakettext offene GitHub-Abnahme abgeschlossen. Gehostete Mitarbeiter-/Rollen- und echte Geräteprüfungen bleiben separat offen.

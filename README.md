@@ -27,6 +27,8 @@ Responsive Plattform im Schwarz-Gold-Design für Sögel, Bersenbrück, Dörpen, 
 
 Für den bisherigen gemeinsamen Umfang sind die vorhandenen Supabase-Erweiterungen **001–012**, privater Storage und der eingerichtete Einladungsdienst erforderlich. Migrationen liegen unter `backend/supabase/`; die jeweiligen Anleitungen erklären die Aktivierung. Die neueren Oberflächen weisen auf fehlende Erweiterungen hin. Der Veröffentlichungsworkflow installiert keine Datenbankmigrationen und richtet keinen Mailversand ein.
 
+Für delegierte Wissens- und Praxisbestätigungen zusätzlich die Sicherheitskorrektur [015_learning_evidence_review.sql](backend/supabase/015_learning_evidence_review.sql) anwenden. Sie verhindert nichtadministrative Selbstbestätigungen. [Prüfstand und Aktivierung](docs/phase2/PAKET_1L_LERNNACHWEISE_PRUEFRECHTE.md); Dateien unter `backend/supabase/rollback/` gehören ausschließlich zum ausdrücklich gewählten Rückweg, nicht zur Installation.
+
 Die lokale Prüfung bestätigt keine aktuelle Installation im gehosteten Projekt. Frühere Rückmeldungen bestätigen Anmeldung und Mailzustellung an das eigene Konto. Eine vollständige aktuelle Abnahme mit einem weiteren Mitarbeiterkonto, echtem Postfach und echten Mobilgeräten muss separat dokumentiert werden.
 
 - **KI:** Echte Modellantworten benötigen zusätzlich Erweiterung 013 und einen aktivierten privaten Modellzugang; die Bereitstellung allein verbindet kein Modell. KI-Wizard, OCR und Videotranskript sind weiterhin offen. Die Wissenssuche zeigt veröffentlichte Originalauszüge und Quellen. PDF-/Office-/Bild-/Videoinhalte werden nicht automatisch ausgelesen.
