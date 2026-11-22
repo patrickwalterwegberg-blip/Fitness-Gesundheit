@@ -37,6 +37,8 @@ jobs:
         run: npm run test:assistant
       - name: Chromium für Browserprüfungen installieren
         run: npx playwright install --with-deps chromium
+      - name: PDF-Prüfwerkzeug installieren
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
       - name: Browserpfad bereitstellen
         run: node --input-type=module -e "import { chromium } from '@playwright/test'; console.log('CHROMIUM_PATH=' + chromium.executablePath());" >> "$GITHUB_ENV"
       - name: Eigenständige Webseite erstellen

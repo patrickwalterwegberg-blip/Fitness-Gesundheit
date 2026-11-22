@@ -66,6 +66,20 @@ Die Lösungen stehen getrennt von den öffentlichen Kursinhalten in einem privat
 
 Gespeichert werden richtige Fragen, Gesamtzahl, bestanden/nicht bestanden, Bestehensgrenze und Zeitpunkt jedes Versuchs. Ein späterer fehlgeschlagener Versuch löscht einen früher erworbenen Bestehensnachweis nicht. Zwischen Prüfungsversuchen liegen mindestens zehn Sekunden. Eine gegebenenfalls verlangte Praxiseinweisung bleibt ein separater Nachweis durch eine berechtigte Person.
 
+## Deinen persönlichen Lernnachweis als PDF speichern
+
+Nach der Einrichtung von Erweiterung 016 kannst du für einen vollständig abgeschlossenen eigenen Lernauftrag einen internen Nachweis öffnen:
+
+1. Im **Lernhub** deinen eigenen Kurs öffnen. Alle Lektionen müssen bestätigt und das Wissen muss geprüft sein. Falls der Auftrag Praxis verlangt, muss diese gesondert bestätigt sein.
+2. **Lernnachweis öffnen** wählen. Prüfe deinen Namen, Studio, Kurs und gegebenenfalls die Praxiseinweisung in der Vorschau.
+3. **Drucken / als PDF speichern** wählen. Der Hub prüft deinen Lernstand und Zugang erneut. Im Druckdialog anschließend, soweit dein Gerät dies anbietet, **Als PDF speichern** auswählen.
+
+Der **Nachweisstand** ist der Zeitpunkt dieser Serverprüfung. Er ist kein gespeichertes Gesamtabschlussdatum. Bei älteren externen Kursen kann die Kursversion als **Nicht dokumentiert** erscheinen. Bereits lokal gespeicherte PDFs behalten ihren ausgewiesenen Stand.
+
+Bei fehlender Freigabe oder unvollständigem Lernstand wird kein neuer Druckauftrag erzeugt. Wende dich bei einer Einrichtungs- oder Freigabemeldung an deine Leitung. Die Funktion ist zunächst auf deine eigenen Nachweise begrenzt; Team-Sammelexporte sind nicht enthalten. Der tatsächliche Druck-/PDF-Ablauf auf euren iPhone- und Android-Geräten ist separat zu prüfen.
+
+Für die Geschäftsleitung: [Erweiterung 016 und Abnahme](phase2/PAKET_1M_PERSOENLICHER_LERNNACHWEIS.md).
+
 ## Rechte
 
 Die Geschäftsleitung hat das Videotool standardmäßig. Anderen Mitarbeitern kann unter **Mitarbeiterzugänge → Rechte → Einzelne Funktionen** die Funktion **Kursvideos aufnehmen, hochladen und zuordnen** freigeschaltet werden. Dafür wird die benötigte Funktion zum Erstellen von Kursen mit freigeschaltet. Die Grundrolle bleibt unverändert.

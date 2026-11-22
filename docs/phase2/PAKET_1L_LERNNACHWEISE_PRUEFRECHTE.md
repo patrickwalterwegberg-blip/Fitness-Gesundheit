@@ -53,3 +53,9 @@ Ohne eine Verbindung mit administrativem Datenbankzugriff kann Codex diese Migra
 Der reine Quellcommit kann zurückgenommen werden; eine bereits installierte Migration wird dadurch nicht automatisch rückgängig. Für einen ausdrücklich notwendigen Datenbankrückweg existiert [rollback/015_learning_evidence_review.sql](../../backend/supabase/rollback/015_learning_evidence_review.sql). Sie stellt die vorherigen beiden Funktionsdefinitionen wieder her und erhält die Datensätze.
 
 Dieser Rückweg öffnet die beschriebene Selbstbestätigung wieder. Vor einem gehosteten Rückweg deshalb die delegierten Rechte `learning.practice` und `learning.assess` entziehen und die Ursache prüfen. Das ist keine normale Einrichtungsdatei. Bevorzugt die eng begrenzte Korrektur beibehalten beziehungsweise vorwärts korrigieren. Keine alten Bestätigungen automatisch löschen.
+
+## Bestätigter Folge- und Betriebsstand
+
+Commit `3e572beaba1e402267d7584612aa300570bdc10f` wurde im [GitHub-Lauf 44831126357](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/44831126357) vollständig geprüft und veröffentlicht: 354 Browserfälle bestanden (5,3 Minuten), Produktionssmoke und Deployment erfolgreich; Veröffentlichung am 20.11.2026 um 22:48:41 UTC abgeschlossen.
+
+Am 22.11.2026 bestätigte der Nutzer mit „Erledigt“ die Anwendung von Migration 015. Dies ist eine Nutzerbestätigung, keine unabhängige technische Kontrolle des gehosteten Datenbankstands. Rollen-/Studioabnahme mit den beiden vorhandenen Konten bleibt gesondert offen.

@@ -52,6 +52,7 @@ const onboarding=await readFile('backend/supabase/012_employee_onboarding.sql','
 const assistant=await readFile('backend/supabase/013_team_assistant.sql','utf8');await db.exec(assistant);await db.exec(assistant);
 const operations=await readFile('backend/supabase/014_operations_check.sql','utf8');await db.exec(operations);await db.exec(operations);
 const evidenceReview=await readFile('backend/supabase/015_learning_evidence_review.sql','utf8');await db.exec(evidenceReview);await db.exec(evidenceReview);
+const evidenceDocument=await readFile('backend/supabase/016_learning_evidence.sql','utf8');await db.exec(evidenceDocument);await db.exec(evidenceDocument);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -1171,4 +1172,68 @@ test('evidence migration rollback and reapplication preserve stored progress and
  const saved=await evidenceState(fixture.assignment);assert.equal(saved.progress.practice_confirmed,true);assert.equal(saved.events.length,before.events.length+1);
  await assert.rejects(asUser(fixture.reviewer,tx=>tx.query('select public.confirm_learning_practice($1)',[fixture.assignment])),e=>e.code==='42501');
  assert.deepEqual(await evidenceState(fixture.assignment),saved);
+});
+
+
+async function ownEvidenceFixture({practice=false,legacy=false,admin=false}={}){
+ const learner=admin?'admin':await evidencePerson(a);
+ let course;
+ if(legacy)course=(await db.query('insert into public.learning_courses(title,lesson_count) values($1,2) returning id',['Legacy external course'])).rows[0].id;
+ else course=(await asUser('admin',tx=>tx.query('select public.save_learning_course(null,$1,$2,$3,$4) as id',['Geräte & Sicherheit – Einführung',JSON.stringify(pilotLessons),JSON.stringify(pilotQuestions),'[1,0]']))).rows[0].id;
+ const assignment=(await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,$4) as id',[ids[learner],course,a,practice]))).rows[0].id;
+ // Prerequisites are seeded only in this isolated database; no invented attempts.
+ await db.query('update public.learning_progress set lessons_read=2,quiz_passed=true where assignment_id=$1',[assignment]);
+ if(practice)await asUser('admin',tx=>tx.query('select public.confirm_learning_practice($1,$2)',[assignment,'Private note must never appear in the document']));
+ return {learner,course,assignment};
+}
+const ownEvidence=({learner,assignment})=>asUser(learner,tx=>tx.query('select public.learning_evidence($1) as result',[assignment])).then(r=>r.rows[0].result);
+test('personal evidence returns only a minimal current server snapshot and never mutates the learning record',async()=>{
+ const f=await ownEvidenceFixture(),before=await evidenceState(f.assignment),result=await ownEvidence(f);
+ assert.deepEqual(Object.keys(result).sort(),['version','assignment_id','learner_name','studio_name','course_title','course_revision','lesson_count','lessons_read','knowledge_confirmed','requires_practice','practice_confirmed','practice_confirmed_at','checked_at'].sort());
+ assert.equal(result.assignment_id,f.assignment);assert.equal(result.learner_name,f.learner);assert.equal(result.studio_name,'Dörpen');assert.equal(result.course_revision,1);
+ assert.equal(result.lessons_read,result.lesson_count);assert.equal(result.knowledge_confirmed,true);assert.equal(result.requires_practice,false);assert.equal(result.practice_confirmed_at,null);assert.ok(Number.isFinite(Date.parse(result.checked_at)));
+ assert.deepEqual(await evidenceState(f.assignment),before);
+ // updated_at is not a reliable course completion timestamp.
+ await db.query("update public.learning_progress set updated_at='2000-01-01' where assignment_id=$1",[f.assignment]);
+ const later=await ownEvidence(f);assert.ok(Date.parse(later.checked_at)>Date.parse('2020-01-01'));assert.equal('completed_at' in later,false);
+});
+test('personal evidence includes a separately confirmed required practice without leaking its notes',async()=>{
+ const f=await ownEvidenceFixture({practice:true}),result=await ownEvidence(f),state=await evidenceState(f.assignment);
+ assert.equal(result.requires_practice,true);assert.equal(result.practice_confirmed,true);assert.equal(result.practice_confirmed_at,state.progress.confirmed_at);
+ assert.equal(JSON.stringify(result).includes('Private note'),false);assert.equal('confirmed_by' in result,false);
+});
+test('personal evidence permits an administrator to read their own completed assignment',async()=>{
+ const f=await ownEvidenceFixture({admin:true});assert.equal((await ownEvidence(f)).learner_name,'admin');
+});
+for(const defect of ['reading','knowledge','practice','practice actor','practice time'])test('personal evidence rejects incomplete '+defect,async()=>{
+ const f=await ownEvidenceFixture({practice:true});
+ const changes={reading:'lessons_read=1',knowledge:'quiz_passed=false',practice:'practice_confirmed=false','practice actor':'confirmed_by=null','practice time':'confirmed_at=null'};
+ await db.query('update public.learning_progress set '+changes[defect]+' where assignment_id=$1',[f.assignment]);const before=await evidenceState(f.assignment);
+ await assert.rejects(ownEvidence(f),e=>e.code==='23514');assert.deepEqual(await evidenceState(f.assignment),before);
+});
+test('personal evidence rejects colleagues even for an administrator or delegated assessor',async()=>{
+ const f=await ownEvidenceFixture(),assessor=await evidencePerson(a);
+ await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,null)',[ids[assessor],['learning.assess']]));
+ for(const learner of ['admin','peer',assessor])await assert.rejects(ownEvidence({...f,learner}),e=>e.code==='42501');
+ await assert.rejects(ownEvidence({...f,assignment:id(999999)}),e=>e.code==='42501');
+});
+for(const boundary of ['inactive','studio withdrawn','learning page withdrawn'])test('personal evidence rechecks '+boundary+' on every request',async()=>{
+ const f=await ownEvidenceFixture();await ownEvidence(f);
+ if(boundary==='inactive')await db.query('update public.profiles set active=false where id=$1',[ids[f.learner]]);
+ if(boundary==='studio withdrawn')await db.query('delete from public.studio_memberships where user_id=$1',[ids[f.learner]]);
+ if(boundary==='learning page withdrawn')await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,array['dashboard'],$2)",[ids[f.learner],ids.admin]);
+ await assert.rejects(ownEvidence(f),e=>e.code==='42501');
+});
+test('personal evidence supports existing external course results and inactive courses without invented versions or quiz scores',async()=>{
+ const f=await ownEvidenceFixture({legacy:true});await db.query('update public.learning_courses set active=false where id=$1',[f.course]);
+ const result=await ownEvidence(f);assert.equal(result.course_revision,null);assert.equal(result.knowledge_confirmed,true);assert.equal('score' in result,false);
+ assert.equal((await db.query('select count(*)::integer as n from public.learning_attempts where assignment_id=$1',[f.assignment])).rows[0].n,0);
+});
+test('personal evidence denies anonymous execution and its rollback removes only the reader',async()=>{
+ const f=await ownEvidenceFixture(),before=await evidenceState(f.assignment);
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');await tx.query('select public.learning_evidence($1)',[f.assignment]);}),e=>e.code==='42501');
+ const backward=await readFile('backend/supabase/rollback/016_learning_evidence.sql','utf8'),forward=await readFile('backend/supabase/016_learning_evidence.sql','utf8');
+ await db.exec(backward);
+ try{await assert.rejects(ownEvidence(f),e=>e.code==='42883');assert.deepEqual(await evidenceState(f.assignment),before);}finally{await db.exec(forward);}
+ assert.equal((await ownEvidence(f)).assignment_id,f.assignment);assert.deepEqual(await evidenceState(f.assignment),before);
 });
