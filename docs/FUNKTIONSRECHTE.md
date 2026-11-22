@@ -8,6 +8,8 @@ Voraussetzung sind die Migrationen 001–007. Öffne [009_function_permissions.s
 
 Das Skript kann erneut ausgeführt werden. Bestehende Grundrollen, Zuweisungen, Lernnachweise, Dateien und individuell vorhandene Modul-/Startseitenrechte bleiben erhalten. Die Aktualisierung des Einladungsdienstes läuft bei Änderungen an seiner Implementierung über den Workflow **Mitarbeiter-Einladungen einrichten**. Diese Bereitstellung ändert keine Mitarbeiterrollen und versendet keine Einladungen.
 
+Bei einem bereits weiter aktualisierten Projekt die historische Erweiterung 009 nicht allein erneut einspielen: Ihre Funktionsdefinitionen würden spätere Erweiterungen und Korrekturen überschreiben. Änderungen in der dokumentierten Reihenfolge anwenden. Die Begrenzung des Mitarbeiter-Studiofilters wird separat in [017_directory_studio_filter.sql](../backend/supabase/017_directory_studio_filter.sql) ergänzt; [Prüfung und Bereitstellungsstand](phase2/PAKET_1N_STUDIOFILTER_NUTZERLISTE.md) beachten.
+
 ## Bedienung
 
 1. **Mitarbeiterzugänge** öffnen und den Namen einer Person anklicken.

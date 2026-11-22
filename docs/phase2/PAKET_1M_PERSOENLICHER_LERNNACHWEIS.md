@@ -45,3 +45,9 @@ Nach Veröffentlichung die vollständige [SQL-Datei 016](https://github.com/patr
 Mit dem Mitarbeiter-Prüfkonto einen tatsächlich zugewiesenen Kurs vollständig bearbeiten, bei Pflichtpraxis die berechtigte zweite Person bestätigen lassen und den persönlichen Lernnachweis öffnen. Vorschau und gespeicherte PDF vergleichen, insbesondere Studio, Kurstitel, Nachweisstand und Pflichtpraxis. Auf echten iPhone-/Safari- und Android-/Chrome-Geräten den verfügbaren Druck-/PDF-Ablauf zusätzlich prüfen. Die Browser-Simulation bestätigt keinen echten Gerätedruck und keinen gehosteten Rollenstatus.
 
 Der Quellcommit lässt sich isoliert zurücknehmen. [rollback/016_learning_evidence.sql](../../backend/supabase/rollback/016_learning_evidence.sql) entfernt nur die neue Lesefunktion, keine Lernaufträge, Fortschritte oder Ereignisse. Die Freigabekorrektur aus 015 bleibt bestehen. Inzwischen lokal gespeicherte PDFs werden durch späteren Rechteentzug nicht zurückgerufen; der Nachweis dokumentiert seinen ausgewiesenen Stand.
+
+## Bestätigter Folge- und Betriebsstand
+
+Commit `b5980aa8874d07c613357fe02920ff7479e860ac` wurde im [GitHub-Lauf 45032927991](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/45032927991) erfolgreich geprüft und veröffentlicht: Installation des PDF-Prüfwerkzeugs, 367 Browserfälle (5,6 Minuten), Produktionssmoke und Deployment bestanden; Veröffentlichung am 22.11.2026 um 14:34:37 UTC abgeschlossen.
+
+Der Nutzer bestätigte danach mit „Erledigt“ die Anwendung von Migration 016. Dies ist als Nutzerbestätigung dokumentiert, nicht als unabhängiger gehosteter Funktionstest. Ein Ergebnis der praktischen Mitarbeiter-/PDF- und Geräteprüfung wurde noch nicht gemeldet.

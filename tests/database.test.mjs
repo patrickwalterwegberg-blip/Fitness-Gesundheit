@@ -53,6 +53,7 @@ const assistant=await readFile('backend/supabase/013_team_assistant.sql','utf8')
 const operations=await readFile('backend/supabase/014_operations_check.sql','utf8');await db.exec(operations);await db.exec(operations);
 const evidenceReview=await readFile('backend/supabase/015_learning_evidence_review.sql','utf8');await db.exec(evidenceReview);await db.exec(evidenceReview);
 const evidenceDocument=await readFile('backend/supabase/016_learning_evidence.sql','utf8');await db.exec(evidenceDocument);await db.exec(evidenceDocument);
+const directoryScope=await readFile('backend/supabase/017_directory_studio_filter.sql','utf8');await db.exec(directoryScope);await db.exec(directoryScope);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -1236,4 +1237,53 @@ test('personal evidence denies anonymous execution and its rollback removes only
  await db.exec(backward);
  try{await assert.rejects(ownEvidence(f),e=>e.code==='42883');assert.deepEqual(await evidenceState(f.assignment),before);}finally{await db.exec(forward);}
  assert.equal((await ownEvidence(f)).assignment_id,f.assignment);assert.deepEqual(await evidenceState(f.assignment),before);
+});
+
+// Directory filters must not become an oracle for memberships in other studios.
+async function directoryScopeFixture(studio,foreign,role='employee'){
+ const reviewer=await evidencePerson(studio,role),member=await evidencePerson(studio);
+ await db.query('insert into public.studio_memberships values($1,$2)',[ids[member],foreign]);
+ await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,null)',[ids[reviewer],['users.view']]));
+ return {reviewer,member,studio,foreign};
+}
+const scopedDirectory=(f,studio)=>asUser(f.reviewer,tx=>tx.query('select public.admin_team_directory(p_query=>$1,p_studio=>$2) as result',[f.member,studio])).then(r=>r.rows[0].result);
+for(const role of ['employee','studio_manager'])for(let index=0;index<7;index++)test('delegated directory filters stay scoped in studio '+index+' for '+role,async()=>{
+ const sites=(await db.query('select id,name from public.studios order by name')).rows;assert.equal(sites.length,7);
+ const f=await directoryScopeFixture(sites[index].id,sites[(index+1)%7].id,role);
+ const own=await scopedDirectory(f,f.studio);assert.equal(own.total,1);assert.equal(own.members[0].id,ids[f.member]);assert.deepEqual(own.members[0].studio_ids,[f.studio]);
+ assert.deepEqual(own.studios.map(s=>s.id),[f.studio]);
+ await assert.rejects(scopedDirectory(f,f.foreign),e=>e.code==='42501');
+ const all=await scopedDirectory(f,null);assert.equal(all.total,1);assert.deepEqual(all.members[0].studio_ids,[f.studio]);
+ assert.equal((await db.query('select role from public.profiles where id=$1',[ids[f.reviewer]])).rows[0].role,role);
+});
+test('directory filtering rechecks a studio withdrawal and preserves grants in the remaining studio',async()=>{
+ const f=await directoryScopeFixture(a,b);await db.query('insert into public.studio_memberships values($1,$2)',[ids[f.reviewer],b]);
+ assert.equal((await scopedDirectory(f,b)).total,1);
+ await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[ids[f.reviewer],b]);
+ await assert.rejects(scopedDirectory(f,b),e=>e.code==='42501');assert.equal((await scopedDirectory(f,a)).total,1);
+ const current=(await asUser('admin',tx=>tx.query('select public.admin_function_access($1) as result',[ids[f.reviewer]]))).rows[0].result;
+ await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,$3)',[ids[f.reviewer],[],current.revision]));
+ await assert.rejects(scopedDirectory(f,a),e=>e.code==='42501');
+});
+test('directory filters support two authorized studios without disclosing a third membership',async()=>{
+ const sites=(await db.query('select id from public.studios order by name')).rows.map(s=>s.id),f=await directoryScopeFixture(sites[0],sites[1]);
+ await db.query('insert into public.studio_memberships values($1,$2),($3,$4)',[ids[f.reviewer],sites[1],ids[f.member],sites[2]]);
+ for(const studio of sites.slice(0,2)){const r=await scopedDirectory(f,studio);assert.equal(r.total,1);assert.deepEqual([...r.members[0].studio_ids].sort(),sites.slice(0,2).sort());}
+ await assert.rejects(scopedDirectory(f,sites[2]),e=>e.code==='42501');
+});
+test('administrator directory filters continue to support all seven studios',async()=>{
+ const sites=(await db.query('select id from public.studios order by name')).rows.map(s=>s.id),member=await evidencePerson(sites[0]);
+ for(const studio of sites.slice(1))await db.query('insert into public.studio_memberships values($1,$2)',[ids[member],studio]);
+ const f={reviewer:'admin',member};
+ for(const studio of sites){const r=await scopedDirectory(f,studio);assert.equal(r.total,1);assert.equal(r.members[0].id,ids[member]);assert.deepEqual([...r.members[0].studio_ids].sort(),[...sites].sort());}
+});
+
+test('directory filter rollback and reapplication preserve records and restore the scoped guard',async()=>{
+ const f=await directoryScopeFixture(a,b);
+ const before=(await db.query('select user_id,studio_id from public.studio_memberships where user_id=$1 order by studio_id',[ids[f.member]])).rows;
+ const backward=await readFile('backend/supabase/rollback/017_directory_studio_filter.sql','utf8'),forward=await readFile('backend/supabase/017_directory_studio_filter.sql','utf8');
+ await db.exec(backward);
+ try{assert.equal((await scopedDirectory(f,b)).members[0].id,ids[f.member]);}finally{await db.exec(forward);}
+ await assert.rejects(scopedDirectory(f,b),e=>e.code==='42501');assert.equal((await scopedDirectory(f,a)).total,1);
+ assert.deepEqual((await db.query('select user_id,studio_id from public.studio_memberships where user_id=$1 order by studio_id',[ids[f.member]])).rows,before);
 });
