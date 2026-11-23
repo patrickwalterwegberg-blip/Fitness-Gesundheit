@@ -95,6 +95,7 @@ try {
 
  await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByText('Aktuell sind dir keine offenen Aufgaben zugewiesen.').waitFor();
+ assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('fg-hub-'))),[],'The compiled Team entry must not initialize local demo data');
  await page.setViewportSize({width:360,height:740});
  await page.getByRole('button',{name:'Ansprechpartner hinzufügen',exact:true}).click();
  const mobileHomeEditor=page.getByRole('dialog',{name:'Startseiteneintrag bearbeiten',exact:true});
@@ -215,6 +216,7 @@ try {
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
  await page.goto('https://teamhub-preview.example.org/Fitness-Gesundheit/login.html');
  await page.getByRole('heading',{name:'Willkommen im Team.'}).waitFor();
+ assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('fg-hub-'))),[],'The dedicated compiled login page must not initialize local demo data');
  await page.getByRole('button',{name:'Mit Anmeldelink anmelden',exact:true}).click();
  await page.getByLabel('Deine Firmen-E-Mail-Adresse').fill('mail-check@example.org');
  await page.getByRole('button',{name:'Anmeldelink anfordern',exact:true}).click();
