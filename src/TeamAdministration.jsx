@@ -72,7 +72,14 @@ export default function TeamAdministration({ client, profile, sites, people, mem
   const selected = selectedId || (entity ? data.modules.find(m => m.versions.some(v => v.id === m.publishedVersionId && v.schema.target === entity.target))?.id : null);
   let center;
   if (control) {
-    const members = control.profiles.map(p => ({ ...p, name: p.full_name, studio: p.role === 'admin' ? 'Alle Studios' : (() => { const assigned = control.assignments.filter(a => a.learner_id === p.id).map(a => a.studio_id); const known = memberships.filter(m => m.user_id === p.id).map(m => m.studio_id); const ids = [...new Set([...known, ...assigned])]; return ids.length === 1 ? control.studios.find(s => s.id === ids[0])?.name || '' : ids.length ? 'Alle Studios' : 'Keinem Studio zugeordnet'; })() }));
+    const members = control.profiles.map(p => {
+      const known = memberships.filter(m => m.user_id === p.id).map(m => m.studio_id);
+      const assigned = control.assignments.filter(a => a.learner_id === p.id).map(a => a.studio_id);
+      const ids = [...new Set([...known, ...assigned])];
+      const studioNames = ids.map(id => control.studios.find(s => s.id === id)?.name).filter(Boolean);
+      return { ...p, name: p.full_name, studioNames,
+        studio: p.role === 'admin' ? 'Alle Studios' : studioNames.join(' · ') || 'Keinem Studio zugeordnet' };
+    });
     const courses = control.courses.map(c => ({ id: c.id, title: c.title, lessons: Array.from({ length: c.lesson_count }, (_, i) => i), completed: [] }));
     const assignments = control.assignments.map(a => ({ id: a.id, personId: a.learner_id, courseId: a.course_id, studio: control.studios.find(s => s.id === a.studio_id)?.name || '', due: a.due_date, practiceRequired: a.requires_practice }));
     const progress = {}; const attempts = []; const confirmations = [];

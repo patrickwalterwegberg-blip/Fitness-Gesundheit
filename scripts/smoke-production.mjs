@@ -19,6 +19,8 @@ const host=new URL(backend).hostname,storageKey=`sb-${host.split('.')[0]}-auth-t
 const uid='00000000-0000-4000-8000-000000000001';
 const user={id:uid,email:'production-smoke@example.org',aud:'authenticated',role:'authenticated',user_metadata:{},app_metadata:{}};
 const profile={id:uid,full_name:'Testkonto Produktion',role:'admin',active:true};
+const controllingMember={id:'00000000-0000-4000-8000-000000000071',full_name:'Team Nord Produktion',role:'employee',active:true};
+const controllingSites=[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'},{id:'00000000-0000-4000-8000-000000000003',name:'Bersenbrück'},{id:'00000000-0000-4000-8000-000000000004',name:'Haselünne'}];
 const payload=Buffer.from(JSON.stringify({sub:uid,aud:'authenticated',role:'authenticated',exp:2200000000})).toString('base64url');
 const token=`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.test-signature`;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
@@ -77,7 +79,10 @@ try {
    else if(url.pathname==='/rest/v1/rpc/onboarding_template_library')body={templates:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/search_knowledge')body={items:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
-   else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile];
+   else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile,controllingMember];
+   else if(url.pathname==='/rest/v1/studios')body=controllingSites;
+   else if(url.pathname==='/rest/v1/studio_memberships')body=controllingSites.slice(0,2).map(s=>({user_id:controllingMember.id,studio_id:s.id}));
+   else if(url.pathname==='/rest/v1/rpc/admin_controlling')body={profiles:[profile,controllingMember],studios:controllingSites,tasks:[],courses:[],assignments:[],progress:[]};
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
    else if(['/rest/v1/tasks','/rest/v1/studios','/rest/v1/studio_memberships','/rest/v1/learning_courses','/rest/v1/learning_assignments','/rest/v1/learning_progress','/rest/v1/learning_material','/rest/v1/learning_reads'].includes(url.pathname))body=[];
    else {unexpected.push(url.pathname);return route.abort();}
@@ -212,6 +217,19 @@ try {
  await recovery.getByRole('group',{name:'Entfernung prüfen: Upload ausstehend',exact:true}).getByRole('button',{name:'Abbrechen',exact:true}).click();
  assert.ok(!calls.includes('/rest/v1/rpc/prepare_delete_learning_video'),'Canceling removal must never start deletion');
  await recovery.getByRole('button',{name:'Fenster schließen',exact:true}).click();
+
+ await page.getByRole('button',{name:'Controlling',exact:true}).click();
+ await page.getByRole('heading',{name:'Dein Team im Überblick.',exact:true}).waitFor();
+ await page.getByLabel('Standort im Controlling',{exact:true}).selectOption('Haselünne');
+ await page.waitForFunction(()=>document.querySelectorAll('.control-table tbody tr').length===1);
+ assert.deepEqual(await page.locator('.control-table tbody tr td:first-child strong').allTextContents(),[profile.full_name],'Compiled unrelated studio must exclude an employee with two other assignments');
+ const exportPending=page.waitForEvent('download');
+ await page.getByRole('button',{name:'CSV exportieren',exact:true}).click();
+ const controllingExport=await exportPending;
+ const exported=await readFile(await controllingExport.path(),'utf8');
+ assert.ok(exported.includes(profile.full_name)&&!exported.includes(controllingMember.full_name),'Compiled export must follow its visible studio filter');
+ await page.getByLabel('Standort im Controlling',{exact:true}).selectOption('Dörpen');
+ await page.locator('.control-table tbody tr').filter({hasText:controllingMember.full_name}).getByText('Dörpen · Bersenbrück',{exact:true}).waitFor();
 
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
  await page.goto('https://teamhub-preview.example.org/Fitness-Gesundheit/login.html');

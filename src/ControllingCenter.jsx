@@ -29,7 +29,7 @@ export default function ControllingCenter({ actor, people, studios, tasks, cours
   const end = period === 'custom' ? to : today;
   const inPeriod = t => { const when = completion(t); return period === 'all' || !!when && berlinDay(new Date(when)) >= start && berlinDay(new Date(when)) <= end; };
   const siteTasks = tasks.filter(t => site === 'Alle Studios' || t.studio === site);
-  const rows = people.filter(p => (personFilter === 'all' || p.id === personFilter) && (site === 'Alle Studios' || p.studio === site || p.studio === 'Alle Studios')).map(p => {
+  const rows = people.filter(p => (personFilter === 'all' || p.id === personFilter) && (site === 'Alle Studios' || (online ? p.role === 'admin' || p.studioNames?.includes(site) : p.studio === site || p.studio === 'Alle Studios'))).map(p => {
     const own = siteTasks.filter(t => belongs(t, p)); const relevantAssignments = assignments.filter(a => a.personId === p.id && (site === 'Alle Studios' || a.studio === site));
     const totalLessons = courses.reduce((n, c) => n + c.lessons.length, 0); const read = courses.reduce((n, c) => n + readLessons(p.id, c, progress).length, 0);
     return { person: p, tasks: own, open: own.filter(t => !t.done), overdue: own.filter(t => !t.done && t.due < today), done: own.filter(t => t.done && inPeriod(t)), read, totalLessons, percent: totalLessons ? Math.round(read / totalLessons * 100) : 0, passed: courses.filter(c => hasPassed(p.id, c.id, attempts)).length, assignments: relevantAssignments, complete: relevantAssignments.filter(a => { const c = courses.find(c => c.id === a.courseId); return c && assignmentComplete(a, c, progress, attempts, confirmations); }) };
