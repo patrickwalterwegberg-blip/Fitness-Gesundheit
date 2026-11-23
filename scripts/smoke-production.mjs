@@ -21,6 +21,9 @@ const user={id:uid,email:'production-smoke@example.org',aud:'authenticated',role
 const profile={id:uid,full_name:'Testkonto Produktion',role:'admin',active:true};
 const controllingMember={id:'00000000-0000-4000-8000-000000000071',full_name:'Team Nord Produktion',role:'employee',active:true};
 const controllingSites=[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'},{id:'00000000-0000-4000-8000-000000000003',name:'Bersenbrück'},{id:'00000000-0000-4000-8000-000000000004',name:'Haselünne'}];
+const practiceCourse='00000000-0000-4000-8000-000000000072',ownPractice='00000000-0000-4000-8000-000000000073',otherPractice='00000000-0000-4000-8000-000000000074';
+let practiceReviewer=false,practiceSaved=false;const practiceWrites=[];
+const controllingProfile=()=>({...profile,role:practiceReviewer?'employee':'admin'});
 const payload=Buffer.from(JSON.stringify({sub:uid,aud:'authenticated',role:'authenticated',exp:2200000000})).toString('base64url');
 const token=`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${payload}.test-signature`;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
@@ -53,7 +56,7 @@ try {
     body={access_token:token,refresh_token:'test-refresh',token_type:'bearer',expires_in:3600,expires_at:2200000000,user};
    }
    else if(url.pathname==='/rest/v1/rpc/admin_operations_status')body=operationsFixture();
-   else if(url.pathname==='/rest/v1/rpc/team_access_context')body={version:12,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
+   else if(url.pathname==='/rest/v1/rpc/team_access_context')body=practiceReviewer?{version:15,capabilities:['controlling.view','learning.read','learning.practice'],pages:['controlling','learning'],can_design:false}:{version:12,capabilities:functionCatalog.map(c=>c.key),pages:['dashboard','tasks','calendar','learning','knowledge','files','modules','builder','chat','feedback','access','controlling'],can_design:true};
    else if(url.pathname==='/rest/v1/team_member_info')body={job_title:'Produktionstest',phone:'',started_on:null};
    else if(url.pathname==='/rest/v1/rpc/admin_team_directory')body={members:[{...profile,email:user.email,studio_ids:[],invited_at:null,last_sign_in_at:null}],total:1,studios:[{id:'00000000-0000-4000-8000-000000000002',name:'Dörpen'}]};
    else if(url.pathname==='/rest/v1/rpc/team_home_data')body={can_manage:true,items:[]};
@@ -79,10 +82,11 @@ try {
    else if(url.pathname==='/rest/v1/rpc/onboarding_template_library')body={templates:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/search_knowledge')body={items:[],total:0};
    else if(url.pathname==='/rest/v1/rpc/team_chat_inbox')body={channels:[],unread:0};
-   else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?profile:[profile,controllingMember];
-   else if(url.pathname==='/rest/v1/studios')body=controllingSites;
-   else if(url.pathname==='/rest/v1/studio_memberships')body=controllingSites.slice(0,2).map(s=>({user_id:controllingMember.id,studio_id:s.id}));
-   else if(url.pathname==='/rest/v1/rpc/admin_controlling')body={profiles:[profile,controllingMember],studios:controllingSites,tasks:[],courses:[],assignments:[],progress:[]};
+   else if(url.pathname==='/rest/v1/profiles')body=url.searchParams.has('id')?controllingProfile():[controllingProfile(),controllingMember];
+   else if(url.pathname==='/rest/v1/studios')body=practiceReviewer?controllingSites.slice(0,1):controllingSites;
+   else if(url.pathname==='/rest/v1/studio_memberships')body=[{user_id:uid,studio_id:controllingSites[0].id},...(practiceReviewer?controllingSites.slice(0,1):controllingSites.slice(0,2)).map(s=>({user_id:controllingMember.id,studio_id:s.id}))];
+   else if(url.pathname==='/rest/v1/rpc/admin_controlling')body={profiles:[controllingProfile(),controllingMember],studios:practiceReviewer?controllingSites.slice(0,1):controllingSites,tasks:[],courses:[{id:practiceCourse,title:'Praxis im Empfang',lesson_count:1}],assignments:[{id:ownPractice,learner_id:uid,course_id:practiceCourse,studio_id:controllingSites[0].id,requires_practice:true},{id:otherPractice,learner_id:controllingMember.id,course_id:practiceCourse,studio_id:controllingSites[0].id,requires_practice:true}],progress:[ownPractice,otherPractice].map(id=>({assignment_id:id,lessons_read:1,quiz_passed:true,practice_confirmed:id===otherPractice&&practiceSaved,confirmed_by:uid,confirmed_at:'2026-11-23T09:00:00Z'}))};
+   else if(url.pathname==='/rest/v1/rpc/confirm_learning_practice'){const input=route.request().postDataJSON();assert.equal(input.p_assignment,otherPractice,'A delegated reviewer must never submit their own practice');practiceWrites.push(input);practiceSaved=true;body=null;}
    else if(url.pathname==='/rest/v1/rpc/my_team_dashboard')body={today:'2026-11-04',counts:{open:0,today:0,overdue:0,done:0},tasks:[],learning:[],knowledge:[]};
    else if(['/rest/v1/tasks','/rest/v1/studios','/rest/v1/studio_memberships','/rest/v1/learning_courses','/rest/v1/learning_assignments','/rest/v1/learning_progress','/rest/v1/learning_material','/rest/v1/learning_reads'].includes(url.pathname))body=[];
    else {unexpected.push(url.pathname);return route.abort();}
@@ -231,6 +235,31 @@ try {
  await page.getByLabel('Standort im Controlling',{exact:true}).selectOption('Dörpen');
  await page.locator('.control-table tbody tr').filter({hasText:controllingMember.full_name}).getByText('Dörpen · Bersenbrück',{exact:true}).waitFor();
 
+ await page.getByRole('button',{name:'Details zu '+profile.full_name,exact:true}).click();
+ await page.getByRole('button',{name:'Praxis bestätigen',exact:true}).click();
+ await page.getByRole('dialog',{name:'Praktische Einweisung bestätigen',exact:true}).getByRole('button',{name:'Praxisbestätigung schließen',exact:true}).click();
+ await page.getByRole('button',{name:'Mitarbeiterdetails schließen',exact:true}).click();
+ assert.equal(practiceWrites.length,0,'Opening and canceling the admin own-practice exception must not write');
+ practiceReviewer=true;
+ await page.reload();
+ await page.getByRole('button',{name:'Controlling',exact:true}).click();
+ await page.getByRole('heading',{name:'Dein Team im Überblick.',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Details zu '+profile.full_name,exact:true}).click();
+ await page.getByText('Deine eigene Praxiseinweisung muss eine andere berechtigte Person bestätigen.',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Praxis bestätigen',exact:true}).count(),0,'Compiled delegated own practice must offer no confirmation action');
+ await page.getByRole('button',{name:'Mitarbeiterdetails schließen',exact:true}).click();
+ await page.getByRole('button',{name:'Details zu '+controllingMember.full_name,exact:true}).click();
+ await page.getByRole('button',{name:'Praxis bestätigen',exact:true}).click();
+ await page.getByLabel('Notiz zur Praxiseinweisung').fill('Gemeinsam am Empfang geübt.');
+ await page.getByRole('dialog',{name:'Praktische Einweisung bestätigen',exact:true}).getByRole('checkbox').check();
+ await page.getByRole('button',{name:'Praxisbestätigung speichern',exact:true}).click();
+ await page.getByText('Lernziel abgeschlossen',{exact:true}).waitFor();
+ assert.equal(practiceWrites.length,1);assert.equal(practiceWrites[0].p_assignment,otherPractice);
+ assert.equal(await page.getByRole('alert').count(),0,'A successful refresh must not create a false confirmation error');
+ await page.getByRole('button',{name:'Mitarbeiterdetails schließen',exact:true}).click();
+ practiceReviewer=false;
+ await page.reload();
+ await page.getByRole('heading',{name:'Meine Übersicht',exact:true}).waitFor();
  await page.getByRole('button',{name:'Abmelden',exact:true}).click();
  await page.goto('https://teamhub-preview.example.org/Fitness-Gesundheit/login.html');
  await page.getByRole('heading',{name:'Willkommen im Team.'}).waitFor();
@@ -278,5 +307,5 @@ try {
  assert.ok(calls.includes('/auth/v1/token'));
  assert.ok(backendReferrers.length>0&&backendReferrers.every(value=>!value),'Backend requests must not disclose the page URL');
  assert.deepEqual(errors,[]);assert.deepEqual(unexpected,[]);
- console.log('Compiled production entry, read-only operational inventory and email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy with revalidated personal evidence and actual PDF content isolation, onboarding draft, local video preview, upload confirmation without retransmission and canceled removal, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
+ console.log('Compiled production entry, delegated practice checks with the preserved admin exception and one permitted colleague confirmation, read-only operational inventory and email-account check without sending, visible invitation with onboarding choices and calendar dialogs, notification inbox with exact learning target, saved personal layout, assistant search and independently generated source-backed AI answer, academy with revalidated personal evidence and actual PDF content isolation, onboarding draft, local video preview, upload confirmation without retransmission and canceled removal, logout, rejected mail-link feedback and dedicated password-login page passed; all network requests were simulated.');
 } finally {await browser.close();}
