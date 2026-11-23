@@ -38,7 +38,7 @@ Die Bestandsaufnahme erteilt keine pauschale Datenschutz- oder Sicherheitsfreiga
 | Unternehmensbezogene Datenschutzinformation | Rechtlichen Unternehmensnamen, Anschrift und Datenschutzkontakt bestätigen; den [Entwurf](DATENSCHUTZHINWEISE_ENTWURF.md) mit den tatsächlichen Angaben vervollständigen und prüfen. |
 | Anbietervereinbarungen / Speicherregion | Supabase, Hosting, Mail- und gegebenenfalls Modellanbieter im Anbieter-Dashboard und den tatsächlichen Verträgen prüfen. |
 | Aufbewahrung / Mitarbeiter-Austritt | Zuständigkeiten und Fristen für Profile, Aufgaben, Lernnachweise, Dateien, Chat und Feedback festlegen. Eine Sperre ist keine Löschung. |
-| Backup / Wiederherstellung | Datenbank **und** Originaldateien sichern; in einem getrennten Testprojekt wiederherstellen und Anmeldung, Rechte, Dateidownload und Lernnachweise vergleichen. Produktive Daten dabei nicht überschreiben. |
+| Backup / Wiederherstellung | Nach [Betreiberanleitung](BACKUP_UND_WIEDERHERSTELLUNG.md) zunächst Anbieterstatus und Umfang prüfen. Datenbank **und** Originaldateien sichern; ausschließlich in einem getrennten Testprojekt wiederherstellen und Anmeldung, Rechte, Dateidownload und Lernnachweise vergleichen. Produktive Daten nicht überschreiben. |
 | E-Mail / KI | Mit einem berechtigten echten Konto einen gezielten Versand beziehungsweise eine Frage testen. Eine angenommene Anfrage ist kein Zustellbeleg. |
 | Geräte / gemeinsame Sitzungen | Kamera und Upload am echten Handy/Laptop prüfen; Abmelden und Gerätesperre an gemeinsam genutzten Geräten festlegen. |
 

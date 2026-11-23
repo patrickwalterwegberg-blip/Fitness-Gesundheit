@@ -39,6 +39,10 @@ Die lokale Prüfung bestätigt keine aktuelle Installation im gehosteten Projekt
 - **Weitere Screenshot-Ideen:** Kunden-/Coaching-Dashboards, soziale Community, Lektionen mit Sternebewertung und Gruppen-/Bundle-Zuweisungen sind noch nicht umgesetzt. Details und Prioritäten stehen im [Funktionsaudit](docs/FUNKTIONS_AUDIT.md).
 - **Demo:** CRM, Marketingplanung, Lager/Bestellungen, externe Statistik-Vorschauen und weitere lokale Beispieldaten sind keine gemeinsam angebundenen Teamprozesse. 1&1-Postfächer, Dropbox, GoHighLevel und WhatsApp sind nicht verbunden. Einladungsmails des Teamzugangs werden über dessen gesonderten Maildienst angefordert.
 
+## Backup und Wiederherstellung vorbereiten
+
+[Betreiberanleitung und erster Dashboard-Schritt](docs/BACKUP_UND_WIEDERHERSTELLUNG.md) · [Lesende SQL-Vorprüfung](scripts/backup-readiness.sql) · [Unausgefüllte Protokollvorlage](docs/templates/BACKUP_WIEDERHERSTELLUNGSNACHWEIS.md). Die Vorprüfung erstellt keine Sicherung und bestätigt keinen Restore. Ein echter Nachweis für Datenbank **und** Originaldateien bleibt separat erforderlich.
+
 ## Entwickeln und bauen
 
 Voraussetzung: Node.js 24 und npm; die CI verwendet Node.js 24.

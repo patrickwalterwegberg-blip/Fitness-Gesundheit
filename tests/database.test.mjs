@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 
 let db, a, b;
@@ -1286,4 +1286,55 @@ test('directory filter rollback and reapplication preserve records and restore t
  try{assert.equal((await scopedDirectory(f,b)).members[0].id,ids[f.member]);}finally{await db.exec(forward);}
  await assert.rejects(scopedDirectory(f,b),e=>e.code==='42501');assert.equal((await scopedDirectory(f,a)).total,1);
  assert.deepEqual((await db.query('select user_id,studio_id from public.studio_memberships where user_id=$1 order by studio_id',[ids[f.member]])).rows,before);
+});
+
+test('backup preflight reads the declared application inventory without exposing contents or changing records',async()=>{
+ await db.exec('reset role');
+ const sql=await readFile('scripts/backup-readiness.sql','utf8');
+ const before=(await db.query(`select (select count(*) from public.profiles)::text as profiles,(select count(*) from public.learning_progress)::text as progress,(select count(*) from storage.objects)::text as objects,(select count(*) from pg_proc)::text as routines`)).rows;
+ const result=await db.exec(sql);
+ const report=result.find(r=>r.rows?.[0]?.backup_readiness_inventory)?.rows[0].backup_readiness_inventory;
+ assert.ok(report);assert.equal(report.read_only,true);assert.equal(report.backup_created,false);assert.equal(report.restore_verified,false);assert.equal(report.storage_bytes_verified,false);
+ const app=report.table_inventory.filter(t=>['public','app_private'].includes(t.schema_name));assert.equal(app.length,45);assert.ok(app.every(t=>t.present));
+ const declared=new Set();for(const file of (await readdir('backend/supabase')).filter(n=>n.endsWith('.sql'))){const source=await readFile('backend/supabase/'+file,'utf8');for(const [,schema,name] of source.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(public|app_private)\.([a-z_]+)/gi))declared.add(schema+'.'+name);}
+ assert.deepEqual(app.map(t=>t.schema_name+'.'+t.table_name).sort(),[...declared].sort(),'Every declared application table must be considered by the preflight');
+ assert.ok(report.routine_presence.every(r=>r.present));assert.equal(report.routine_presence.length,5);
+ assert.equal(report.table_inventory.find(t=>t.table_name==='team_assistant_requests').optional,true);
+ assert.equal(report.table_inventory.find(t=>t.schema_name==='auth'&&t.table_name==='identities').present,false,'The local managed-auth stub is incomplete and must be reported as such');
+ assert.deepEqual(report.storage_inventory.map(b=>b.bucket).sort(),['course-videos','team-knowledge']);
+ for(const table of report.table_inventory)assert.deepEqual(Object.keys(table).sort(),['estimated_rows','optional','present','rls_enabled','schema_name','table_name']);
+ for(const bucket of report.storage_inventory)assert.deepEqual(Object.keys(bucket).sort(),['bucket','objects_in_metadata','objects_without_size_metadata','present','private','recorded_bytes','size_limit']);
+ const after=(await db.query(`select (select count(*) from public.profiles)::text as profiles,(select count(*) from public.learning_progress)::text as progress,(select count(*) from storage.objects)::text as objects,(select count(*) from pg_proc)::text as routines`)).rows;assert.deepEqual(after,before);
+});
+
+test('backup preflight explicitly tolerates an absent optional AI table without enabling or creating it',async()=>{
+ await db.exec('begin; alter table app_private.team_assistant_requests rename to backup_test_optional_requests');
+ try{
+  const sql=await readFile('scripts/backup-readiness.sql','utf8');
+  // The outer test transaction owns the temporary catalog change; retain read-only SELECTs.
+  const select=sql.slice(sql.indexOf('with expected_tables'),sql.lastIndexOf('rollback;'));
+  const report=(await db.query(select)).rows[0].backup_readiness_inventory;
+  const optional=report.table_inventory.find(t=>t.table_name==='team_assistant_requests');assert.equal(optional.present,false);assert.equal(optional.optional,true);
+  assert.equal((await db.query("select to_regclass('app_private.team_assistant_requests') as table_name")).rows[0].table_name,null);
+ }finally{await db.exec('rollback');}
+});
+
+test('backup preflight transaction rejects an injected write and leaves no table behind',async()=>{
+ const sql=await readFile('scripts/backup-readiness.sql','utf8');
+ try{await assert.rejects(db.exec(sql.replace('rollback;','create table public.backup_preflight_write_probe(id integer); rollback;')),e=>e.code==='25006');}
+ finally{await db.exec('rollback');}
+ assert.equal((await db.query("select to_regclass('public.backup_preflight_write_probe') as table_name")).rows[0].table_name,null);
+});
+
+test('backup preflight reports missing buckets, invalid size metadata and additional tables without disclosing file details',async()=>{
+ const probe=new PGlite();await probe.waitReady;
+ try{
+  await probe.exec(`create schema storage;create table storage.buckets(id text primary key,public boolean,file_size_limit bigint);create table storage.objects(id text primary key,bucket_id text,name text,metadata jsonb);create table public.operator_extra(id integer);insert into storage.buckets values('team-knowledge',false,52428800);`);
+  for(const [i,size] of [12,'unknown',null,'9999999999999999999','-1'].entries())await probe.query('insert into storage.objects values($1,$2,$3,$4)',[String(i),'team-knowledge','SECRET_FILE_PATH_'+i,JSON.stringify({size,private_content:'SECRET_VALUE'})]);
+  const result=await probe.exec(await readFile('scripts/backup-readiness.sql','utf8'));const report=result.find(r=>r.rows?.[0]?.backup_readiness_inventory)?.rows[0].backup_readiness_inventory;
+  const missing=report.storage_inventory.find(b=>b.bucket==='course-videos');assert.equal(missing.present,false);assert.equal(missing.private,null);assert.equal(missing.objects_in_metadata,0);assert.equal(missing.recorded_bytes,'0');assert.equal(missing.objects_without_size_metadata,0);
+  const found=report.storage_inventory.find(b=>b.bucket==='team-knowledge');assert.equal(found.private,true);assert.equal(found.objects_in_metadata,5);assert.equal(found.recorded_bytes,'12');assert.equal(found.objects_without_size_metadata,4);
+  assert.equal(report.additional_app_table_count,1);assert.ok(report.table_inventory.every(t=>!t.present));assert.ok(report.routine_presence.every(r=>!r.present));assert.equal(report.read_only,true);
+  const rendered=JSON.stringify(report);for(const secret of ['SECRET_FILE_PATH','SECRET_VALUE','operator_extra'])assert.ok(!rendered.includes(secret));
+ }finally{await probe.close();}
 });

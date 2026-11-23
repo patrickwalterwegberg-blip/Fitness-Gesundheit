@@ -60,7 +60,7 @@ Siehe [Prüfbericht und lesende Betreiberabfragen](SICHERHEIT_UND_DATENSCHUTZ_PR
 - [ ] Aktuelle produktive RLS-/Storage-Regeln mit zwei Rollen und zwei Studios geprüft.
 - [ ] Vollständige Datenschutzinformation, Anbietervereinbarungen und Speicherregionen dokumentiert.
 - [ ] Löschfristen, Mitarbeiter-Austritt und Zuständigkeiten festgelegt.
-- [ ] Backup einschließlich Storage und Wiederherstellung im Testprojekt erfolgreich geprüft.
+- [ ] Backup einschließlich Storage und Wiederherstellung im getrennten Testprojekt nach [Betreiberanleitung](BACKUP_UND_WIEDERHERSTELLUNG.md) tatsächlich geprüft und in der geschützten Kopie der [Protokollvorlage](templates/BACKUP_WIEDERHERSTELLUNGSNACHWEIS.md) dokumentiert.
 - [ ] Echte Controlling-Exporte sind korrekt bezeichnet und enthalten keine ausführbaren Formeln aus Mitarbeiterangaben.
 - [ ] Browserregeln und Sicherheitsheader an der veröffentlichten Domain geprüft.
 
