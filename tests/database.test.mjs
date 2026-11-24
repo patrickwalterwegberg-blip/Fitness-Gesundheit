@@ -54,6 +54,7 @@ const operations=await readFile('backend/supabase/014_operations_check.sql','utf
 const evidenceReview=await readFile('backend/supabase/015_learning_evidence_review.sql','utf8');await db.exec(evidenceReview);await db.exec(evidenceReview);
 const evidenceDocument=await readFile('backend/supabase/016_learning_evidence.sql','utf8');await db.exec(evidenceDocument);await db.exec(evidenceDocument);
 const directoryScope=await readFile('backend/supabase/017_directory_studio_filter.sql','utf8');await db.exec(directoryScope);await db.exec(directoryScope);
+const notificationScope=await readFile('backend/supabase/018_notification_source_access.sql','utf8');await db.exec(notificationScope);await db.exec(notificationScope);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -1337,4 +1338,91 @@ test('backup preflight reports missing buckets, invalid size metadata and additi
   assert.equal(report.additional_app_table_count,1);assert.ok(report.table_inventory.every(t=>!t.present));assert.ok(report.routine_presence.every(r=>!r.present));assert.equal(report.read_only,true);
   const rendered=JSON.stringify(report);for(const secret of ['SECRET_FILE_PATH','SECRET_VALUE','operator_extra'])assert.ok(!rendered.includes(secret));
  }finally{await probe.close();}
+});
+
+// Real SQL/RLS boundary: notification ownership alone must not retain a revoked studio.
+async function notificationStudioFixture(kind,role='employee',studio=a,{authorOwn=false}={}){
+ const who=await evidencePerson(studio,role),uid=ids[who];
+ const otherStudio=(await db.query('select id from public.studios where id<>$1 order by name limit 1',[studio])).rows[0].id;
+ await db.query('insert into public.studio_memberships values($1,$2)',[uid,otherStudio]);
+ await db.query("insert into public.team_page_access(user_id,pages,updated_by) values($1,array['learning','feedback'],$2)",[uid,ids.admin]);
+ await db.query("select set_config('request.jwt.claim.sub',$1,false)",[ids.admin]);
+ let target,title;
+ if(kind==='feedback'){
+  target=id(evidenceSequence++);title='Nur im zugewiesenen Studio lesbarer Feedbacktitel';
+  const anonymous=!authorOwn&&role==='employee';
+  await db.query("insert into public.team_feedback(id,reference,studio_id,category,title,body,anonymous,author_id,assignee_id) values($1,$2,$3,'idee',$4,'Synthetischer vertraulicher Prüfinhalt',$5,$6,$7)",[target,'FG-'+target.replaceAll('-',''),studio,title,anonymous,anonymous?null:authorOwn?uid:ids.admin,authorOwn?ids.admin:uid]);
+  if(authorOwn)await db.query("update public.team_feedback set status='in_progress',updated_at=clock_timestamp() where id=$1",[target]);
+ }else{
+  title='Nur im zugewiesenen Studio lesbarer Kurstitel';
+  const course=(await db.query('insert into public.learning_courses(title,lesson_count) values($1,1) returning id',[title])).rows[0].id;
+  target=(await asUser('admin',tx=>tx.query('select public.create_learning_assignment($1,$2,$3,null,false) as id',[uid,course,studio]))).rows[0].id;
+ }
+ const notices=(await db.query('select * from public.team_notifications where user_id=$1 and target_id=$2',[uid,target])).rows;
+ assert.equal(notices.length,1,'The actual assignment/status trigger must create the personal notification');
+ return {who,uid,target,title,kind,studio,otherStudio,noteId:notices[0].id,stored:notices[0]};
+}
+const notificationSource=(f)=>asUser(f.who,tx=>tx.query(`select id from public.${f.kind==='feedback'?'team_feedback':'learning_assignments'} where id=$1`,[f.target]));
+const personalNotification=(f)=>asUser(f.who,tx=>tx.query('select * from public.team_notifications where id=$1',[f.noteId]));
+const personalInbox=async(f)=>(await asUser(f.who,tx=>tx.query('select public.team_notification_inbox() as result'))).rows[0].result;
+const notificationStudioNames=['Bersenbrück','Dörpen','Haselünne','Lathen','Löningen','Sögel','Werlte'];
+for(const kind of ['feedback','learning'])for(const role of ['employee','studio_manager'])for(const name of notificationStudioNames){
+ test(`notification studio scope: ${kind} / ${role} / ${name}`,async()=>{
+  const studio=(await db.query('select id from public.studios where name=$1',[name])).rows[0].id;
+  const f=await notificationStudioFixture(kind,role,studio);
+  assert.equal((await notificationSource(f)).rows.length,1);assert.equal((await personalNotification(f)).rows[0].body,f.title);
+  let inbox=await personalInbox(f);assert.equal(inbox.total,1);assert.equal(inbox.unread,1);assert.equal(inbox.items[0].body,f.title);
+  await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[f.uid,studio]);
+  assert.equal((await notificationSource(f)).rows.length,0,'Source access must be withdrawn while the second studio remains');
+  assert.equal((await personalNotification(f)).rows.length,0,'A fresh notification SELECT must not leak the revoked title');
+  inbox=await personalInbox(f);assert.deepEqual(inbox.items,[]);assert.equal(inbox.total,0);assert.equal(inbox.unread,0);
+  await asUser(f.who,tx=>tx.query('select public.mark_team_notifications_read($1)',[[f.noteId]]));
+  assert.deepEqual((await db.query('select * from public.team_notifications where id=$1',[f.noteId])).rows[0],f.stored,'Forbidden read marking must preserve the unread historical row byte-for-byte');
+  await db.query('insert into public.studio_memberships values($1,$2)',[f.uid,studio]);
+  assert.equal((await notificationSource(f)).rows.length,1);assert.equal((await personalNotification(f)).rows.length,1);
+  inbox=await personalInbox(f);assert.equal(inbox.total,1);assert.equal(inbox.unread,1);assert.equal(String(inbox.items[0].id),String(f.noteId));
+  await asUser(f.who,tx=>tx.query('select public.mark_team_notifications_read($1)',[[f.noteId]]));
+  inbox=await personalInbox(f);assert.equal(inbox.total,1);assert.equal(inbox.unread,0);assert.ok(inbox.items[0].read_at);
+  for(const other of ['admin','peer'])assert.equal((await asUser(other,tx=>tx.query('select * from public.team_notifications where id=$1',[f.noteId]))).rows.length,0,'Notification ownership must still exclude other people, including administrators');
+ });
+}
+
+test('notification studio scope preserves the existing own-author feedback access after studio withdrawal',async()=>{
+ const f=await notificationStudioFixture('feedback','employee',a,{authorOwn:true});
+ await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[f.uid,a]);
+ assert.equal((await notificationSource(f)).rows.length,1);assert.equal((await personalNotification(f)).rows.length,1);assert.equal((await personalInbox(f)).unread,1);
+});
+for(const kind of ['feedback','learning'])test(`notification studio scope preserves administrator own ${kind} notifications`,async()=>{
+ const f=await notificationStudioFixture(kind,'admin');
+ await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[f.uid,a]);
+ assert.equal((await notificationSource(f)).rows.length,1);assert.equal((await personalNotification(f)).rows.length,1);const inbox=await personalInbox(f),matching=inbox.items.filter(n=>String(n.id)===String(f.noteId));assert.equal(matching.length,1);assert.equal(matching[0].read_at,null);assert.equal(matching[0].body,f.title);assert.ok(inbox.unread>=1);
+});
+test('notification studio scope does not broaden a former feedback recipient into a newly delegated manager',async()=>{
+ const f=await notificationStudioFixture('feedback');
+ await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,null)',[f.uid,['feedback.manage']]));
+ await db.query('update public.team_feedback set assignee_id=$1,updated_at=clock_timestamp() where id=$2',[ids.admin,f.target]);
+ assert.equal((await notificationSource(f)).rows.length,1,'The manager may still read the source');
+ assert.equal((await personalNotification(f)).rows.length,0,'The original personal author/assignee/admin qualification must remain');
+ assert.equal((await personalInbox(f)).total,0);
+});
+for(const kind of ['feedback','learning'])test(`notification studio scope respects withdrawn ${kind} page access`,async()=>{
+ const f=await notificationStudioFixture(kind);
+ await db.query('update public.team_page_access set pages=array[]::text[] where user_id=$1',[f.uid]);
+ assert.equal((await notificationSource(f)).rows.length,0);assert.equal((await personalNotification(f)).rows.length,0);assert.equal((await personalInbox(f)).total,0);
+});
+
+test('notification studio scope rollback and reapplication preserve history while restoring the source guard',async()=>{
+ const fixtures=[];for(const kind of ['feedback','learning'])fixtures.push(await notificationStudioFixture(kind));
+ for(const f of fixtures){await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[f.uid,a]);assert.equal((await personalNotification(f)).rows.length,0);}
+ const before=(await db.query('select * from public.team_notifications order by id')).rows;
+ const forward=await readFile('backend/supabase/018_notification_source_access.sql','utf8'),backward=await readFile('backend/supabase/rollback/018_notification_source_access.sql','utf8');
+ await db.exec(backward);
+ try{for(const f of fixtures){assert.equal((await notificationSource(f)).rows.length,0);assert.equal((await personalNotification(f)).rows.length,1,'The rollback must demonstrate the original weaker visibility');}}
+ finally{await db.exec(forward);}
+ for(const f of fixtures){assert.equal((await personalNotification(f)).rows.length,0);assert.equal((await personalInbox(f)).total,0);}
+ assert.deepEqual((await db.query('select * from public.team_notifications order by id')).rows,before);
+});
+test('notification studio scope keeps the existing helper security and authenticated-only execution',async()=>{
+ const row=(await db.query("select p.prosecdef,p.provolatile,p.proconfig,has_function_privilege('anon',p.oid,'EXECUTE') as anonymous_execute,has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_execute from pg_proc p where p.oid='app_private.notification_visible(public.team_notifications)'::regprocedure")).rows[0];
+ assert.equal(row.prosecdef,true);assert.equal(row.provolatile,'s');assert.ok(row.proconfig.some(v=>v==='search_path=""'));assert.equal(row.anonymous_execute,false);assert.equal(row.authenticated_execute,true);
 });
