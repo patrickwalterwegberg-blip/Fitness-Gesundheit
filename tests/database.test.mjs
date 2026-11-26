@@ -55,6 +55,7 @@ const evidenceReview=await readFile('backend/supabase/015_learning_evidence_revi
 const evidenceDocument=await readFile('backend/supabase/016_learning_evidence.sql','utf8');await db.exec(evidenceDocument);await db.exec(evidenceDocument);
 const directoryScope=await readFile('backend/supabase/017_directory_studio_filter.sql','utf8');await db.exec(directoryScope);await db.exec(directoryScope);
 const notificationScope=await readFile('backend/supabase/018_notification_source_access.sql','utf8');await db.exec(notificationScope);await db.exec(notificationScope);
+const feedbackTarget=await readFile('backend/supabase/019_feedback_notification_detail.sql','utf8');await db.exec(feedbackTarget);await db.exec(feedbackTarget);
 for (const [role, uid] of Object.entries(ids)) {
   await db.query('insert into auth.users(id,email) values ($1,$2)', [uid, role+'@example.org']);
   await db.query('insert into public.profiles(id,full_name,role,active) values ($1,$2,$3,$4)', [uid, role, role === 'admin' ? 'admin' : role === 'manager' ? 'studio_manager' : 'employee', role !== 'inactive']);
@@ -1425,4 +1426,64 @@ test('notification studio scope rollback and reapplication preserve history whil
 test('notification studio scope keeps the existing helper security and authenticated-only execution',async()=>{
  const row=(await db.query("select p.prosecdef,p.provolatile,p.proconfig,has_function_privilege('anon',p.oid,'EXECUTE') as anonymous_execute,has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_execute from pg_proc p where p.oid='app_private.notification_visible(public.team_notifications)'::regprocedure")).rows[0];
  assert.equal(row.prosecdef,true);assert.equal(row.provolatile,'s');assert.ok(row.proconfig.some(v=>v==='search_path=""'));assert.equal(row.anonymous_execute,false);assert.equal(row.authenticated_execute,true);
+});
+
+// Targeted feedback reads use the same DTO and rights as the existing list.
+const feedbackDTOKeys=['id','reference','studio_id','category','title','body','anonymous','assignee_id','status','reply','revision','created_at','updated_at','author_name','assignee_name','own','can_manage'].sort();
+const feedbackTargetRead=async(who,target)=>(await asUser(who,tx=>tx.query('select public.team_feedback_detail($1) as result',[target]))).rows[0].result;
+for(const role of ['employee','studio_manager'])for(const name of notificationStudioNames)test(`feedback detail scope: ${role} / ${name}`,async()=>{
+ const studio=(await db.query('select id from public.studios where name=$1',[name])).rows[0].id;
+ const f=await notificationStudioFixture('feedback',role,studio),ticket=await feedbackTargetRead(f.who,f.target);
+ const listed=(await asUser(f.who,tx=>tx.query('select public.team_feedback_list() as result'))).rows[0].result.items.find(t=>t.id===f.target);
+ assert.deepEqual(ticket,listed);assert.deepEqual(Object.keys(ticket).sort(),feedbackDTOKeys);assert.equal(ticket.can_manage,true);
+ assert.equal(ticket.anonymous,role==='employee');if(ticket.anonymous)assert.equal(ticket.author_name,null);
+ assert.equal(await feedbackTargetRead('other',f.target),null,'An unrelated nonrecipient cannot resolve the target');
+ await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[f.uid,studio]);
+ assert.equal(await feedbackTargetRead(f.who,f.target),null);assert.equal(await feedbackTargetRead(f.who,id(999999)),null);
+ await db.query('insert into public.studio_memberships values($1,$2)',[f.uid,studio]);assert.deepEqual(await feedbackTargetRead(f.who,f.target),ticket);
+});
+test('feedback detail preserves own-author visibility without inventing management rights',async()=>{
+ const f=await notificationStudioFixture('feedback','employee',a,{authorOwn:true});await db.query('delete from public.studio_memberships where user_id=$1 and studio_id=$2',[f.uid,a]);
+ const t=await feedbackTargetRead(f.who,f.target);assert.equal(t.own,true);assert.equal(t.can_manage,false);assert.equal(t.author_name,f.who);
+});
+test('feedback detail allows admin and scoped delegated managers with current source rights',async()=>{
+ const f=await notificationStudioFixture('feedback'),delegated=await evidencePerson(a),foreign=await evidencePerson(b);
+ for(const who of [delegated,foreign])await asUser('admin',tx=>tx.query('select public.admin_function_access($1,$2,null)',[ids[who],['feedback.manage']]));
+ assert.equal((await feedbackTargetRead('admin',f.target)).can_manage,true);assert.equal((await feedbackTargetRead(delegated,f.target)).can_manage,true);assert.equal(await feedbackTargetRead(foreign,f.target),null);
+});
+test('feedback detail rejects revoked pages and inactive accounts and exposes nothing to anon',async()=>{
+ const f=await notificationStudioFixture('feedback');
+ await db.query('update public.team_page_access set pages=array[]::text[] where user_id=$1',[f.uid]);
+ await assert.rejects(feedbackTargetRead(f.who,f.target),/Feedback not granted/);
+ await assert.rejects(feedbackTargetRead('inactive',f.target),/Feedback not granted/);
+ await assert.rejects(db.transaction(async tx=>{await tx.exec('set local role anon');return tx.query('select public.team_feedback_detail($1)',[f.target]);}),/permission denied/);
+});
+test('feedback detail missing and null IDs return the same result without writes',async()=>{
+ const f=await notificationStudioFixture('feedback'),before=(await db.query('select * from public.team_feedback where id=$1',[f.target])).rows;
+ assert.equal(await feedbackTargetRead(f.who,null),null);assert.equal(await feedbackTargetRead(f.who,id(999999)),null);
+ await feedbackTargetRead(f.who,f.target);assert.deepEqual((await db.query('select * from public.team_feedback where id=$1',[f.target])).rows,before);
+});
+test('feedback detail resolves old targets beyond list pages and supplies updated data after save',async()=>{
+ const f=await notificationStudioFixture('feedback');
+ for(let i=0;i<21;i++){const tid=id(evidenceSequence++);await db.query("insert into public.team_feedback(id,reference,studio_id,category,title,body,anonymous,assignee_id,created_at) values($1,$2,$3,'idee','Neuere Meldung','Prüfinhalt',true,$4,clock_timestamp()+interval '1 day')",[tid,'FG-'+tid.replaceAll('-',''),a,f.uid]);}
+ const list=(await asUser(f.who,tx=>tx.query('select public.team_feedback_list() as result'))).rows[0].result;assert.equal(list.items.some(t=>t.id===f.target),false);
+ let t=await feedbackTargetRead(f.who,f.target);assert.equal(t.id,f.target);
+ await asUser(f.who,tx=>tx.query("select public.update_team_feedback($1,'done','Geprüft',$2,$3)",[f.target,f.uid,t.revision]));
+ t=await feedbackTargetRead(f.who,f.target);assert.equal(t.reply,'Geprüft');assert.equal(t.status,'done');assert.equal(t.revision,2);
+});
+test('feedback detail immediately follows reassignment access loss while preserving source data',async()=>{
+ const f=await notificationStudioFixture('feedback');assert.equal((await feedbackTargetRead(f.who,f.target)).can_manage,true);
+ await db.query('update public.team_feedback set assignee_id=$1 where id=$2',[ids.admin,f.target]);assert.equal(await feedbackTargetRead(f.who,f.target),null);assert.equal((await feedbackTargetRead('admin',f.target)).id,f.target);
+});
+test('feedback detail rollback removes only its endpoint and reapplication preserves all data and source rules',async()=>{
+ const f=await notificationStudioFixture('feedback'),before=(await db.query('select * from public.team_feedback order by id')).rows,notes=(await db.query('select * from public.team_notifications order by id')).rows;
+ const forward=await readFile('backend/supabase/019_feedback_notification_detail.sql','utf8');
+ await db.exec(await readFile('backend/supabase/rollback/019_feedback_notification_detail.sql','utf8'));
+ try{assert.equal((await db.query("select to_regprocedure('public.team_feedback_detail(uuid)') as result")).rows[0].result,null);assert.equal((await personalNotification(f)).rows.length,1);}
+ finally{await db.exec(forward);}
+ assert.deepEqual((await db.query('select * from public.team_feedback order by id')).rows,before);assert.deepEqual((await db.query('select * from public.team_notifications order by id')).rows,notes);assert.equal((await feedbackTargetRead(f.who,f.target)).id,f.target);
+});
+test('feedback detail retains stable definer with empty search path and authenticated-only execution',async()=>{
+ const r=(await db.query("select p.prosecdef,p.provolatile,p.proconfig,has_function_privilege('anon',p.oid,'EXECUTE') as anon,has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated from pg_proc p where p.oid='public.team_feedback_detail(uuid)'::regprocedure")).rows[0];
+ assert.equal(r.prosecdef,true);assert.equal(r.provolatile,'s');assert.ok(r.proconfig.includes('search_path=""'));assert.equal(r.anon,false);assert.equal(r.authenticated,true);
 });

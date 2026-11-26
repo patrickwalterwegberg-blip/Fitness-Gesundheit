@@ -33,6 +33,7 @@ Diese Liste ergänzt die automatisierten Prüfungen. Ergebnisse erst nach einem 
 - [ ] Wartungsplan mit einem sechsmonatigen Abstand anlegen. Verknüpfte Aufgabe erscheint am richtigen Kalendertag. Abschließen: genau eine Folgeaufgabe und das nächste Wartungsdatum entstehen; der Monatsrhythmus bleibt verankert.
 - [ ] Eine fällige Testaufgabe erzeugt eine Meldung in der Glocke. Neueste Meldungen stehen oben; Als gelesen behält sie im Verlauf. Eine zweite Sitzung sieht denselben serverseitigen Lesestand.
 - [ ] Einen neu zugewiesenen Kurs über seine Benachrichtigung öffnen, während zuvor Mein Onboarding geöffnet war. Der richtige Kurs mit seinen Lektionen erscheint ohne manuelles Neuladen.
+- [ ] Nach Installation von Erweiterung 019 eine vorhandene Feedbackmeldung aus der Glocke öffnen: exakt der zugehörige Detaildialog erscheint, auch jenseits der ersten Listenseite oder bei widersprechendem Listenfilter. Nach Schließen denselben gelesenen Eintrag erneut öffnen. Dafür keine reale Meldung nur zum Test beantworten oder Zuständigkeiten entziehen.
 - [ ] Falls Benachrichtigungen auch bei geschlossenem Hub erzeugt werden sollen: im Supabase-Projekt den Job `teamhub-due-notifications` und seine Ausführungen prüfen. OS-Push und Erinnerungsmails gehören nicht zu diesem Ablauf.
 
 ## Video, Prüfung, Chat und Feedback

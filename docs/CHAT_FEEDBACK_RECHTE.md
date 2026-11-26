@@ -72,3 +72,13 @@ Mit **Ohne Namen im Feedbackeintrag senden** wird keine Autor-ID im Meldungsdate
 7. **Abmelden** bleibt im Teamzugang oben rechts auch beim Scrollen erreichbar. Nach Abmelden und Neuladen dürfen keine privaten Ansichten offen bleiben.
 
 Automatische Prüfungen verwenden PostgreSQL/PGlite mit echten SQL-Rollen und Browserabläufe mit simulierten HTTP-Antworten. Sie legen keine Nachrichten oder Feedbackmeldungen im gehosteten Projekt an und ersetzen keinen echten Test mit zwei Mitarbeiterkonten.
+
+## Feedback direkt aus der Glocke öffnen
+
+„Feedback öffnen“ lädt die konkrete Meldung anhand ihrer ID und öffnet den bestehenden Detaildialog. Listenfilter und Listenseite bleiben erhalten. Es werden keine fremden Listen durchgeblättert. Erst nach erfolgreichem Zielladen und bestätigter Lesemarkierung wird die Glocke geschlossen. Ist das Feedback nicht mehr sichtbar, bleibt der Hinweis ungelesen und die bisherige Ansicht erhalten.
+
+Dafür nach den bestehenden Teamhub-Erweiterungen die vollständige Datei [019_feedback_notification_detail.sql](../backend/supabase/019_feedback_notification_detail.sql) im richtigen Supabase-Projekt unter **SQL Editor → New query** ausführen. Sie verwendet die vorhandenen Feedback-Quellrechte und gibt dieselben Detailfelder wie die Liste zurück. Unbekannte und nicht sichtbare IDs liefern dasselbe Ergebnis. Anonyme Meldungen erhalten keine zusätzliche Autorzuordnung. Kein Modellzugang und keine neuen Funktionsrechte sind erforderlich.
+
+Ein Frontend-Deployment installiert diese Datei nicht. Bei fehlender 019 zeigt der Link einen entsprechenden Hinweis; nicht stattdessen alte Komplettmigrationen erneut ausführen. Die gewöhnliche Liste und ihre Formulare benötigen die neue Einzelabfrage nicht. Bereits gelesene Meldungen lassen sich erneut öffnen. Nach Speichern wird das konkrete Ziel erneut abgefragt; bei bestätigt verlorenem Zugriff verschwindet sein Detail. Gewöhnliche Speicherfehler erhalten den Antwortentwurf.
+
+[Rückweg](../backend/supabase/rollback/019_feedback_notification_detail.sql) nur gemeinsam mit dem passenden Frontend-Rückweg verwenden: Er entfernt die neue Einzelabfrage, keine Feedbackdaten oder Lesestände. [Prüfstand und Grenzen](phase2/PAKET_1T_FEEDBACK_BENACHRICHTIGUNGSZIEL.md).

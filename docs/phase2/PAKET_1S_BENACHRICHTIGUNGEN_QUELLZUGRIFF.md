@@ -45,3 +45,7 @@ Die echte Installations-/Rollenabnahme bleibt offen, bis sie gemeldet oder über
 ## Rückweg
 
 [rollback/018_notification_source_access.sql](../../backend/supabase/rollback/018_notification_source_access.sql) stellt den vorherigen Funktionskörper aus SQL 012 exakt wieder her und erhält Daten/Lesestände. **Dabei wird die beschriebene schwächere Sichtbarkeit erneut geöffnet.** Vorwärts korrigieren; einen erforderlichen Rückweg erst nach Einschränkung der betroffenen Bereiche und mit dem Betreiber abstimmen. Kein automatischer Rollback und keine Löschung.
+
+## Nachtrag 26.11.2026
+
+Commit `7e17cddcae6100b62423298997d00d98f9f4b901` wurde mit [Workflow 45478244416](https://github.com/patrickwalterwegberg-blip/Fitness-Gesundheit/actions/runs/45478244416) erfolgreich bereitgestellt; 408 Browserfälle und der Produktionstest bestanden. Der Nutzer meldete danach SQL 018 als ausgeführt, den Hub als neu geladen und das Öffnen der Glocke ohne Fehlermeldung. Das sind Betreiber-Rückmeldungen und eine bestätigte Bedienprüfung. Die tatsächlichen Funktionskörper und Rolle-/Studioentzüge wurden hier weiterhin nicht unabhängig im gehosteten Projekt geprüft. Erweiterung 017, Backup und Restore bleiben separat unbestätigt beziehungsweise offen.

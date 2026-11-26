@@ -1,0 +1,33 @@
+# Paket 1T – Feedback aus Benachrichtigungen gezielt öffnen
+
+Stand: 26.11.2026. Ausgangsstand lokal und auf GitHub `main`: `7e17cddcae6100b62423298997d00d98f9f4b901`. Nutzer meldete 018 ausgeführt, Hub neu geladen und Glocke öffnet ohne Fehler. Eine echte Rolle-/Studioabnahme folgt daraus nicht. Backup-/Programmprüfung bleibt auf Nutzerwunsch übersprungen, echte Sicherung/Restore bleiben offen. Generative KI bleibt zurückgestellt.
+
+## Ziel und bestätigter Fehler
+
+P2: „Feedback öffnen“ aus der Glocke setzte bisher nur den Bereich, übergab aber keine Feedback-ID an den Detaildialog. Die Meldung wurde dennoch als gelesen markiert. Ein älteres Ticket außerhalb der ersten 20 Einträge oder bei widersprechendem Listenfilter war damit nicht direkt erreichbar. Selbst auf der ersten Seite öffnete kein konkreter Detaildialog. Unabhängige Quellprüfung bestätigte die fehlende Übergabe in `TeamWorkspace`/`TeamFeedback`; ein gezielter Browserfall reproduzierte den fehlenden Ziel-Dialog.
+
+## Kleine Änderung
+
+- Neue [Migration 019](../../backend/supabase/019_feedback_notification_detail.sql) ergänzt ausschließlich `team_feedback_detail(uuid)`: lesende Einzelabfrage, `STABLE SECURITY DEFINER`, leerer Suchpfad und Ausführungsrecht nur für `authenticated`. Die bestehenden `can_page`, `feedback_visible` und `feedback_manage` bleiben maßgeblich und werden nicht ersetzt. Kein Datenupdate und kein Modellzugang. Forward und Rückweg melden PostgREST die Schemaänderung ausdrücklich.
+- Die Antwort enthält dieselben 17 Felder wie die bisherige Feedbackliste, einschließlich serverseitigem `can_manage`. Keine zusätzliche Autor-ID oder Ereignisdaten. Unbekannte und nicht sichtbare Ziele liefern einheitlich `null`; entzogene Bereichsfreigaben bleiben verboten.
+- `TeamWorkspace` löst genau das Ziel vor der Lesemarkierung auf. Erst wenn Zielladen und Markierung erfolgreich sind und der Sitzung-/Rechte-/Ansichtskontext noch gilt, öffnet der bestehende Dialog. Fehlende 019 wird ausdrücklich benannt, statt auf 007 oder 010 zu verweisen.
+- `TeamFeedback` trennt das gezielte Detail von der paginierten Liste. Filter und Seite bleiben erhalten; Speichern lädt dieses Ziel erneut. Abgebrochene/veraltete Zielantworten dürfen weder geschlossene Dialoge wieder öffnen noch andere Tickets überschreiben. Bei einem ausdrücklich verbotenen gezielten Save wird der alte Dialog sofort verworfen und der aktuelle Quellzugriff erneut geprüft. Gewöhnliche Speicherfehler behalten den Antwortentwurf. Die gewöhnlichen Listenformulare bleiben auf ihrem bestehenden Backendpfad.
+- Schwarz-Gold-Design, Daten, Benachrichtigungshistorie und Rechtekatalog bleiben erhalten.
+
+## Prüfung und Ergebnis
+
+22 neue PostgreSQL-/PGlite-Fälle bestanden: zwei Rollen × sieben Studios, anonyme/namentliche DTO-Parität zur Liste, Studioentzug und Wiedererteilung, eigener Autor ohne erfundene Bearbeitungsrechte, Admin und delegierte Verwaltung, fremde Studios, entzogenes Bereichsrecht/inaktiv/anon, unbekannte und leere ID, altes Ziel jenseits Seite 1, Speichern/Neuzuweisung sowie Rückweg und Funktionsattribute. Die neue Migration wird zweimal angewandt.
+
+Der vollständige Datenbank-/Modelllauf bestand mit **249 Tests**. Die gezielte Browserreihe bestand mit **31 Fällen**: vierzehn neue Feedbackziel-Fälle sowie die bisherigen Kommunikations- und Lernverlinkungsfälle. Geprüft wurden unter anderem ein Ziel jenseits Seite 1, widersprechende Filter mit erhaltener Listenseite, erneutes Öffnen, fehlende 019, Zugriffs-/Lese-/Speicherfehler, aktualisierte Antwort nach Save, Quellverlust nach Save, verspätete Antworten nach Schließen/Zielwechsel/Rechteentzug und die mobile Ansicht. In den ersten Testläufen wurden die lokale Navigation, ein nicht weitergereichter Fixture-Fehlerschalter und ein zu enger Labelselektor korrigiert; anschließend bestand die gesamte gezielte Reihe. Die unabhängige Quellprüfung forderte den expliziten PostgREST-Schema-Reload sowie die erneute Quellprüfung nach einem verweigerten Save; zusätzlich musste ein verzögerter Hintergrundabruf bei reinem Netzfehler einen schon eingegebenen Antwortentwurf erhalten. Alle drei Punkte wurden vor der endgültigen QA korrigiert und gezielt abgesichert. Die unabhängige vollständige Abnahme auf einer eingefrorenen Kopie bestand mit **422 Browsertests, 249 Datenbank-/Modelltests, 13 Zugriffsdiensttests, 9 Mock-Assistenttests, erfolgreichem Build und bestandenem Produktionstest**. Alle 196 Kerndateien entsprachen dem eingefrorenen Manifest; 46 lokale Dokumentationslinks und der mobile Screenshot wurden geprüft. Der Screenshot zeigt den bestehenden Schwarz-Gold-Dialog bei 390 Pixel Breite mit erreichbarem Schließen und ohne seitlichen Überlauf. Der alte Fehler wurde außerdem in einer separaten frischen Kopie von `7e17cdd` unabhängig reproduziert: genau der erwartete fehlende Ziel-Dialog, kein Testserverfehler. Die relevanten Baselinequellen entsprachen bytegenau dem Ausgangscommit. Der neue GitHub-Veröffentlichungslauf wird erst nach seinem tatsächlichen Abschluss bestätigt. Browserbackend und Mailantworten werden simuliert; PGlite führt tatsächliche lokale SQL-Regeln aus. Keiner dieser Tests bestätigt die gehostete Installation oder ein echtes Mobilgerät.
+
+## Aktivierung und manuelle Prüfung
+
+1. Das bestehende Teamhub-Projekt unter [Supabase-Projekte](https://supabase.com/dashboard/projects) auswählen. **SQL Editor → New query** öffnen.
+2. Nur die vollständige neue [019_feedback_notification_detail.sql](../../backend/supabase/019_feedback_notification_detail.sql) ausführen. Sie ist wiederholbar und erhält alle Daten. Voraussetzung sind die bestehenden Feedback-/Funktionsrechte; 018 und die bisherigen Korrekturen bleiben bestehen. Nicht alte Komplettmigrationen darüber ausführen.
+3. Hub neu laden. Eine vorhandene Feedback-Benachrichtigung öffnen: der konkrete Dialog erscheint. Schließen und dieselbe Meldung nochmals öffnen. Ohne reale Notwendigkeit kein Feedback beantworten, keine Mitarbeiterrechte entziehen und keine Zuständigkeit nur zum Test ändern.
+
+Die Arbeitsumgebung verfügt über keinen privaten Supabase-Verwaltungszugriff. GitHub-Bereitstellung und lokale Signaturen bestätigen keine gehostete 019-Aktivierung; die bleibt bis zur Betreiberbestätigung oder unabhängigen berechtigten Prüfung offen.
+
+## Rückweg
+
+[Rollback 019](../../backend/supabase/rollback/019_feedback_notification_detail.sql) entfernt ausschließlich den neuen Endpoint. Er muss mit einem passenden Frontend-Rückweg abgestimmt werden; danach zeigt ein neuer Feedbacklink sonst den Hinweis auf die fehlende Erweiterung. Bestehende Liste und Feedbackdaten bleiben erhalten. Kein automatischer Rollback und keine Bereinigung.

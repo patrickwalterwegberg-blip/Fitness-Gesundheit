@@ -30,6 +30,8 @@ Für den bisherigen gemeinsamen Umfang sind die vorhandenen Supabase-Erweiterung
 
 Für die aktuelle serverseitige Sichtbarkeit von Feedback-/Lernbenachrichtigungen zusätzlich [018_notification_source_access.sql](backend/supabase/018_notification_source_access.sql) nach den bestehenden Erweiterungen anwenden. Sie koppelt die Meldungen an den aktuellen Quellzugriff und erhält die Historie. Der Code-Deploy allein aktiviert diese Korrektur nicht; [Aktivierung und Prüfgrenzen](docs/phase2/PAKET_1S_BENACHRICHTIGUNGEN_QUELLZUGRIFF.md).
 
+Für direkte Feedbacklinks aus der Glocke zusätzlich [019_feedback_notification_detail.sql](backend/supabase/019_feedback_notification_detail.sql) anwenden. Sie ergänzt ausschließlich eine lesende Einzelabfrage mit den bestehenden Feedbackrechten. Fehlt 019, bleiben diese Links mit einem Hinweis ungelesen; die normale Feedbackliste bleibt bedienbar. [Paket und Aktivierung](docs/phase2/PAKET_1T_FEEDBACK_BENACHRICHTIGUNGSZIEL.md).
+
 Für delegierte Wissens- und Praxisbestätigungen zusätzlich die Sicherheitskorrektur [015_learning_evidence_review.sql](backend/supabase/015_learning_evidence_review.sql) anwenden. Sie verhindert nichtadministrative Selbstbestätigungen. [Prüfstand und Aktivierung](docs/phase2/PAKET_1L_LERNNACHWEISE_PRUEFRECHTE.md); Dateien unter `backend/supabase/rollback/` gehören ausschließlich zum ausdrücklich gewählten Rückweg, nicht zur Installation.
 
 Die lokale Prüfung bestätigt keine aktuelle Installation im gehosteten Projekt. Frühere Rückmeldungen bestätigen Anmeldung und Mailzustellung an das eigene Konto. Eine vollständige aktuelle Abnahme mit einem weiteren Mitarbeiterkonto, echtem Postfach und echten Mobilgeräten muss separat dokumentiert werden.

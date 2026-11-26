@@ -11,9 +11,17 @@ export function communicationError(error){
  if(error?.code==='40001')return 'Der Stand wurde inzwischen geändert. Bitte aktualisieren und die Änderung erneut prüfen.';
  if(error?.message?.includes('Wait one second'))return 'Bitte warte eine Sekunde vor der nächsten Nachricht.';
  if(error?.code==='23514')return 'Bitte prüfe deine Eingaben und die gewählten Studios oder Zuständigkeiten.';
- return 'Die Serverabfrage oder Speicherung konnte nicht bestätigt werden. Bitte erneut versuchen.';
+ return error?.localMessage||'Die Serverabfrage oder Speicherung konnte nicht bestätigt werden. Bitte erneut versuchen.';
 }
 export async function communicationRpc(client,name,args,signal){const query=client.rpc(name,args);const result=await(signal?query.abortSignal(signal):query);if(result.error)throw {...result.error,status:result.status};return result.data;}
+// A notification must resolve its exact source before it can be marked read.
+export async function feedbackDetail(client,id,signal){
+ let ticket;
+ try{ticket=await communicationRpc(client,'team_feedback_detail',{p_feedback:id},signal);}
+ catch(error){if(error?.code==='PGRST202')throw {localMessage:'Für den direkten Feedbacklink fehlt noch Erweiterung 019. Bitte wende dich an Patrick Walter.'};throw error;}
+ if(!ticket||ticket.id!==id)throw {code:'FEEDBACK_UNAVAILABLE',localMessage:'Dieses Feedback ist nicht mehr verfügbar. Aktualisiere deine Benachrichtigungen.'};
+ return ticket;
+}
 export function useTeamScope(client,profile){
  const key=profile?`${profile.id}|${profile.role}`:'';const[state,setState]=useState(null),[reload,setReload]=useState(0);
  useEffect(()=>{
